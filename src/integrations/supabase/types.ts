@@ -106,40 +106,85 @@ export type Database = {
       }
       customizations: {
         Row: {
+          assistant_personality: string | null
           background_image_url: string | null
+          business_description: string | null
+          business_hours: string | null
+          business_industry: string | null
           business_name: string | null
+          chat_logo_url: string | null
           created_at: string | null
+          custom_voices: Json | null
+          facebook_username: string | null
           faqs: Json | null
           greeting: string | null
           id: string
+          instagram_username: string | null
+          key_services: string | null
           logo_url: string | null
+          setup_strength: string | null
+          special_instructions: string | null
+          target_audience: string | null
+          telegram_username: string | null
           tone: string | null
           updated_at: string | null
+          vapi_voices: Json | null
           voices: Json | null
+          whatsapp_username: string | null
         }
         Insert: {
+          assistant_personality?: string | null
           background_image_url?: string | null
+          business_description?: string | null
+          business_hours?: string | null
+          business_industry?: string | null
           business_name?: string | null
+          chat_logo_url?: string | null
           created_at?: string | null
+          custom_voices?: Json | null
+          facebook_username?: string | null
           faqs?: Json | null
           greeting?: string | null
           id?: string
+          instagram_username?: string | null
+          key_services?: string | null
           logo_url?: string | null
+          setup_strength?: string | null
+          special_instructions?: string | null
+          target_audience?: string | null
+          telegram_username?: string | null
           tone?: string | null
           updated_at?: string | null
+          vapi_voices?: Json | null
           voices?: Json | null
+          whatsapp_username?: string | null
         }
         Update: {
+          assistant_personality?: string | null
           background_image_url?: string | null
+          business_description?: string | null
+          business_hours?: string | null
+          business_industry?: string | null
           business_name?: string | null
+          chat_logo_url?: string | null
           created_at?: string | null
+          custom_voices?: Json | null
+          facebook_username?: string | null
           faqs?: Json | null
           greeting?: string | null
           id?: string
+          instagram_username?: string | null
+          key_services?: string | null
           logo_url?: string | null
+          setup_strength?: string | null
+          special_instructions?: string | null
+          target_audience?: string | null
+          telegram_username?: string | null
           tone?: string | null
           updated_at?: string | null
+          vapi_voices?: Json | null
           voices?: Json | null
+          whatsapp_username?: string | null
         }
         Relationships: []
       }
@@ -267,6 +312,33 @@ export type Database = {
           sales_flagged?: boolean | null
           timestamp?: string | null
           transcript_text?: string | null
+        }
+        Relationships: []
+      }
+      user_onboarding: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          onboarding_completed: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          onboarding_completed?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          onboarding_completed?: boolean | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
