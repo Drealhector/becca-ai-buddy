@@ -13,9 +13,8 @@ import WalletSection from "@/components/dashboard/WalletSection";
 import CustomizationPanel from "@/components/dashboard/CustomizationPanel";
 import CopyableLinks from "@/components/dashboard/CopyableLinks";
 import PhoneCallSection from "@/components/dashboard/PhoneCallSection";
-import SocialProfilesSection from "@/components/dashboard/SocialProfilesSection";
-import VoiceManagementSection from "@/components/dashboard/VoiceManagementSection";
 import LogoCustomization from "@/components/dashboard/LogoCustomization";
+import VoiceManagementSection from "@/components/dashboard/VoiceManagementSection";
 import { Menu, LogOut } from "lucide-react";
 
 const Dashboard = () => {
@@ -107,14 +106,11 @@ const Dashboard = () => {
         {/* Wallet */}
         <WalletSection />
 
-        {/* Logo Customization */}
-        <LogoCustomization />
-
-        {/* Social Profiles */}
-        <SocialProfilesSection />
-
-        {/* Voice Management */}
-        <VoiceManagementSection />
+        {/* Logo & Voice Management */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <LogoCustomization />
+          <VoiceManagementSection />
+        </div>
 
         {/* Customization */}
         <CustomizationPanel />

@@ -16,7 +16,7 @@ serve(async (req) => {
       throw new Error('VAPI_API_KEY is not configured');
     }
 
-    const response = await fetch('https://api.vapi.ai/voice', {
+    const response = await fetch('https://api.vapi.ai/assistant', {
       headers: {
         'Authorization': `Bearer ${VAPI_API_KEY}`,
       },

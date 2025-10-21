@@ -44,6 +44,10 @@ const CustomizationPanel = () => {
           tone: customization.tone,
           greeting: customization.greeting,
           faqs: customization.faqs,
+          whatsapp_username: customization.whatsapp_username,
+          instagram_username: customization.instagram_username,
+          facebook_username: customization.facebook_username,
+          telegram_username: customization.telegram_username,
         })
         .eq("id", customization.id);
 
@@ -59,8 +63,57 @@ const CustomizationPanel = () => {
 
   return (
     <Card className="p-6 shadow-elegant hover:shadow-hover transition-all">
-      <h3 className="text-lg font-semibold mb-4">Advanced Customization</h3>
-      <div className="space-y-4">
+      <h3 className="text-lg font-semibold mb-6">AI Assistant Configuration</h3>
+      <div className="space-y-6">
+        <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+          <h4 className="font-medium text-sm">Social Media Links</h4>
+          <p className="text-xs text-muted-foreground">
+            Add your social media usernames so customers are redirected to your profiles
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">WhatsApp Phone</label>
+              <Input
+                value={customization.whatsapp_username || ""}
+                onChange={(e) =>
+                  setCustomization({ ...customization, whatsapp_username: e.target.value })
+                }
+                placeholder="1234567890 (with country code)"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Instagram Username</label>
+              <Input
+                value={customization.instagram_username || ""}
+                onChange={(e) =>
+                  setCustomization({ ...customization, instagram_username: e.target.value })
+                }
+                placeholder="yourusername"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Facebook Username</label>
+              <Input
+                value={customization.facebook_username || ""}
+                onChange={(e) =>
+                  setCustomization({ ...customization, facebook_username: e.target.value })
+                }
+                placeholder="yourusername"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Telegram Username</label>
+              <Input
+                value={customization.telegram_username || ""}
+                onChange={(e) =>
+                  setCustomization({ ...customization, telegram_username: e.target.value })
+                }
+                placeholder="yourusername"
+              />
+            </div>
+          </div>
+        </div>
+
         <div>
           <label className="text-sm font-medium mb-1 block">Business Description</label>
           <Textarea
@@ -148,7 +201,7 @@ const CustomizationPanel = () => {
           disabled={loading}
           className="w-full"
         >
-          {loading ? "Saving..." : "Save Customization"}
+          {loading ? "Saving..." : "Save All Configuration"}
         </Button>
       </div>
     </Card>

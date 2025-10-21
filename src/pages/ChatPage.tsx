@@ -27,23 +27,26 @@ const ChatPage = () => {
     }
   };
 
-  const getSocialLink = (platform: string) => {
+  const handleSocialClick = (platform: string) => {
+    let link = "#";
     switch (platform) {
       case "instagram":
-        return customization?.instagram_username
+        link = customization?.instagram_username
           ? `https://instagram.com/${customization.instagram_username}`
           : "https://instagram.com";
+        break;
       case "facebook":
-        return customization?.facebook_username
+        link = customization?.facebook_username
           ? `https://facebook.com/${customization.facebook_username}`
           : "https://facebook.com";
+        break;
       case "whatsapp":
-        return customization?.whatsapp_username
+        link = customization?.whatsapp_username
           ? `https://wa.me/${customization.whatsapp_username}`
           : "https://whatsapp.com";
-      default:
-        return "#";
+        break;
     }
+    window.open(link, "_blank");
   };
 
   if (!selectedChannel) {
@@ -67,27 +70,27 @@ const ChatPage = () => {
             </Button>
 
             <Button
-              onClick={() => window.open(getSocialLink("instagram"), "_blank")}
+              onClick={() => handleSocialClick("instagram")}
               className="w-full h-16 text-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 shadow-elegant"
             >
               <Instagram className="mr-2 h-6 w-6" />
-              Instagram
+              Chat on Instagram
             </Button>
 
             <Button
-              onClick={() => window.open(getSocialLink("facebook"), "_blank")}
+              onClick={() => handleSocialClick("facebook")}
               className="w-full h-16 text-lg bg-blue-600 hover:bg-blue-700 shadow-elegant"
             >
               <Facebook className="mr-2 h-6 w-6" />
-              Facebook
+              Chat on Facebook
             </Button>
 
             <Button
-              onClick={() => window.open(getSocialLink("whatsapp"), "_blank")}
+              onClick={() => handleSocialClick("whatsapp")}
               className="w-full h-16 text-lg bg-green-600 hover:bg-green-700 shadow-elegant"
             >
               <MessageCircle className="mr-2 h-6 w-6" />
-              WhatsApp
+              Chat on WhatsApp
             </Button>
           </div>
         </div>
