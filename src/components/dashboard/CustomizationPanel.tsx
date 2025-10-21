@@ -34,6 +34,13 @@ const CustomizationPanel = () => {
         .from("customizations")
         .update({
           business_name: customization.business_name,
+          business_description: customization.business_description,
+          business_industry: customization.business_industry,
+          target_audience: customization.target_audience,
+          key_services: customization.key_services,
+          business_hours: customization.business_hours,
+          assistant_personality: customization.assistant_personality,
+          special_instructions: customization.special_instructions,
           tone: customization.tone,
           greeting: customization.greeting,
           faqs: customization.faqs,
@@ -51,17 +58,65 @@ const CustomizationPanel = () => {
   };
 
   return (
-    <Card className="p-6">
-      <h3 className="text-lg font-semibold mb-4">Customization</h3>
+    <Card className="p-6 shadow-elegant hover:shadow-hover transition-all">
+      <h3 className="text-lg font-semibold mb-4">Advanced Customization</h3>
       <div className="space-y-4">
         <div>
-          <label className="text-sm font-medium mb-1 block">Business Name</label>
-          <Input
-            value={customization.business_name || ""}
+          <label className="text-sm font-medium mb-1 block">Business Description</label>
+          <Textarea
+            value={customization.business_description || ""}
             onChange={(e) =>
-              setCustomization({ ...customization, business_name: e.target.value })
+              setCustomization({ ...customization, business_description: e.target.value })
             }
-            placeholder="Your Business Name"
+            placeholder="What does your business do?"
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1 block">Target Audience</label>
+          <Textarea
+            value={customization.target_audience || ""}
+            onChange={(e) =>
+              setCustomization({ ...customization, target_audience: e.target.value })
+            }
+            placeholder="Who are your customers?"
+            rows={2}
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1 block">Key Services</label>
+          <Textarea
+            value={customization.key_services || ""}
+            onChange={(e) =>
+              setCustomization({ ...customization, key_services: e.target.value })
+            }
+            placeholder="What do you offer?"
+            rows={2}
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1 block">Assistant Personality</label>
+          <Input
+            value={customization.assistant_personality || ""}
+            onChange={(e) =>
+              setCustomization({ ...customization, assistant_personality: e.target.value })
+            }
+            placeholder="Professional, friendly, enthusiastic..."
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1 block">Special Instructions</label>
+          <Textarea
+            value={customization.special_instructions || ""}
+            onChange={(e) =>
+              setCustomization({ ...customization, special_instructions: e.target.value })
+            }
+            placeholder="Any specific rules or guidance..."
+            rows={3}
           />
         </div>
 
@@ -84,35 +139,14 @@ const CustomizationPanel = () => {
               setCustomization({ ...customization, greeting: e.target.value })
             }
             placeholder="Hi, I'm BECCA..."
-            rows={3}
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-medium mb-1 block">FAQs (JSON)</label>
-          <Textarea
-            value={
-              typeof customization.faqs === "string"
-                ? customization.faqs
-                : JSON.stringify(customization.faqs || [], null, 2)
-            }
-            onChange={(e) => {
-              try {
-                const parsed = JSON.parse(e.target.value);
-                setCustomization({ ...customization, faqs: parsed });
-              } catch {
-                setCustomization({ ...customization, faqs: e.target.value });
-              }
-            }}
-            placeholder='[{"q": "Question?", "a": "Answer"}]'
-            rows={4}
+            rows={2}
           />
         </div>
 
         <Button
           onClick={handleSave}
           disabled={loading}
-          className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
+          className="w-full"
         >
           {loading ? "Saving..." : "Save Customization"}
         </Button>

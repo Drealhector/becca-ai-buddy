@@ -30,6 +30,17 @@ const PublicHub = () => {
     }
   };
 
+  const getSocialLink = (platform: string) => {
+    switch (platform) {
+      case "telegram":
+        return customization?.telegram_username
+          ? `https://t.me/${customization.telegram_username}`
+          : "#";
+      default:
+        return "#";
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -63,24 +74,24 @@ const PublicHub = () => {
         </div>
 
         {/* Action Tiles */}
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           <Link to={`/chat/${slug}`}>
             <Button
               variant="secondary"
-              className="w-full h-16 text-lg bg-white hover:bg-white/90 text-primary shadow-elegant"
+              className="w-full h-16 text-lg bg-white hover:bg-white/90 text-primary shadow-elegant hover:shadow-hover transition-all"
             >
               <MessageSquare className="mr-2 h-6 w-6" />
-              Chat with {slug || "us"}
+              Chat with {customization?.business_name || slug || "us"}
             </Button>
           </Link>
 
           <Link to={`/call/${slug}`}>
             <Button
               variant="secondary"
-              className="w-full h-16 text-lg bg-white hover:bg-white/90 text-primary shadow-elegant"
+              className="w-full h-16 text-lg bg-white hover:bg-white/90 text-primary shadow-elegant hover:shadow-hover transition-all"
             >
               <Phone className="mr-2 h-6 w-6" />
-              Call {slug || "us"}
+              Call {customization?.business_name || slug || "us"}
             </Button>
           </Link>
         </div>
@@ -88,7 +99,7 @@ const PublicHub = () => {
         {/* Floating Bubble */}
         <Link
           to={`/call/${slug}`}
-          className="fixed bottom-6 right-6 w-16 h-16 bg-white rounded-full shadow-glow flex items-center justify-center hover:scale-110 transition-transform"
+          className="fixed bottom-6 right-6 w-16 h-16 bg-white rounded-full shadow-glow flex items-center justify-center hover:scale-110 transition-all animate-bounce"
         >
           <Mic className="h-8 w-8 text-primary" />
         </Link>

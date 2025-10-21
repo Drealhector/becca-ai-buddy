@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Instagram, Facebook, MessageCircle } from "lucide-react";
-import WebChat from "@/components/chat/WebChat";
+import WebChatWidget from "@/components/chat/WebChatWidget";
 import { supabase } from "@/integrations/supabase/client";
 
 const ChatPage = () => {
@@ -27,6 +27,25 @@ const ChatPage = () => {
     }
   };
 
+  const getSocialLink = (platform: string) => {
+    switch (platform) {
+      case "instagram":
+        return customization?.instagram_username
+          ? `https://instagram.com/${customization.instagram_username}`
+          : "https://instagram.com";
+      case "facebook":
+        return customization?.facebook_username
+          ? `https://facebook.com/${customization.facebook_username}`
+          : "https://facebook.com";
+      case "whatsapp":
+        return customization?.whatsapp_username
+          ? `https://wa.me/${customization.whatsapp_username}`
+          : "https://whatsapp.com";
+      default:
+        return "#";
+    }
+  };
+
   if (!selectedChannel) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary via-accent to-primary flex items-center justify-center p-4">
@@ -48,24 +67,24 @@ const ChatPage = () => {
             </Button>
 
             <Button
-              onClick={() => window.open("https://instagram.com", "_blank")}
-              className="w-full h-16 text-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90"
+              onClick={() => window.open(getSocialLink("instagram"), "_blank")}
+              className="w-full h-16 text-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 shadow-elegant"
             >
               <Instagram className="mr-2 h-6 w-6" />
               Instagram
             </Button>
 
             <Button
-              onClick={() => window.open("https://facebook.com", "_blank")}
-              className="w-full h-16 text-lg bg-blue-600 hover:bg-blue-700"
+              onClick={() => window.open(getSocialLink("facebook"), "_blank")}
+              className="w-full h-16 text-lg bg-blue-600 hover:bg-blue-700 shadow-elegant"
             >
               <Facebook className="mr-2 h-6 w-6" />
               Facebook
             </Button>
 
             <Button
-              onClick={() => window.open("https://whatsapp.com", "_blank")}
-              className="w-full h-16 text-lg bg-green-600 hover:bg-green-700"
+              onClick={() => window.open(getSocialLink("whatsapp"), "_blank")}
+              className="w-full h-16 text-lg bg-green-600 hover:bg-green-700 shadow-elegant"
             >
               <MessageCircle className="mr-2 h-6 w-6" />
               WhatsApp
@@ -77,7 +96,21 @@ const ChatPage = () => {
   }
 
   if (selectedChannel === "web") {
-    return <WebChat slug={slug || "default"} customization={customization} />;
+    return (
+      <>
+        <div className="min-h-screen bg-gradient-to-br from-primary via-accent to-primary p-4">
+          <div className="text-center py-20">
+            <h1 className="text-4xl font-bold text-white mb-4">
+              {customization?.business_name || "BECCA"}
+            </h1>
+            <p className="text-white/80 text-lg">
+              {customization?.greeting || "How can I help you today?"}
+            </p>
+          </div>
+        </div>
+        <WebChatWidget customization={customization} onClose={() => setSelectedChannel(null)} />
+      </>
+    );
   }
 
   return null;

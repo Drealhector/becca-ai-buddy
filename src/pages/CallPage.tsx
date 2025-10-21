@@ -98,18 +98,18 @@ const CallPage = () => {
           <Button
             onClick={handleCall}
             size="lg"
-            className="w-48 h-48 rounded-full bg-white hover:bg-white/90 text-primary shadow-glow hover:scale-105 transition-transform"
+            className="w-64 h-64 rounded-full bg-white hover:bg-white/90 text-primary shadow-glow hover:scale-110 transition-all animate-pulse"
           >
-            <Phone className="h-24 w-24" />
+            <Phone className="h-32 w-32" />
           </Button>
         ) : (
           <Button
             onClick={handleEndCall}
             size="lg"
             variant="destructive"
-            className="w-48 h-48 rounded-full shadow-glow hover:scale-105 transition-transform"
+            className="w-64 h-64 rounded-full shadow-glow hover:scale-110 transition-all"
           >
-            <PhoneOff className="h-24 w-24" />
+            <PhoneOff className="h-32 w-32" />
           </Button>
         )}
 
