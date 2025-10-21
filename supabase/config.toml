@@ -1,1 +1,16 @@
 project_id = "rexjtzpuywmytxomlpwg"
+
+[functions.chat]
+verify_jwt = false
+
+[functions.n8n-webhook]
+verify_jwt = false
+
+[functions.vapi-webhook]
+verify_jwt = false
+
+[functions.check-toggle]
+verify_jwt = false
+
+[functions.get-customizations]
+verify_jwt = false

@@ -61,6 +61,7 @@ const WebChat = ({ slug, customization }: WebChatProps) => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const userInput = input;
     setInput("");
     setLoading(true);
 
@@ -69,24 +70,87 @@ const WebChat = ({ slug, customization }: WebChatProps) => {
       await supabase.from("messages").insert({
         conversation_id: conversationId,
         role: "user",
-        content: input,
+        content: userInput,
         platform: "web",
       });
 
-      // Call OpenAI reply endpoint (placeholder - would be implemented in edge function)
-      const aiResponse = {
+      // Stream AI response
+      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+      const response = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: messages
+            .filter((m) => m.role === "user" || m.role === "ai")
+            .map((m) => ({ role: m.role === "ai" ? "assistant" : m.role, content: m.content }))
+            .concat([{ role: "user", content: userInput }]),
+          conversationId,
+        }),
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error("Failed to get AI response");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let aiContent = "";
+
+      const aiMessage = {
         role: "ai",
-        content: "I'm BECCA, your AI assistant. This is a demo response. In production, I would use the OpenAI API to generate responses based on your customizations.",
+        content: "",
         timestamp: new Date().toISOString(),
       };
+      setMessages((prev) => [...prev, aiMessage]);
 
-      setMessages((prev) => [...prev, aiResponse]);
+      let textBuffer = "";
+      let streamDone = false;
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              aiContent += content;
+              setMessages((prev) =>
+                prev.map((m, i) =>
+                  i === prev.length - 1 ? { ...m, content: aiContent } : m
+                )
+              );
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
 
       // Save AI message
       await supabase.from("messages").insert({
         conversation_id: conversationId,
         role: "ai",
-        content: aiResponse.content,
+        content: aiContent,
         platform: "web",
       });
     } catch (error) {
