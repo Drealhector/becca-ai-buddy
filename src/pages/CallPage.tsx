@@ -1,14 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Phone, PhoneOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Vapi from "@vapi-ai/web";
+import { useToast } from "@/hooks/use-toast";
 
 const CallPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { toast } = useToast();
   const [customization, setCustomization] = useState<any>(null);
   const [isInCall, setIsInCall] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const vapiRef = useRef<Vapi | null>(null);
+  const vapiPublicKey = import.meta.env.VITE_VAPI_PUBLIC_KEY || "d1db5c09-36ce-4cbe-9d2a-16b47df084c3";
 
   useEffect(() => {
     fetchCustomization();
@@ -43,24 +49,77 @@ const CallPage = () => {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleCall = () => {
-    setIsInCall(true);
-    setCallDuration(0);
+  const handleCall = async () => {
+    setIsLoading(true);
+    try {
+      // Initialize Vapi instance
+      if (!vapiRef.current) {
+        vapiRef.current = new Vapi(vapiPublicKey);
+        
+        // Set up event listeners
+        vapiRef.current.on("call-start", () => {
+          console.log("Call started");
+          setIsInCall(true);
+          setCallDuration(0);
+          setIsLoading(false);
+        });
+
+        vapiRef.current.on("call-end", () => {
+          console.log("Call ended");
+          handleEndCall();
+        });
+
+        vapiRef.current.on("error", (error) => {
+          console.error("Vapi error:", error);
+          toast({
+            title: "Call Error",
+            description: "Failed to connect. Please try again.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          setIsInCall(false);
+        });
+      }
+
+      // Get customization config from edge function
+      const { data, error } = await supabase.functions.invoke("start-vapi-call");
+      
+      if (error) throw error;
+
+      // Start the call with assistant overrides
+      await vapiRef.current.start(data.assistantId, data.assistantOverrides);
+      
+    } catch (error) {
+      console.error("Error starting call:", error);
+      toast({
+        title: "Error",
+        description: "Failed to start call. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
   };
 
   const handleEndCall = async () => {
     setIsInCall(false);
+    
+    // Stop Vapi call
+    if (vapiRef.current) {
+      vapiRef.current.stop();
+    }
+    
     // Save call history
     try {
       await supabase.from("call_history").insert({
-        type: "incoming",
-        number: "demo-call",
-        topic: "Voice call",
+        type: "outgoing",
+        number: slug || "web-call",
+        topic: "Voice call with BECCA",
         duration_minutes: Math.round(callDuration / 60),
       });
     } catch (error) {
       console.error("Error saving call:", error);
     }
+    
     setCallDuration(0);
   };
 
@@ -98,9 +157,17 @@ const CallPage = () => {
           <Button
             onClick={handleCall}
             size="lg"
-            className="w-64 h-64 rounded-full bg-white hover:bg-white/90 text-primary shadow-glow hover:scale-110 transition-all animate-pulse"
+            disabled={isLoading}
+            className="w-64 h-64 rounded-full bg-white hover:bg-white/90 text-primary shadow-glow hover:scale-110 transition-all animate-pulse disabled:opacity-50 disabled:animate-none"
           >
-            <Phone className="h-32 w-32" />
+            {isLoading ? (
+              <div className="flex flex-col items-center gap-4">
+                <Phone className="h-32 w-32 animate-pulse" />
+                <span className="text-sm">Connecting...</span>
+              </div>
+            ) : (
+              <Phone className="h-32 w-32" />
+            )}
           </Button>
         ) : (
           <Button
@@ -111,13 +178,6 @@ const CallPage = () => {
           >
             <PhoneOff className="h-32 w-32" />
           </Button>
-        )}
-
-        {/* Vapi Widget Placeholder */}
-        {customization?.vapi_widget_code && (
-          <div className="mt-8 text-white/60 text-sm">
-            Vapi widget would be embedded here
-          </div>
         )}
       </div>
     </div>
