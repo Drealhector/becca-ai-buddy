@@ -51,6 +51,7 @@ export type Database = {
           telegram_n8n_webhook_url: string | null
           updated_at: string | null
           vapi_assistant_id: string | null
+          vapi_public_key: string | null
           vapi_widget_code: string | null
           whatsapp_n8n_webhook_url: string | null
         }
@@ -63,6 +64,7 @@ export type Database = {
           telegram_n8n_webhook_url?: string | null
           updated_at?: string | null
           vapi_assistant_id?: string | null
+          vapi_public_key?: string | null
           vapi_widget_code?: string | null
           whatsapp_n8n_webhook_url?: string | null
         }
@@ -75,6 +77,7 @@ export type Database = {
           telegram_n8n_webhook_url?: string | null
           updated_at?: string | null
           vapi_assistant_id?: string | null
+          vapi_public_key?: string | null
           vapi_widget_code?: string | null
           whatsapp_n8n_webhook_url?: string | null
         }

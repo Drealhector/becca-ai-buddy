@@ -13,11 +13,12 @@ const CallPage = () => {
   const [isInCall, setIsInCall] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [vapiPublicKey, setVapiPublicKey] = useState<string | null>(null);
   const vapiRef = useRef<Vapi | null>(null);
-  const vapiPublicKey = import.meta.env.VITE_VAPI_PUBLIC_KEY;
 
   useEffect(() => {
     fetchCustomization();
+    fetchVapiKey();
   }, []);
 
   useEffect(() => {
@@ -43,6 +44,19 @@ const CallPage = () => {
     }
   };
 
+  const fetchVapiKey = async () => {
+    try {
+      const { data } = await supabase
+        .from("connections")
+        .select("vapi_public_key")
+        .limit(1)
+        .single();
+      setVapiPublicKey(data?.vapi_public_key || null);
+    } catch (error) {
+      console.error("Error fetching Vapi key:", error);
+    }
+  };
+
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -53,7 +67,7 @@ const CallPage = () => {
     if (!vapiPublicKey) {
       toast({
         title: "Configuration Error",
-        description: "Vapi public key not configured. Please add VITE_VAPI_PUBLIC_KEY to your environment.",
+        description: "Vapi public key not configured. Please go to Dashboard > Connection Status to add your Vapi Public Key.",
         variant: "destructive",
       });
       return;
