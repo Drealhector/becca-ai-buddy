@@ -21,6 +21,7 @@ const LogoCustomization = () => {
       const { data } = await supabase
         .from("customizations")
         .select("logo_url, chat_logo_url")
+        .limit(1)
         .single();
       setLogoUrl(data?.logo_url || "");
       setChatLogoUrl(data?.chat_logo_url || "");
@@ -68,38 +69,18 @@ const LogoCustomization = () => {
   const handleGenerateLogo = async () => {
     setGenerating(true);
     try {
-      const { data: customData } = await supabase
-        .from("customizations")
-        .select("business_name, business_description")
-        .single();
+      const { data, error } = await supabase.functions.invoke("generate-logo");
 
-      const prompt = `Create a professional, modern circular logo for ${customData?.business_name || "a business"}. ${customData?.business_description || ""}. Simple, clean design on transparent or white background, suitable for web use as avatar.`;
+      if (error) throw error;
+      if (!data?.imageDataUrl) throw new Error("No image generated");
 
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image-preview",
-          messages: [{ role: "user", content: prompt }],
-          modalities: ["image", "text"],
-        }),
-      });
-
-      const data = await response.json();
-      const imageDataUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-      if (imageDataUrl) {
-        // Convert base64 to blob and upload
-        const base64Response = await fetch(imageDataUrl);
-        const blob = await base64Response.blob();
-        const file = new File([blob], "generated-logo.png", { type: "image/png" });
-        
-        await handleFileUpload(file, "chat");
-        toast.success("Logo generated and uploaded!");
-      }
+      // Convert base64 to blob and upload
+      const base64Response = await fetch(data.imageDataUrl);
+      const blob = await base64Response.blob();
+      const file = new File([blob], "generated-logo.png", { type: "image/png" });
+      
+      await handleFileUpload(file, "chat");
+      toast.success("Logo generated and uploaded!");
     } catch (error) {
       console.error("Error generating logo:", error);
       toast.error("Failed to generate logo");

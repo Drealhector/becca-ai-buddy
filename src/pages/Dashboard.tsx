@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import MasterSwitch from "@/components/dashboard/MasterSwitch";
 import ChannelToggles from "@/components/dashboard/ChannelToggles";
-import ConnectionStatus from "@/components/dashboard/ConnectionStatus";
 import TranscriptsSection from "@/components/dashboard/TranscriptsSection";
 import ConversationsSection from "@/components/dashboard/ConversationsSection";
 import WalletSection from "@/components/dashboard/WalletSection";
@@ -73,10 +72,7 @@ const Dashboard = () => {
         <MasterSwitch />
 
         {/* Channel Controls */}
-        <div className="grid md:grid-cols-2 gap-8">
-          <ChannelToggles />
-          <ConnectionStatus />
-        </div>
+        <ChannelToggles />
 
         {/* Transcripts */}
         <TranscriptsSection />
