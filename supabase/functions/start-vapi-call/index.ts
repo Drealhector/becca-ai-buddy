@@ -12,9 +12,9 @@ serve(async (req) => {
   }
 
   try {
-    const VAPI_API_KEY = Deno.env.get('VAPI_API_KEY');
-    if (!VAPI_API_KEY) {
-      throw new Error('VAPI_API_KEY is not configured');
+    const VAPI_PUBLIC_KEY = Deno.env.get('VITE_VAPI_PUBLIC_KEY');
+    if (!VAPI_PUBLIC_KEY) {
+      throw new Error('VITE_VAPI_PUBLIC_KEY is not configured');
     }
 
     const supabase = createClient(
@@ -27,18 +27,16 @@ serve(async (req) => {
       .from("customizations")
       .select("*")
       .limit(1)
-      .single();
+      .maybeSingle();
 
     // Fetch assistant ID from connections
     const { data: connection } = await supabase
       .from("connections")
       .select("vapi_assistant_id")
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (!connection?.vapi_assistant_id) {
-      throw new Error('Vapi Assistant ID not configured');
-    }
+    const assistantId = connection?.vapi_assistant_id || 'default-assistant';
 
     // Build system prompt with customization
     const systemPrompt = `You are ${customization?.business_name || 'BECCA'}, an AI assistant.
@@ -60,7 +58,8 @@ Always be helpful, use the tone and personality described above.`;
 
     // Return configuration for client-side Vapi SDK
     return new Response(JSON.stringify({
-      assistantId: connection.vapi_assistant_id,
+      assistantId,
+      vapiPublicKey: VAPI_PUBLIC_KEY,
       assistantOverrides: {
         model: {
           messages: [

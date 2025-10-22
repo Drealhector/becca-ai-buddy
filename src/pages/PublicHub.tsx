@@ -19,7 +19,7 @@ const PublicHub = () => {
         .from("customizations")
         .select("*")
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setCustomization(data);

@@ -13,12 +13,10 @@ const CallPage = () => {
   const [isInCall, setIsInCall] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [vapiPublicKey, setVapiPublicKey] = useState<string | null>(null);
   const vapiRef = useRef<Vapi | null>(null);
 
   useEffect(() => {
     fetchCustomization();
-    fetchVapiKey();
   }, []);
 
   useEffect(() => {
@@ -37,23 +35,10 @@ const CallPage = () => {
         .from("customizations")
         .select("*")
         .limit(1)
-        .single();
+        .maybeSingle();
       setCustomization(data);
     } catch (error) {
       console.error("Error fetching customization:", error);
-    }
-  };
-
-  const fetchVapiKey = async () => {
-    try {
-      const { data } = await supabase
-        .from("connections")
-        .select("vapi_public_key")
-        .limit(1)
-        .single();
-      setVapiPublicKey(data?.vapi_public_key || null);
-    } catch (error) {
-      console.error("Error fetching Vapi key:", error);
     }
   };
 
@@ -64,20 +49,23 @@ const CallPage = () => {
   };
 
   const handleCall = async () => {
-    if (!vapiPublicKey) {
-      toast({
-        title: "Configuration Error",
-        description: "Vapi public key not configured. Please go to Dashboard > Connection Status to add your Vapi Public Key.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     setIsLoading(true);
     try {
+      // Get customization config and Vapi key from edge function
+      const { data, error } = await supabase.functions.invoke("start-vapi-call");
+      
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message || "Failed to start call configuration");
+      }
+
+      if (!data?.vapiPublicKey) {
+        throw new Error("Vapi configuration is missing. Please contact support.");
+      }
+
       // Initialize Vapi instance
       if (!vapiRef.current) {
-        vapiRef.current = new Vapi(vapiPublicKey);
+        vapiRef.current = new Vapi(data.vapiPublicKey);
         
         // Set up event listeners
         vapiRef.current.on("call-start", () => {
@@ -102,18 +90,6 @@ const CallPage = () => {
           setIsLoading(false);
           setIsInCall(false);
         });
-      }
-
-      // Get customization config from edge function
-      const { data, error } = await supabase.functions.invoke("start-vapi-call");
-      
-      if (error) {
-        console.error("Edge function error:", error);
-        throw new Error(error.message || "Failed to start call configuration");
-      }
-
-      if (!data?.assistantId) {
-        throw new Error("No assistant ID configured. Please add your Vapi Assistant ID in the dashboard.");
       }
 
       console.log("Starting call with config:", data);

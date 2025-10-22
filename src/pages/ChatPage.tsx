@@ -20,7 +20,7 @@ const ChatPage = () => {
         .from("customizations")
         .select("*")
         .limit(1)
-        .single();
+        .maybeSingle();
       setCustomization(data);
     } catch (error) {
       console.error("Error fetching customization:", error);
