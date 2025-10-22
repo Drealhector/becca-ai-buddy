@@ -12,6 +12,7 @@ const VoiceManagementSection = () => {
   const [customVoices, setCustomVoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [newVoiceName, setNewVoiceName] = useState("");
+  const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
 
   useEffect(() => {
     fetchVoices();
@@ -25,17 +26,51 @@ const VoiceManagementSection = () => {
       if (error) throw error;
       setVapiVoices(data?.voices || []);
 
-      // Fetch custom voices
+      // Fetch custom voices and selected voice
       const { data: customData } = await supabase
         .from("customizations")
-        .select("custom_voices")
+        .select("custom_voices, vapi_voices")
+        .limit(1)
         .single();
       setCustomVoices(Array.isArray(customData?.custom_voices) ? customData.custom_voices : []);
+      
+      // Get first vapi_voice if exists
+      const vapiVoicesData = customData?.vapi_voices;
+      if (Array.isArray(vapiVoicesData) && vapiVoicesData.length > 0) {
+        setSelectedVoice(vapiVoicesData[0] as string);
+      }
     } catch (error) {
       console.error("Error fetching voices:", error);
       toast.error("Failed to load voices");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectVoice = async (voiceId: string) => {
+    try {
+      setSelectedVoice(voiceId);
+      
+      // Save selected voice to customizations
+      const { data: customData } = await supabase
+        .from("customizations")
+        .select("id")
+        .limit(1)
+        .single();
+        
+      if (!customData) throw new Error("Customization not found");
+      
+      const { error } = await supabase
+        .from("customizations")
+        .update({ vapi_voices: [voiceId] })
+        .eq("id", customData.id);
+        
+      if (error) throw error;
+      
+      toast.success("Voice selected successfully");
+    } catch (error) {
+      console.error("Error selecting voice:", error);
+      toast.error("Failed to select voice");
     }
   };
 
@@ -99,13 +134,27 @@ const VoiceManagementSection = () => {
               vapiVoices.map((voice) => (
                 <div
                   key={voice.id}
-                  className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSelectVoice(voice.id)}
+                  className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all ${
+                    selectedVoice === voice.id 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-border hover:bg-muted/50'
+                  }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <Mic className="w-4 h-4 text-primary" />
-                    <span className="font-medium">{voice.name}</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Mic className="w-4 h-4 text-primary" />
+                      <span className="font-medium">{voice.name}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{voice.description}</p>
+                    <span className="text-xs text-muted-foreground">Provider: {voice.provider}</span>
                   </div>
-                  <span className="text-xs text-green-500 font-semibold">Functional</span>
+                  <div className="flex flex-col items-end gap-1">
+                    {selectedVoice === voice.id && (
+                      <span className="text-xs text-primary font-semibold">Selected</span>
+                    )}
+                    <span className="text-xs text-green-500 font-semibold">Functional</span>
+                  </div>
                 </div>
               ))
             ) : (

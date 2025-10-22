@@ -14,7 +14,7 @@ const CallPage = () => {
   const [callDuration, setCallDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const vapiRef = useRef<Vapi | null>(null);
-  const vapiPublicKey = import.meta.env.VITE_VAPI_PUBLIC_KEY || "d1db5c09-36ce-4cbe-9d2a-16b47df084c3";
+  const vapiPublicKey = import.meta.env.VITE_VAPI_PUBLIC_KEY;
 
   useEffect(() => {
     fetchCustomization();
@@ -50,6 +50,15 @@ const CallPage = () => {
   };
 
   const handleCall = async () => {
+    if (!vapiPublicKey) {
+      toast({
+        title: "Configuration Error",
+        description: "Vapi public key not configured. Please add VITE_VAPI_PUBLIC_KEY to your environment.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     try {
       // Initialize Vapi instance
@@ -73,7 +82,7 @@ const CallPage = () => {
           console.error("Vapi error:", error);
           toast({
             title: "Call Error",
-            description: "Failed to connect. Please try again.",
+            description: error?.message || "Failed to connect. Please try again.",
             variant: "destructive",
           });
           setIsLoading(false);
@@ -84,8 +93,17 @@ const CallPage = () => {
       // Get customization config from edge function
       const { data, error } = await supabase.functions.invoke("start-vapi-call");
       
-      if (error) throw error;
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message || "Failed to start call configuration");
+      }
 
+      if (!data?.assistantId) {
+        throw new Error("No assistant ID configured. Please add your Vapi Assistant ID in the dashboard.");
+      }
+
+      console.log("Starting call with config:", data);
+      
       // Start the call with assistant overrides
       await vapiRef.current.start(data.assistantId, data.assistantOverrides);
       
@@ -93,7 +111,7 @@ const CallPage = () => {
       console.error("Error starting call:", error);
       toast({
         title: "Error",
-        description: "Failed to start call. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to start call. Please try again.",
         variant: "destructive",
       });
       setIsLoading(false);

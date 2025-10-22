@@ -25,6 +25,7 @@ serve(async (req) => {
     const { data: customData } = await supabase
       .from('customizations')
       .select('*')
+      .limit(1)
       .single();
 
     // Build system prompt from customization
