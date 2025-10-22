@@ -26,28 +26,9 @@ const Onboarding = () => {
   });
 
   useEffect(() => {
-    checkAuth();
+    // Generate a demo user ID for development
+    setUserId("demo-user-id");
   }, []);
-
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-    setUserId(user.id);
-
-    // Check if already onboarded
-    const { data: onboarding } = await supabase
-      .from("user_onboarding")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-
-    if (onboarding?.onboarding_completed) {
-      navigate("/dashboard");
-    }
-  };
 
   const calculateStrength = (): string => {
     const filledFields = Object.values(formData).filter(val => val.trim() !== "").length;

@@ -23,31 +23,12 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-        setLoading(false);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    // No auth required - use demo user
+    setUser({ id: "demo-user" } as User);
+    setLoading(false);
+  }, []);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
     navigate("/");
   };
 
