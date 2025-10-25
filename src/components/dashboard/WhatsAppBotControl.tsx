@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { MessageSquare, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface BotConfig {
   botActive: boolean;
@@ -34,6 +33,12 @@ const WhatsAppBotControl = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
+  const WEBHOOKS = {
+    UPDATE_CONFIG: "https://hector4all.app.n8n.cloud/webhook/update-bot-config",
+    GET_CONFIG: "https://hector4all.app.n8n.cloud/webhook/get-bot-config",
+    GET_MESSAGES: "https://hector4all.app.n8n.cloud/webhook/get-recent-messages",
+  };
+
   useEffect(() => {
     fetchBotConfig();
     fetchRecentMessages();
@@ -48,21 +53,21 @@ const WhatsAppBotControl = () => {
 
   const fetchBotConfig = async () => {
     try {
-      const { data, error } = await supabase
-        .from('bot_config')
-        .select('*')
-        .eq('id', 1)
-        .single();
+      const response = await fetch(WEBHOOKS.GET_CONFIG, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
 
-      if (error) throw error;
-
-      if (data) {
-        setConfig({
-          botActive: data.bot_active ?? true,
-          personality: data.personality ?? "helpful and friendly",
-          tone: data.tone ?? "professional",
-          character: data.character ?? "polite and informative",
-        });
+      if (response.ok) {
+        const data = await response.json();
+        if (data) {
+          setConfig({
+            botActive: data.bot_active ?? data.botActive ?? true,
+            personality: data.personality ?? "helpful and friendly",
+            tone: data.tone ?? "professional",
+            character: data.character ?? "polite and informative",
+          });
+        }
       }
     } catch (error) {
       console.error("Error fetching bot config:", error);
@@ -72,14 +77,15 @@ const WhatsAppBotControl = () => {
   const fetchRecentMessages = async () => {
     setIsLoadingMessages(true);
     try {
-      const { data, error } = await supabase
-        .from('whatsapp_messages')
-        .select('*')
-        .order('timestamp', { ascending: false })
-        .limit(5);
+      const response = await fetch(WEBHOOKS.GET_MESSAGES, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
 
-      if (error) throw error;
-      setMessages(data || []);
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data || []);
+      }
     } catch (error) {
       console.error("Error fetching messages:", error);
     } finally {
@@ -90,19 +96,22 @@ const WhatsAppBotControl = () => {
   const handleSaveConfig = async () => {
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('bot_config')
-        .update({
-          bot_active: config.botActive,
+      const response = await fetch(WEBHOOKS.UPDATE_CONFIG, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          botActive: config.botActive,
           personality: config.personality,
           tone: config.tone,
           character: config.character,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', 1);
+        }),
+      });
 
-      if (error) throw error;
-      toast.success("Bot configuration saved successfully!");
+      if (response.ok) {
+        toast.success("Bot configuration saved successfully!");
+      } else {
+        throw new Error("Failed to save configuration");
+      }
     } catch (error) {
       console.error("Error saving bot config:", error);
       toast.error("Failed to save bot configuration");
