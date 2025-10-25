@@ -18,24 +18,36 @@ export type Database = {
         Row: {
           bot_active: boolean | null
           character: string | null
+          created_at: string | null
           id: number
+          is_enabled: boolean | null
+          model: string | null
           personality: string | null
+          system_prompt: string | null
           tone: string | null
           updated_at: string | null
         }
         Insert: {
           bot_active?: boolean | null
           character?: string | null
+          created_at?: string | null
           id: number
+          is_enabled?: boolean | null
+          model?: string | null
           personality?: string | null
+          system_prompt?: string | null
           tone?: string | null
           updated_at?: string | null
         }
         Update: {
           bot_active?: boolean | null
           character?: string | null
+          created_at?: string | null
           id?: number
+          is_enabled?: boolean | null
+          model?: string | null
           personality?: string | null
+          system_prompt?: string | null
           tone?: string | null
           updated_at?: string | null
         }

@@ -1,18 +1,22 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { MessageSquare, Loader2 } from "lucide-react";
+import { Power, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface BotConfig {
-  botActive: boolean;
-  personality: string;
+  id: number;
+  is_enabled: boolean;
+  system_prompt: string;
   tone: string;
   character: string;
+  model: string;
 }
 
 interface Message {
@@ -23,26 +27,30 @@ interface Message {
   timestamp: string;
 }
 
+const SYSTEM_PROMPT_TEMPLATES = [
+  "You are a friendly customer support assistant. Be helpful, patient, and professional.",
+  "You are a witty companion who loves to joke around while being helpful.",
+  "You are a professional business assistant. Be concise, formal, and efficient.",
+];
+
 const WhatsAppBotControl = () => {
   const [config, setConfig] = useState<BotConfig>({
-    botActive: true,
-    personality: "helpful and friendly",
-    tone: "professional",
-    character: "polite and informative",
+    id: 1,
+    is_enabled: true,
+    system_prompt: "",
+    tone: "",
+    character: "",
+    model: "gpt-4o-mini",
   });
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
 
   useEffect(() => {
     fetchBotConfig();
     fetchRecentMessages();
-
-    // Auto-refresh messages every 10 seconds
-    const interval = setInterval(() => {
-      fetchRecentMessages();
-    }, 10000);
-
+    const interval = setInterval(fetchRecentMessages, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -51,39 +59,39 @@ const WhatsAppBotControl = () => {
       const { data, error } = await supabase
         .from("bot_config")
         .select("*")
-        .limit(1)
+        .eq("id", 1)
         .single();
-      
+
       if (error) throw error;
-      
+
       if (data) {
         setConfig({
-          botActive: data.bot_active ?? true,
-          personality: data.personality || "helpful and friendly",
-          tone: data.tone || "professional",
-          character: data.character || "polite and informative",
+          id: data.id,
+          is_enabled: data.is_enabled ?? true,
+          system_prompt: data.system_prompt ?? "",
+          tone: data.tone ?? "",
+          character: data.character ?? "",
+          model: data.model ?? "gpt-4o-mini",
         });
       }
     } catch (error) {
-      console.error("Error fetching config:", error);
-      toast.error("Could not load bot configuration");
+      console.error("Error fetching bot config:", error);
+      toast.error("Failed to load bot configuration");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const fetchRecentMessages = async () => {
-    setIsLoadingMessages(true);
     try {
       const { data, error } = await supabase
         .from("whatsapp_messages")
         .select("*")
         .order("timestamp", { ascending: false })
         .limit(5);
-      
+
       if (error) throw error;
-      
-      if (data) {
-        setMessages(data);
-      }
+      setMessages(data || []);
     } catch (error) {
       console.error("Error fetching messages:", error);
     } finally {
@@ -91,160 +99,259 @@ const WhatsAppBotControl = () => {
     }
   };
 
-  const handleSaveConfig = async () => {
+  const handleToggleBot = async (enabled: boolean) => {
+    const newConfig = { ...config, is_enabled: enabled };
+    setConfig(newConfig);
+    await handleSaveConfig(newConfig);
+  };
+
+  const handleSaveConfig = async (configToSave = config) => {
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      // Update Supabase
+      const { error: supabaseError } = await supabase
         .from("bot_config")
         .update({
-          bot_active: config.botActive,
-          personality: config.personality,
-          tone: config.tone,
-          character: config.character,
+          is_enabled: configToSave.is_enabled,
+          system_prompt: configToSave.system_prompt,
+          tone: configToSave.tone,
+          character: configToSave.character,
+          model: configToSave.model,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", 1);
 
-      if (error) throw error;
+      if (supabaseError) throw supabaseError;
 
-      toast.success("Bot configuration saved! n8n will use these settings.");
+      // Notify n8n webhook
+      try {
+        await fetch("https://drealhector388.app.n8n.cloud/webhook/update-bot-config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            is_enabled: configToSave.is_enabled,
+            system_prompt: configToSave.system_prompt,
+            tone: configToSave.tone,
+            character: configToSave.character,
+            model: configToSave.model,
+          }),
+        });
+      } catch (webhookError) {
+        console.log("n8n webhook notification failed (non-critical):", webhookError);
+      }
+
+      toast.success("Bot configuration updated successfully");
     } catch (error) {
       console.error("Error saving config:", error);
-      toast.error("Could not save bot configuration");
+      toast.error("Failed to save bot configuration");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString();
-  };
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            WhatsApp Bot Control
-          </CardTitle>
-          <CardDescription>
-            Configure your WhatsApp bot's personality and behavior
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Bot Status</Label>
+      {/* Bot Status Toggle - Large and Prominent */}
+      <Card className="p-6 border-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Power className={`h-8 w-8 ${config.is_enabled ? "text-green-500" : "text-muted-foreground"}`} />
+            <div>
+              <h2 className="text-2xl font-bold">WhatsApp Bot</h2>
               <p className="text-sm text-muted-foreground">
-                {config.botActive ? "Active" : "Inactive"}
+                {config.is_enabled ? "Bot is currently active" : "Bot is currently disabled"}
               </p>
             </div>
-            <Switch
-              checked={config.botActive}
-              onCheckedChange={(checked) =>
-                setConfig({ ...config, botActive: checked })
-              }
+          </div>
+          <Switch
+            checked={config.is_enabled}
+            onCheckedChange={handleToggleBot}
+            disabled={isSaving}
+            className="scale-150"
+          />
+        </div>
+      </Card>
+
+      {/* Current Configuration Display */}
+      <Card className="p-6 bg-muted/50">
+        <h3 className="text-lg font-semibold mb-4">Current Configuration</h3>
+        <div className="space-y-3 text-sm">
+          <div>
+            <span className="font-medium">Status:</span>{" "}
+            <span className={config.is_enabled ? "text-green-600" : "text-muted-foreground"}>
+              {config.is_enabled ? "Enabled" : "Disabled"}
+            </span>
+          </div>
+          <div>
+            <span className="font-medium">Model:</span> {config.model}
+          </div>
+          <div>
+            <span className="font-medium">Tone:</span> {config.tone || "Not set"}
+          </div>
+          <div>
+            <span className="font-medium">Character:</span> {config.character || "Not set"}
+          </div>
+          <div>
+            <span className="font-medium">System Prompt:</span>
+            <p className="mt-1 text-muted-foreground italic">
+              {config.system_prompt ? `"${config.system_prompt.substring(0, 100)}..."` : "Not set"}
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Personality Editor */}
+      <Card className="p-6">
+        <h2 className="text-2xl font-bold mb-6">Customize Bot Personality</h2>
+        <div className="space-y-5">
+          <div>
+            <Label htmlFor="system-prompt" className="text-base font-semibold">
+              System Prompt *
+            </Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Main personality instructions for the AI
+            </p>
+            <Textarea
+              id="system-prompt"
+              value={config.system_prompt}
+              onChange={(e) => setConfig({ ...config, system_prompt: e.target.value })}
+              placeholder="You are a helpful assistant..."
+              rows={5}
+              className="resize-none"
             />
+            <div className="mt-2">
+              <p className="text-xs text-muted-foreground mb-2">Quick templates:</p>
+              <div className="flex flex-wrap gap-2">
+                {SYSTEM_PROMPT_TEMPLATES.map((template, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConfig({ ...config, system_prompt: template })}
+                    className="text-xs"
+                  >
+                    Template {idx + 1}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="personality">Personality</Label>
-            <Input
-              id="personality"
-              value={config.personality}
-              onChange={(e) =>
-                setConfig({ ...config, personality: e.target.value })
-              }
-              placeholder="e.g., friendly and enthusiastic"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tone">Tone</Label>
+          <div>
+            <Label htmlFor="tone" className="text-base font-semibold">
+              Tone *
+            </Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Conversational tone (e.g., "friendly", "professional", "casual")
+            </p>
             <Input
               id="tone"
               value={config.tone}
               onChange={(e) => setConfig({ ...config, tone: e.target.value })}
-              placeholder="e.g., casual, professional"
+              placeholder="professional"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="character">Character</Label>
+          <div>
+            <Label htmlFor="character" className="text-base font-semibold">
+              Character *
+            </Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Character traits (e.g., "helpful assistant", "witty companion")
+            </p>
             <Input
               id="character"
               value={config.character}
-              onChange={(e) =>
-                setConfig({ ...config, character: e.target.value })
-              }
-              placeholder="e.g., humorous and witty"
+              onChange={(e) => setConfig({ ...config, character: e.target.value })}
+              placeholder="helpful assistant"
             />
           </div>
 
+          <div>
+            <Label htmlFor="model" className="text-base font-semibold">
+              AI Model *
+            </Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Choose the OpenAI model to use
+            </p>
+            <Select value={config.model} onValueChange={(value) => setConfig({ ...config, model: value })}>
+              <SelectTrigger id="model">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="gpt-4o">GPT-4o (Most Capable)</SelectItem>
+                <SelectItem value="gpt-4o-mini">GPT-4o Mini (Recommended)</SelectItem>
+                <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo (Fastest)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button
-            onClick={handleSaveConfig}
-            disabled={isSaving}
+            onClick={() => handleSaveConfig()}
+            disabled={isSaving || !config.system_prompt || !config.tone || !config.character}
             className="w-full"
+            size="lg"
           >
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                Updating...
               </>
             ) : (
-              "Save Configuration"
+              "Update Bot Personality"
             )}
           </Button>
-        </CardContent>
+        </div>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Recent Messages</CardTitle>
-              <CardDescription>Last 5 WhatsApp interactions</CardDescription>
-            </div>
-            {isLoadingMessages && <Loader2 className="h-4 w-4 animate-spin" />}
+      {/* Recent Messages */}
+      <Card className="p-6">
+        <h2 className="text-2xl font-bold mb-4">Last 5 Conversations</h2>
+        {isLoadingMessages ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
           </div>
-        </CardHeader>
-        <CardContent>
-          {messages.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No messages yet
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className="border rounded-lg p-4 space-y-2"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{message.user_phone}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {message.message_text}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full ${
-                        message.sender_type === "bot"
-                          ? "bg-primary/10 text-primary"
-                          : "bg-secondary/10 text-secondary-foreground"
-                      }`}
-                    >
-                      {message.sender_type}
+        ) : messages.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">
+            No recent messages yet
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`border rounded-lg p-4 space-y-2 ${
+                  message.sender_type === "bot" ? "bg-primary/5" : "bg-muted/30"
+                }`}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className={`font-semibold text-sm ${
+                      message.sender_type === "bot" ? "text-primary" : "text-foreground"
+                    }`}>
+                      {message.sender_type === "user" ? "User" : "Bot"}
                     </span>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {message.user_phone}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {formatTimestamp(message.timestamp)}
-                  </p>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(message.timestamp).toLocaleString()}
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
+                <p className="text-sm leading-relaxed">{message.message_text}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   );
