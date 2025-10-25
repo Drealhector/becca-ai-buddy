@@ -113,7 +113,7 @@ const WhatsAppBotControl = () => {
     try {
       console.log("Saving config to:", WEBHOOKS.UPDATE_CONFIG);
       const payload = {
-        botActive: config.botActive,
+        bot_active: config.botActive,
         personality: config.personality,
         tone: config.tone,
         character: config.character,
