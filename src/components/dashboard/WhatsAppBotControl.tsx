@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { MessageSquare, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BotConfig {
   botActive: boolean;
@@ -33,12 +34,6 @@ const WhatsAppBotControl = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
-  const WEBHOOKS = {
-    UPDATE_CONFIG: "https://hector4all.app.n8n.cloud/webhook/update-bot-config",
-    GET_CONFIG: "https://hector4all.app.n8n.cloud/webhook/get-bot-config",
-    GET_MESSAGES: "https://hector4all.app.n8n.cloud/webhook/get-recent-messages",
-  };
-
   useEffect(() => {
     fetchBotConfig();
     fetchRecentMessages();
@@ -53,53 +48,41 @@ const WhatsAppBotControl = () => {
 
   const fetchBotConfig = async () => {
     try {
-      console.log("Fetching bot config from:", WEBHOOKS.GET_CONFIG);
-      const response = await fetch(WEBHOOKS.GET_CONFIG, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        mode: "cors",
-      });
-
-      console.log("Config response status:", response.status);
-      const responseText = await response.text();
-      console.log("Config response body:", responseText);
-
-      if (response.ok) {
-        const data = JSON.parse(responseText);
-        if (data) {
-          setConfig({
-            botActive: data.bot_active ?? data.botActive ?? true,
-            personality: data.personality ?? "helpful and friendly",
-            tone: data.tone ?? "professional",
-            character: data.character ?? "polite and informative",
-          });
-        }
-      } else {
-        console.error("Config fetch failed with status:", response.status);
+      const { data, error } = await supabase
+        .from("bot_config")
+        .select("*")
+        .limit(1)
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        setConfig({
+          botActive: data.bot_active ?? true,
+          personality: data.personality || "helpful and friendly",
+          tone: data.tone || "professional",
+          character: data.character || "polite and informative",
+        });
       }
     } catch (error) {
-      console.error("Error fetching bot config:", error);
-      toast.error("Cannot connect to n8n. Make sure workflow is ACTIVE.");
+      console.error("Error fetching config:", error);
+      toast.error("Could not load bot configuration");
     }
   };
 
   const fetchRecentMessages = async () => {
     setIsLoadingMessages(true);
     try {
-      console.log("Fetching messages from:", WEBHOOKS.GET_MESSAGES);
-      const response = await fetch(WEBHOOKS.GET_MESSAGES, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        mode: "cors",
-      });
-
-      console.log("Messages response status:", response.status);
-      const responseText = await response.text();
-      console.log("Messages response body:", responseText);
-
-      if (response.ok) {
-        const data = JSON.parse(responseText);
-        setMessages(data || []);
+      const { data, error } = await supabase
+        .from("whatsapp_messages")
+        .select("*")
+        .order("timestamp", { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      
+      if (data) {
+        setMessages(data);
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -111,34 +94,22 @@ const WhatsAppBotControl = () => {
   const handleSaveConfig = async () => {
     setIsSaving(true);
     try {
-      console.log("Saving config to:", WEBHOOKS.UPDATE_CONFIG);
-      const payload = {
-        bot_active: config.botActive,
-        personality: config.personality,
-        tone: config.tone,
-        character: config.character,
-      };
-      console.log("Payload:", payload);
+      const { error } = await supabase
+        .from("bot_config")
+        .update({
+          bot_active: config.botActive,
+          personality: config.personality,
+          tone: config.tone,
+          character: config.character,
+        })
+        .eq("id", 1);
 
-      const response = await fetch(WEBHOOKS.UPDATE_CONFIG, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        mode: "cors",
-        body: JSON.stringify(payload),
-      });
+      if (error) throw error;
 
-      console.log("Save response status:", response.status);
-      const responseText = await response.text();
-      console.log("Save response body:", responseText);
-
-      if (response.ok) {
-        toast.success("Bot configuration saved successfully!");
-      } else {
-        toast.error(`Failed to save: ${response.status}. Is n8n workflow ACTIVE?`);
-      }
+      toast.success("Bot configuration saved! n8n will use these settings.");
     } catch (error) {
-      console.error("Error saving bot config:", error);
-      toast.error("Cannot connect to n8n. Make sure workflow is ACTIVE.");
+      console.error("Error saving config:", error);
+      toast.error("Could not save bot configuration");
     } finally {
       setIsSaving(false);
     }
