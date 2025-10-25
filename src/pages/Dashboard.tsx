@@ -14,6 +14,7 @@ import CopyableLinks from "@/components/dashboard/CopyableLinks";
 import PhoneCallSection from "@/components/dashboard/PhoneCallSection";
 import LogoCustomization from "@/components/dashboard/LogoCustomization";
 import VoiceManagementSection from "@/components/dashboard/VoiceManagementSection";
+import WhatsAppBotControl from "@/components/dashboard/WhatsAppBotControl";
 import { Menu, LogOut } from "lucide-react";
 
 const Dashboard = () => {
@@ -73,6 +74,9 @@ const Dashboard = () => {
 
         {/* Channel Controls */}
         <ChannelToggles />
+
+        {/* WhatsApp Bot Control */}
+        <WhatsAppBotControl />
 
         {/* Transcripts */}
         <TranscriptsSection />

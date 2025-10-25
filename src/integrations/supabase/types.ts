@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      bot_config: {
+        Row: {
+          bot_active: boolean | null
+          character: string | null
+          id: number
+          personality: string | null
+          tone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bot_active?: boolean | null
+          character?: string | null
+          id: number
+          personality?: string | null
+          tone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bot_active?: boolean | null
+          character?: string | null
+          id?: number
+          personality?: string | null
+          tone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       call_history: {
         Row: {
           duration_minutes: number | null
