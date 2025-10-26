@@ -14,8 +14,6 @@ interface BotConfig {
   id: number;
   is_enabled: boolean;
   system_prompt: string;
-  tone: string;
-  character: string;
   model: string;
 }
 
@@ -38,8 +36,6 @@ const WhatsAppBotControl = () => {
     id: 1,
     is_enabled: true,
     system_prompt: "",
-    tone: "",
-    character: "",
     model: "gpt-4o-mini",
   });
   const [messages, setMessages] = useState<Message[]>([]);
@@ -69,8 +65,6 @@ const WhatsAppBotControl = () => {
           id: data.id,
           is_enabled: data.is_enabled ?? true,
           system_prompt: data.system_prompt ?? "",
-          tone: data.tone ?? "",
-          character: data.character ?? "",
           model: data.model ?? "gpt-4o-mini",
         });
       }
@@ -114,8 +108,6 @@ const WhatsAppBotControl = () => {
         .update({
           is_enabled: configToSave.is_enabled,
           system_prompt: configToSave.system_prompt,
-          tone: configToSave.tone,
-          character: configToSave.character,
           model: configToSave.model,
           updated_at: new Date().toISOString(),
         })
@@ -132,8 +124,6 @@ const WhatsAppBotControl = () => {
           body: JSON.stringify({
             is_enabled: configToSave.is_enabled,
             system_prompt: configToSave.system_prompt,
-            tone: configToSave.tone,
-            character: configToSave.character,
             model: configToSave.model,
           }),
         });
@@ -197,12 +187,6 @@ const WhatsAppBotControl = () => {
             <span className="font-medium">Model:</span> {config.model}
           </div>
           <div>
-            <span className="font-medium">Tone:</span> {config.tone || "Not set"}
-          </div>
-          <div>
-            <span className="font-medium">Character:</span> {config.character || "Not set"}
-          </div>
-          <div>
             <span className="font-medium">System Prompt:</span>
             <p className="mt-1 text-muted-foreground italic">
               {config.system_prompt ? `"${config.system_prompt.substring(0, 100)}..."` : "Not set"}
@@ -220,14 +204,14 @@ const WhatsAppBotControl = () => {
               System Prompt *
             </Label>
             <p className="text-sm text-muted-foreground mb-2">
-              Main personality instructions for the AI
+              Main personality instructions for the AI - describe the tone, character, and behavior
             </p>
             <Textarea
               id="system-prompt"
               value={config.system_prompt}
               onChange={(e) => setConfig({ ...config, system_prompt: e.target.value })}
-              placeholder="You are a helpful assistant..."
-              rows={5}
+              placeholder="You are a helpful, friendly assistant..."
+              rows={6}
               className="resize-none"
             />
             <div className="mt-2">
@@ -246,36 +230,6 @@ const WhatsAppBotControl = () => {
                 ))}
               </div>
             </div>
-          </div>
-
-          <div>
-            <Label htmlFor="tone" className="text-base font-semibold">
-              Tone *
-            </Label>
-            <p className="text-sm text-muted-foreground mb-2">
-              Conversational tone (e.g., "friendly", "professional", "casual")
-            </p>
-            <Input
-              id="tone"
-              value={config.tone}
-              onChange={(e) => setConfig({ ...config, tone: e.target.value })}
-              placeholder="professional"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="character" className="text-base font-semibold">
-              Character *
-            </Label>
-            <p className="text-sm text-muted-foreground mb-2">
-              Character traits (e.g., "helpful assistant", "witty companion")
-            </p>
-            <Input
-              id="character"
-              value={config.character}
-              onChange={(e) => setConfig({ ...config, character: e.target.value })}
-              placeholder="helpful assistant"
-            />
           </div>
 
           <div>
@@ -299,7 +253,7 @@ const WhatsAppBotControl = () => {
 
           <Button
             onClick={() => handleSaveConfig()}
-            disabled={isSaving || !config.system_prompt || !config.tone || !config.character}
+            disabled={isSaving || !config.system_prompt}
             className="w-full"
             size="lg"
           >
