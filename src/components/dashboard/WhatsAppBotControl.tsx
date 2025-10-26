@@ -126,7 +126,7 @@ const WhatsAppBotControl = () => {
       // Notify n8n webhook
       try {
         console.log("🔔 Calling n8n webhook to update bot config...", configToSave);
-        const n8nResponse = await fetch("https://drealhector388.app.n8n.cloud/webhook/update-bot-config", {
+        const n8nResponse = await fetch("https://drealhector455.app.n8n.cloud/webhook/update-bot-config", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
