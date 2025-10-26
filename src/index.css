@@ -14,7 +14,7 @@ All colors MUST be HSL.
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 264 83% 57%;
+    --primary: 264 163 70% 45%%;163 70% 45%
     --primary-foreground: 0 0% 100%;
     --primary-glow: 264 83% 67%;
     --secondary: 210 40% 96.1%;
@@ -119,4 +119,23 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+
+:root {
+  --primary: 163 70% 45%;
+  --primary-glow: 163 70% 65%;
+  --ring: 163 70% 45%;
+    --gradient-primary: linear-gradient(135deg, hsl(163 70% 45%), hsl(163 70% 65%));
+  --shadow-elegant: 0 10px 40px -10px hsl(163 70% 45% / 0.3);
+  --shadow-glow: 0 0 8px hsl(163 70% 65% / 0.5);
+  --shadow-depth: 0 20px 25px -15px hsl(163 70% 45% / 0.4), 0 10px 20px -10px hsl(163 70% 45% / 0.2);
+  --shadow-hover: 0 30px 20px -20px hsl(163 70% 45% / 0.5);
+  --shadow-inner: inset 0 2px 4px 0 hsl(163 70% 45% / 0.1);
+
+}
+
+.dark {
+  --primary: 163 70% 45%;
+  --ring: 163 70% 45%;
+}
 }
