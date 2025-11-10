@@ -15,7 +15,7 @@ import LogoCustomization from "@/components/dashboard/LogoCustomization";
 import VoiceManagementSection from "@/components/dashboard/VoiceManagementSection";
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
 import { Menu, LogOut, Phone, Link as LinkIcon, Settings, MessageSquare, History, Mic } from "lucide-react";
-import beccaLogo from "@/assets/becca-logo.png";
+
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -82,9 +82,9 @@ const Dashboard = () => {
             <Button variant="ghost" size="icon" onClick={() => setShowNav(!showNav)}>
               <Menu className="h-5 w-5" />
             </Button>
-            <img src={beccaLogo} alt="BECCA" className="w-8 h-8" />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              ECCA Dashboard
+            <h1 className="text-2xl font-bold">
+              <span className="text-4xl font-extrabold bg-gradient-to-br from-primary via-accent to-primary bg-clip-text text-transparent drop-shadow-lg">B</span>
+              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">ECCA Dashboard</span>
             </h1>
           </div>
           <div className="flex items-center gap-4">

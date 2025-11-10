@@ -11,6 +11,7 @@ import Billing from "./pages/Billing";
 import PublicHub from "./pages/PublicHub";
 import ChatPage from "./pages/ChatPage";
 import CallPage from "./pages/CallPage";
+import ProductPage from "./pages/ProductPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/:slug" element={<PublicHub />} />
           <Route path="/chat/:slug" element={<ChatPage />} />
           <Route path="/call/:slug" element={<CallPage />} />
+          <Route path="/product/:slug" element={<ProductPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
