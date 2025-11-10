@@ -4,9 +4,13 @@ import { Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 const links = [
-  { label: "Public Hub", path: "/hector/becca" },
+  { label: "Public Hub", path: "/hector" },
   { label: "Call Page", path: "/call/hector" },
   { label: "Chat Page", path: "/chat/hector" },
+  { label: "WhatsApp", path: "/whatsapp/hector" },
+  { label: "Instagram Page", path: "/instagram/hector" },
+  { label: "Facebook Page", path: "/facebook/hector" },
+  { label: "Telegram", path: "/telegram/hector" },
 ];
 
 const CopyableLinks = () => {

@@ -94,91 +94,40 @@ const LogoCustomization = () => {
     <Card className="p-6 shadow-elegant hover:shadow-hover transition-all">
       <div className="flex items-center gap-2 mb-6">
         <ImageIcon className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-semibold">Logo & Branding</h3>
+        <h3 className="text-lg font-semibold">Hub Logo</h3>
       </div>
 
-      <div className="space-y-6">
-        <div>
-          <Label>Hub Logo (for Public Hub page)</Label>
-          <div className="mt-2 flex items-center gap-4">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], "hub")}
-              className="hidden"
-              id="hub-logo-upload"
-            />
-            <label htmlFor="hub-logo-upload">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={uploading === "hub"}
-                className="gap-2 cursor-pointer"
-                asChild
-              >
-                <span>
-                  {uploading === "hub" ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Upload className="w-4 h-4" />
-                  )}
-                  {uploading === "hub" ? "Uploading..." : "Upload Logo"}
-                </span>
-              </Button>
-            </label>
-            {logoUrl && (
-              <img src={logoUrl} alt="Hub Logo" className="w-16 h-16 object-cover rounded-lg border" />
-            )}
-          </div>
-        </div>
-
-        <div>
-          <Label>Chat Widget Logo</Label>
-          <div className="mt-2 space-y-2">
-            <div className="flex items-center gap-4">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], "chat")}
-                className="hidden"
-                id="chat-logo-upload"
-              />
-              <label htmlFor="chat-logo-upload">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={uploading === "chat" || generating}
-                  className="gap-2 cursor-pointer"
-                  asChild
-                >
-                  <span>
-                    {uploading === "chat" ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Upload className="w-4 h-4" />
-                    )}
-                    {uploading === "chat" ? "Uploading..." : "Upload Logo"}
-                  </span>
-                </Button>
-              </label>
-              {chatLogoUrl && (
-                <img src={chatLogoUrl} alt="Chat Logo" className="w-16 h-16 object-cover rounded-lg border" />
-              )}
-            </div>
+      <div>
+        <Label>Hub Logo (for Public Hub page)</Label>
+        <div className="mt-2 flex items-center gap-4">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], "hub")}
+            className="hidden"
+            id="hub-logo-upload"
+          />
+          <label htmlFor="hub-logo-upload">
             <Button
+              type="button"
               variant="outline"
-              onClick={handleGenerateLogo}
-              disabled={generating || uploading === "chat"}
-              className="w-full gap-2"
+              disabled={uploading === "hub"}
+              className="gap-2 cursor-pointer"
+              asChild
             >
-              {generating ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              {generating ? "Generating..." : "Generate with AI"}
+              <span>
+                {uploading === "hub" ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {uploading === "hub" ? "Uploading..." : "Upload Logo"}
+              </span>
             </Button>
-          </div>
+          </label>
+          {logoUrl && (
+            <img src={logoUrl} alt="Hub Logo" className="w-16 h-16 object-cover rounded-lg border" />
+          )}
         </div>
       </div>
     </Card>

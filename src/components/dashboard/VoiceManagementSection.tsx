@@ -165,7 +165,7 @@ const VoiceManagementSection = () => {
 
         {/* Custom Voices */}
         <div>
-          <Label className="text-sm font-semibold mb-2 block">Custom Voices (Preview Only)</Label>
+          <Label className="text-sm font-semibold mb-2 block">Custom Voices</Label>
           <div className="space-y-2 max-h-40 overflow-y-auto mb-4">
             {customVoices.map((voice) => (
               <div
@@ -176,7 +176,6 @@ const VoiceManagementSection = () => {
                   <Upload className="w-4 h-4 text-muted-foreground" />
                   <span className="font-medium">{voice.name}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">Preview</span>
               </div>
             ))}
           </div>
@@ -199,11 +198,8 @@ const VoiceManagementSection = () => {
               }}
             >
               <Upload className="w-4 h-4" />
-              Upload Voice (Preview Only)
+              Upload Custom Voice
             </Button>
-            <p className="text-xs text-muted-foreground">
-              Custom voices are for preview only. Vapi voices are fully functional.
-            </p>
           </div>
         </div>
       </div>

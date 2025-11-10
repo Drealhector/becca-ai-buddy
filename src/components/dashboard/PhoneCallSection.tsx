@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Phone, PhoneIncoming, PhoneOutgoing } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -13,6 +13,12 @@ const PhoneCallSection = () => {
   const [showMakeCall, setShowMakeCall] = useState(false);
   const [callTopic, setCallTopic] = useState("");
   const [callNumber, setCallNumber] = useState("");
+  const [isInCall, setIsInCall] = useState(false);
+  const [callStatus, setCallStatus] = useState<"calling" | "connected" | null>(null);
+  const [callDuration, setCallDuration] = useState(0);
+  const [callStartTime, setCallStartTime] = useState<Date | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCallHistory();
@@ -37,6 +43,18 @@ const PhoneCallSection = () => {
     };
   }, []);
 
+  // Call timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isInCall && callStatus === "connected" && callStartTime) {
+      interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - callStartTime.getTime()) / 1000);
+        setCallDuration(elapsed);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isInCall, callStatus, callStartTime]);
+
   const fetchCallHistory = async () => {
     try {
       const { data } = await supabase
@@ -51,50 +69,112 @@ const PhoneCallSection = () => {
     }
   };
 
+  const formatCallDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   const handleMakeCall = async () => {
     if (!callTopic || !callNumber) {
       toast.error("Please enter both topic and number");
       return;
     }
 
-    toast.success(`Call queued with topic: ${callTopic}`);
-    
-    // Show notification
-    setTimeout(() => {
-      toast.info(`BECCA Assistant calling ${callNumber}`, {
-        description: "Ringing...",
-        duration: 4000,
-      });
-      
-      setTimeout(() => {
-        toast.success("Connected", {
-          description: "Call in progress...",
-        });
-      }, 4000);
-    }, 1000);
+    setIsInCall(true);
+    setCallStatus("calling");
+    setShowMakeCall(false);
 
-    // Save to history (mock)
+    // Simulate ringing
+    setTimeout(() => {
+      setCallStatus("connected");
+      setCallStartTime(new Date());
+    }, 3000);
+  };
+
+  const handleEndCall = async () => {
+    const finalDuration = Math.floor(callDuration / 60); // Convert to minutes
+    
     try {
       await supabase.from("call_history").insert({
         type: "outgoing",
         number: callNumber,
         topic: callTopic,
-        duration_minutes: 0,
+        duration_minutes: finalDuration,
       });
+      
+      toast.success("Call ended");
     } catch (error) {
       console.error("Error saving call:", error);
     }
 
-    setShowMakeCall(false);
+    setIsInCall(false);
+    setCallStatus(null);
+    setCallDuration(0);
+    setCallStartTime(null);
     setCallTopic("");
     setCallNumber("");
+  };
+
+  const handleLongPressStart = (callId: string) => {
+    const timer = setTimeout(() => {
+      setSelectedCallId(callId);
+    }, 800);
+    setLongPressTimer(timer);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleDeleteCall = async (callId: string) => {
+    try {
+      await supabase.from("call_history").delete().eq("id", callId);
+      toast.success("Call deleted");
+      setSelectedCallId(null);
+    } catch (error) {
+      console.error("Error deleting call:", error);
+      toast.error("Failed to delete call");
+    }
   };
 
   const incomingCalls = callHistory.filter((call) => call.type === "incoming");
   const outgoingCalls = callHistory.filter((call) => call.type === "outgoing");
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 relative">
+      {/* Call Widget Overlay */}
+      {isInCall && (
+        <div className="absolute inset-0 z-10 bg-gradient-to-b from-card to-background/95 backdrop-blur-lg rounded-lg flex flex-col items-center justify-center p-8">
+          <div className="bg-primary/10 rounded-full p-20 mb-8 shadow-glow">
+            <Phone className="h-24 w-24 text-primary" />
+          </div>
+          
+          <h2 className="text-3xl font-bold mb-2">{callNumber}</h2>
+          
+          {callStatus === "calling" ? (
+            <p className="text-xl text-muted-foreground mb-8 animate-pulse">Calling...</p>
+          ) : (
+            <>
+              <p className="text-xl text-green-500 mb-4">Connected</p>
+              <p className="text-4xl font-mono font-bold mb-8">{formatCallDuration(callDuration)}</p>
+            </>
+          )}
+
+          <Button
+            size="lg"
+            variant="destructive"
+            className="rounded-full w-20 h-20 shadow-elegant hover:shadow-hover"
+            onClick={handleEndCall}
+          >
+            <PhoneOff className="h-8 w-8" />
+          </Button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-full bg-primary/10">
@@ -152,8 +232,25 @@ const PhoneCallSection = () => {
               incomingCalls.map((call) => (
                 <div
                   key={call.id}
-                  className="p-3 border border-border rounded-lg hover:bg-muted/50"
+                  className={`p-3 border rounded-lg hover:bg-muted/50 transition-all relative ${
+                    selectedCallId === call.id ? "border-destructive" : "border-border"
+                  }`}
+                  onMouseDown={() => handleLongPressStart(call.id)}
+                  onMouseUp={handleLongPressEnd}
+                  onMouseLeave={handleLongPressEnd}
+                  onTouchStart={() => handleLongPressStart(call.id)}
+                  onTouchEnd={handleLongPressEnd}
                 >
+                  {selectedCallId === call.id && (
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-2 right-2 h-6 w-6"
+                      onClick={() => handleDeleteCall(call.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-medium text-sm">{call.number}</span>
                     <Badge variant="secondary">
@@ -185,8 +282,25 @@ const PhoneCallSection = () => {
               outgoingCalls.map((call) => (
                 <div
                   key={call.id}
-                  className="p-3 border border-border rounded-lg hover:bg-muted/50"
+                  className={`p-3 border rounded-lg hover:bg-muted/50 transition-all relative ${
+                    selectedCallId === call.id ? "border-destructive" : "border-border"
+                  }`}
+                  onMouseDown={() => handleLongPressStart(call.id)}
+                  onMouseUp={handleLongPressEnd}
+                  onMouseLeave={handleLongPressEnd}
+                  onTouchStart={() => handleLongPressStart(call.id)}
+                  onTouchEnd={handleLongPressEnd}
                 >
+                  {selectedCallId === call.id && (
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-2 right-2 h-6 w-6"
+                      onClick={() => handleDeleteCall(call.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-medium text-sm">{call.number}</span>
                     <Badge variant="secondary">
