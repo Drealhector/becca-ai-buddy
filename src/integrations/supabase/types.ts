@@ -53,6 +53,24 @@ export type Database = {
         }
         Relationships: []
       }
+      bot_personality: {
+        Row: {
+          id: number
+          personality_text: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: number
+          personality_text: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: number
+          personality_text?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       call_history: {
         Row: {
           duration_minutes: number | null

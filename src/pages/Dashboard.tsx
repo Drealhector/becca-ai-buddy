@@ -14,6 +14,7 @@ import CopyableLinks from "@/components/dashboard/CopyableLinks";
 import PhoneCallSection from "@/components/dashboard/PhoneCallSection";
 import LogoCustomization from "@/components/dashboard/LogoCustomization";
 import VoiceManagementSection from "@/components/dashboard/VoiceManagementSection";
+import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
 import { Menu, LogOut } from "lucide-react";
 
 const Dashboard = () => {
@@ -91,6 +92,9 @@ const Dashboard = () => {
 
         {/* Customization */}
         <CustomizationPanel />
+
+        {/* AI Personality */}
+        <AIPersonalitySection />
 
         {/* Copyable Links */}
         <CopyableLinks />
