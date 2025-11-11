@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,20 @@ const TalkToUs = () => {
     callVolume: "",
     beccaDescription: "",
   });
+
+  useEffect(() => {
+    // Load VAPI widget script
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/@vapi-ai/client-sdk-react/dist/embed/widget.umd.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,35 +205,11 @@ How they want BECCA to work: ${formData.beccaDescription}
               <h2 className="text-2xl font-bold text-slate-900 mb-4 text-center">
                 CHAT WITH BECCA
               </h2>
-              <div className="flex-1 min-h-[600px]">
-                <vapi-widget
-                  public-key="208b6005-0953-425b-a478-2748d49d884c"
-                  assistant-id="b09cc3ec-1180-4b2a-a6c8-49f80bc10da8"
-                  mode="chat"
-                  theme="dark"
-                  base-bg-color="#000000"
-                  accent-color="#14B8A6"
-                  cta-button-color="#000000"
-                  cta-button-text-color="#ffffff"
-                  border-radius="large"
-                  size="full"
-                  position="bottom-right"
-                  title="CHAT WITH BECCA"
-                  start-button-text="Start"
-                  end-button-text="End Call"
-                  chat-first-message="Hey, How can I help you today?"
-                  chat-placeholder="Type your message..."
-                  voice-show-transcript="true"
-                  consent-required="false"
-                ></vapi-widget>
-              </div>
+              <div className="flex-1 min-h-[600px]" id="vapi-widget-container"></div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* VAPI Widget Script */}
-      <script src="https://unpkg.com/@vapi-ai/client-sdk-react/dist/embed/widget.umd.js" async type="text/javascript"></script>
     </div>
   );
 };
