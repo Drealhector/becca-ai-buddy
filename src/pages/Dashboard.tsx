@@ -14,7 +14,8 @@ import PhoneCallSection from "@/components/dashboard/PhoneCallSection";
 import LogoCustomization from "@/components/dashboard/LogoCustomization";
 import VoiceManagementSection from "@/components/dashboard/VoiceManagementSection";
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
-import { Menu, LogOut, Phone, Link as LinkIcon, Settings, MessageSquare, History, Mic } from "lucide-react";
+import { Menu, LogOut, Phone, Link as LinkIcon, Settings, MessageSquare, History, Mic, Trash2 } from "lucide-react";
+import bLogo from "@/assets/b-logo.png";
 
 
 const Dashboard = () => {
@@ -57,7 +58,6 @@ const Dashboard = () => {
   const sections = [
     { id: "master-switch", label: "Master Switch", icon: Settings },
     { id: "channels", label: "Channels", icon: MessageSquare },
-    { id: "transcripts", label: "Transcripts", icon: History },
     { id: "conversations", label: "Conversations", icon: MessageSquare },
     { id: "logo-voice", label: "Logo & Voice", icon: Mic },
     { id: "ai-personality", label: "AI Personality", icon: MessageSquare },
@@ -82,9 +82,9 @@ const Dashboard = () => {
             <Button variant="ghost" size="icon" onClick={() => setShowNav(!showNav)}>
               <Menu className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">
-              <span className="text-4xl font-extrabold bg-gradient-to-br from-primary via-accent to-primary bg-clip-text text-transparent drop-shadow-lg">B</span>
-              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">ECCA Dashboard</span>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <img src={bLogo} alt="B" className="h-8 w-8" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
+              <span className="text-white bg-gradient-to-r from-slate-200 to-slate-400 bg-clip-text text-transparent font-bold">ECCA Dashboard</span>
             </h1>
           </div>
           <div className="flex items-center gap-4">
@@ -127,7 +127,7 @@ const Dashboard = () => {
                   Connect Number
                 </Button>
                 
-                {showConnectNumber && (
+                {showConnectNumber && !isConnected && (
                   <div className="pl-6 space-y-2">
                     <div className="flex gap-2">
                       <Input
@@ -139,9 +139,28 @@ const Dashboard = () => {
                         Connect
                       </Button>
                     </div>
-                    {isConnected && (
-                      <p className="text-sm text-green-500">✓ Connected to {phoneNumber}</p>
-                    )}
+                    <p className="text-xs text-muted-foreground">One number per business</p>
+                  </div>
+                )}
+                
+                {isConnected && (
+                  <div className="pl-6 space-y-2">
+                    <div className="flex items-center justify-between p-2 bg-green-500/10 border border-green-500/20 rounded">
+                      <span className="text-sm text-green-500">Active: {phoneNumber}</span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-destructive hover:text-destructive"
+                        onClick={() => {
+                          setIsConnected(false);
+                          setPhoneNumber("");
+                          toast.success("Number disconnected");
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">One number per business</p>
                   </div>
                 )}
 
@@ -183,11 +202,6 @@ const Dashboard = () => {
         {/* Channel Controls */}
         <div id="channels">
           <ChannelToggles />
-        </div>
-
-        {/* Transcripts */}
-        <div id="transcripts">
-          <TranscriptsSection />
         </div>
 
         {/* Conversations */}
