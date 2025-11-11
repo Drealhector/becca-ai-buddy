@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import beccaLogo from "@/assets/becca-b-logo.png";
 import { ArrowLeft } from "lucide-react";
 
@@ -68,19 +69,18 @@ const TalkToUs = () => {
     setLoading(true);
 
     try {
-      const emailContent = `
-New BECCA Inquiry
+      const { data, error } = await supabase.functions.invoke('send-contact-email', {
+        body: {
+          fullName: formData.fullName,
+          email: formData.email,
+          phoneNumber: `${formData.countryCode}${formData.phoneNumber}`,
+          role: formData.role,
+          callVolume: formData.callVolume,
+          customFunction: formData.customFunction,
+        }
+      });
 
-Full Name: ${formData.fullName}
-Email: ${formData.email}
-Phone Number: ${formData.countryCode}${formData.phoneNumber}
-Role: ${formData.role}
-Number of Support Calls (Monthly): ${formData.callVolume}
-Custom Function for Becca to Automate: ${formData.customFunction}
-      `.trim();
-
-      // This would need a proper email sending edge function
-      console.log("Form data to send:", emailContent);
+      if (error) throw error;
 
       toast({
         title: "Thank you!",
