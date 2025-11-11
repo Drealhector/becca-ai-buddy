@@ -91,9 +91,7 @@ const TalkToUs = () => {
         body: JSON.stringify(submissionData)
       });
 
-      const result = await response.json();
-
-      if (result.success || response.ok) {
+      if (response.ok) {
         setShowSuccess(true);
         
         // Reset form
@@ -336,7 +334,7 @@ const TalkToUs = () => {
                   {["CXO", "VP", "Director", "Other"].map((role) => (
                     <div key={role} className="flex items-center space-x-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
                       <RadioGroupItem value={role} id={`role-${role}`} />
-                      <Label htmlFor={`role-${role}`} className="cursor-pointer flex-1 text-sm">
+                      <Label htmlFor={`role-${role}`} className="cursor-pointer flex-1 text-sm text-slate-900">
                         {role}
                       </Label>
                     </div>
@@ -354,10 +352,10 @@ const TalkToUs = () => {
                   className="space-y-2"
                   required
                 >
-                  {["<50,000", "50,001-100,000", "100,001-500,000", "500,001-1,000,000", "1,000,000"].map((range) => (
+                  {["<50,000", "50,001-100,000", "100,001-500,000", "500,001-1,000,000", ">1,000,000"].map((range) => (
                     <div key={range} className="flex items-center space-x-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
                       <RadioGroupItem value={range} id={`calls-${range}`} />
-                      <Label htmlFor={`calls-${range}`} className="cursor-pointer flex-1 text-sm">
+                      <Label htmlFor={`calls-${range}`} className="cursor-pointer flex-1 text-sm text-slate-900">
                         {range}
                       </Label>
                     </div>
@@ -367,13 +365,13 @@ const TalkToUs = () => {
 
               <div>
                 <Label htmlFor="customFunction" className="text-sm font-medium text-slate-900">
-                  Custom Function for Becca to Automate (Optional)
+                  Custom Function for Becca to Automate
                 </Label>
                 <Textarea
                   id="customFunction"
                   value={formData.customFunction}
                   onChange={(e) => setFormData({ ...formData, customFunction: e.target.value })}
-                  placeholder="e.g., Schedule meetings, Send follow-up emails"
+                  placeholder="what you need automated in your business"
                   rows={5}
                   className="mt-1.5 border-slate-300 focus:border-slate-400 resize-none"
                 />
