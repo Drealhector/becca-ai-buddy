@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -22,6 +23,7 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
   const [salesInstructions, setSalesInstructions] = useState("");
   const [linkSlug, setLinkSlug] = useState("");
   const [price, setPrice] = useState("");
+  const [currency, setCurrency] = useState("USD");
   const [category, setCategory] = useState("");
   const [features, setFeatures] = useState("");
   const [stock, setStock] = useState("");
@@ -57,6 +59,9 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
         }]);
         setCurrentMediaLabel("");
         setCurrentMediaDescription("");
+        // Reset file input
+        const input = document.getElementById('media') as HTMLInputElement;
+        if (input) input.value = "";
       };
       reader.readAsDataURL(file);
     } else {
@@ -100,6 +105,7 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
           image_url: publicUrl,
           link_slug: linkSlug.toLowerCase().replace(/\s+/g, '-'),
           price: price ? parseFloat(price) : null,
+          currency,
           category: category || null,
           features: features ? features.split(',').map(f => f.trim()) : null,
           stock: stock ? parseInt(stock) : 0
@@ -160,6 +166,7 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
       setSalesInstructions("");
       setLinkSlug("");
       setPrice("");
+      setCurrency("USD");
       setCategory("");
       setFeatures("");
       setStock("");
@@ -209,8 +216,8 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
               <Label htmlFor="price">Price</Label>
               <Input
                 id="price"
@@ -222,15 +229,31 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
               />
             </div>
             <div>
-              <Label htmlFor="stock">Stock</Label>
-              <Input
-                id="stock"
-                type="number"
-                value={stock}
-                onChange={(e) => setStock(e.target.value)}
-                placeholder="0"
-              />
+              <Label htmlFor="currency">Currency</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger id="currency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="NGN">Naira (₦)</SelectItem>
+                  <SelectItem value="GHS">Cedis (₵)</SelectItem>
+                  <SelectItem value="GBP">Pounds (£)</SelectItem>
+                  <SelectItem value="EUR">Euro (€)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="stock">Stock</Label>
+            <Input
+              id="stock"
+              type="number"
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              placeholder="0"
+            />
           </div>
 
           <div>
