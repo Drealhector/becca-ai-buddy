@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import bLogo from "@/assets/b-logo.png";
+import beccaLogo from "@/assets/becca-b-logo.png";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -14,7 +14,7 @@ const Landing = () => {
       {/* Header */}
       <header className="relative z-10 container mx-auto px-4 py-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src={bLogo} alt="B" className="h-10 w-10 drop-shadow-2xl" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+          <img src={beccaLogo} alt="B" className="h-10 w-10 drop-shadow-lg" />
           <span className="text-white text-2xl font-bold">ECCA</span>
         </div>
         <div className="flex items-center gap-4">
@@ -36,13 +36,22 @@ const Landing = () => {
 
       {/* Hero Content */}
       <div className="relative z-10 container mx-auto px-4 py-20 text-center max-w-5xl">
+        <div className="mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
+            <span className="text-white text-sm">BECCA RAISES $61M SERIES A</span>
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+
         <h1 className="text-6xl md:text-7xl font-bold text-white mb-8 leading-tight">
-          AI that talks and acts like a human.<br />
-          Handles millions of calls and chats.
+          AI that talks like a human.<br />
+          Handles millions of calls.
         </h1>
         
         <p className="text-xl md:text-2xl text-white/90 mb-12">
-          AI brain for business support
+          AI agents for enterprise support
         </p>
 
         <Button

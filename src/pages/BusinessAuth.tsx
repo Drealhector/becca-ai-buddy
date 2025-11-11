@@ -93,7 +93,7 @@ const BusinessAuth = () => {
 
               <div>
                 <Label htmlFor="businessKey" className="text-white text-sm mb-2 block">
-                  Business Key
+                  Password
                 </Label>
                 <Input
                   id="businessKey"
