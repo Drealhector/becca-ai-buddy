@@ -68,6 +68,17 @@ const TalkToUs = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate radio buttons manually
+    if (!formData.role) {
+      alert('Please select your role');
+      return;
+    }
+    if (!formData.callVolume) {
+      alert('Please select number of support calls');
+      return;
+    }
+    
     setLoading(true);
     setShowSuccess(false);
     setShowError(false);
