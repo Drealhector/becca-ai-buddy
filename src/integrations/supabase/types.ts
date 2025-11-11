@@ -109,6 +109,30 @@ export type Database = {
         }
         Relationships: []
       }
+      business_keys: {
+        Row: {
+          business_key: string
+          business_name: string
+          created_at: string
+          id: string
+          is_active: boolean
+        }
+        Insert: {
+          business_key: string
+          business_name: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+        }
+        Update: {
+          business_key?: string
+          business_name?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+        }
+        Relationships: []
+      }
       call_history: {
         Row: {
           duration_minutes: number | null
@@ -545,6 +569,7 @@ export type Database = {
       }
       user_onboarding: {
         Row: {
+          business_key: string | null
           completed_at: string | null
           created_at: string | null
           id: string
@@ -553,6 +578,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          business_key?: string | null
           completed_at?: string | null
           created_at?: string | null
           id?: string
@@ -561,6 +587,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          business_key?: string | null
           completed_at?: string | null
           created_at?: string | null
           id?: string
@@ -568,7 +595,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_onboarding_business_key_fkey"
+            columns: ["business_key"]
+            isOneToOne: false
+            referencedRelation: "business_keys"
+            referencedColumns: ["business_key"]
+          },
+        ]
       }
       wallet: {
         Row: {
