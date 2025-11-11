@@ -1,46 +1,86 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Plus, Upload, X } from "lucide-react";
+import { Upload, X, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface MediaItem {
-  file: File;
+  id?: string;
+  file?: File;
   preview: string;
   label: string;
   description: string;
+  media_url?: string;
 }
 
-export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => void }) => {
-  const [open, setOpen] = useState(false);
+interface EditProductDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  product: any;
+  onProductUpdated: () => void;
+}
+
+export const EditProductDialog = ({ open, onOpenChange, product, onProductUpdated }: EditProductDialogProps) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [salesInstructions, setSalesInstructions] = useState("");
-  const [linkSlug, setLinkSlug] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
   const [features, setFeatures] = useState("");
   const [stock, setStock] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [currentMediaLabel, setCurrentMediaLabel] = useState("");
   const [currentMediaDescription, setCurrentMediaDescription] = useState("");
   const [loading, setLoading] = useState(false);
+  const [agentId, setAgentId] = useState("");
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  useEffect(() => {
+    if (product) {
+      setName(product.name || "");
+      setDescription(product.description || "");
+      setSalesInstructions(product.sales_instructions || "");
+      setPrice(product.price?.toString() || "");
+      setCategory(product.category || "");
+      setFeatures(product.features?.join(', ') || "");
+      setStock(product.stock?.toString() || "");
+      
+      // Fetch agent and media
+      fetchProductData();
+    }
+  }, [product]);
+
+  const fetchProductData = async () => {
+    if (!product?.id) return;
+
+    // Fetch agent
+    const { data: agentData } = await supabase
+      .from('ai_agents')
+      .select('*')
+      .eq('product_id', product.id)
+      .single();
+    
+    if (agentData) {
+      setAgentId(agentData.assistant_id);
+    }
+
+    // Fetch media
+    const { data: mediaData } = await supabase
+      .from('product_media')
+      .select('*')
+      .eq('product_id', product.id);
+    
+    if (mediaData) {
+      setMediaItems(mediaData.map(m => ({
+        id: m.id,
+        preview: m.media_url,
+        label: m.label,
+        description: m.description || "",
+        media_url: m.media_url
+      })));
     }
   };
 
@@ -64,70 +104,71 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
     }
   };
 
-  const removeMedia = (index: number) => {
+  const removeMedia = async (index: number) => {
+    const media = mediaItems[index];
+    
+    // If it's an existing media item, delete from database
+    if (media.id) {
+      const { error } = await supabase
+        .from('product_media')
+        .delete()
+        .eq('id', media.id);
+      
+      if (error) {
+        toast.error("Failed to delete media");
+        return;
+      }
+    }
+    
     setMediaItems(mediaItems.filter((_, i) => i !== index));
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+
+    setLoading(true);
+    try {
+      await supabase.functions.invoke('delete-product-agent', {
+        body: {
+          productId: product.id,
+          assistantId: agentId
+        }
+      });
+
+      toast.success("Product deleted successfully!");
+      onOpenChange(false);
+      onProductUpdated();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete product");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !linkSlug || !imageFile) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
     setLoading(true);
+    
     try {
-      // Upload main product image
-      const fileExt = imageFile.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(fileName, imageFile);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(fileName);
-
-      // Create product record
-      const { data: productData, error: insertError } = await supabase
+      // Update product
+      const { error: updateError } = await supabase
         .from('products')
-        .insert({
+        .update({
           name,
           description,
           sales_instructions: salesInstructions,
-          image_url: publicUrl,
-          link_slug: linkSlug.toLowerCase().replace(/\s+/g, '-'),
           price: price ? parseFloat(price) : null,
           category: category || null,
           features: features ? features.split(',').map(f => f.trim()) : null,
           stock: stock ? parseInt(stock) : 0
         })
-        .select()
-        .single();
+        .eq('id', product.id);
 
-      if (insertError) throw insertError;
+      if (updateError) throw updateError;
 
-      // Create AI agent via n8n
-      const { data: agentData } = await supabase.functions.invoke('create-product-agent', {
-        body: {
-          productId: productData.id,
-          productName: name,
-          productDescription: description,
-          productPrice: price,
-          productCategory: category,
-          productFeatures: features ? features.split(',').map(f => f.trim()) : [],
-          sellerInfo: {
-            name: "Product Owner",
-            email: "owner@example.com"
-          }
-        }
-      });
-
-      // Upload additional media if any
-      if (mediaItems.length > 0 && agentData?.agentId) {
-        for (const media of mediaItems) {
+      // Upload new media
+      for (const media of mediaItems) {
+        if (media.file) {
           const mediaExt = media.file.name.split('.').pop();
           const mediaFileName = `${Math.random()}.${mediaExt}`;
           const { error: mediaUploadError } = await supabase.storage
@@ -142,8 +183,8 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
 
           await supabase.functions.invoke('upload-product-media', {
             body: {
-              assistantId: agentData.agentId,
-              productId: productData.id,
+              assistantId: agentId,
+              productId: product.id,
               mediaUrl,
               mediaType: media.file.type.startsWith('image/') ? 'image' : 'video',
               label: media.label,
@@ -153,38 +194,21 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
         }
       }
 
-      toast.success("Product and AI agent created successfully!");
-      setOpen(false);
-      setName("");
-      setDescription("");
-      setSalesInstructions("");
-      setLinkSlug("");
-      setPrice("");
-      setCategory("");
-      setFeatures("");
-      setStock("");
-      setImageFile(null);
-      setImagePreview("");
-      setMediaItems([]);
-      onProductAdded();
+      toast.success("Product updated successfully!");
+      onOpenChange(false);
+      onProductUpdated();
     } catch (error: any) {
-      toast.error(error.message || "Failed to add product");
+      toast.error(error.message || "Failed to update product");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="w-full">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Product Link
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add New Product</DialogTitle>
+          <DialogTitle>Edit Product</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
@@ -193,7 +217,6 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter product name"
               required
             />
           </div>
@@ -204,7 +227,6 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the product"
               rows={3}
             />
           </div>
@@ -218,7 +240,6 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
                 step="0.01"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                placeholder="0.00"
               />
             </div>
             <div>
@@ -228,7 +249,6 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
                 type="number"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
-                placeholder="0"
               />
             </div>
           </div>
@@ -239,7 +259,6 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
               id="category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              placeholder="e.g., Electronics, Clothing"
             />
           </div>
 
@@ -249,7 +268,6 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
               id="features"
               value={features}
               onChange={(e) => setFeatures(e.target.value)}
-              placeholder="e.g., Wireless, Bluetooth, USB-C"
             />
           </div>
 
@@ -259,49 +277,12 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
               id="sales"
               value={salesInstructions}
               onChange={(e) => setSalesInstructions(e.target.value)}
-              placeholder="Explain to the AI how to sell this product"
               rows={3}
             />
           </div>
 
-          <div>
-            <Label htmlFor="slug">Link Name *</Label>
-            <Input
-              id="slug"
-              value={linkSlug}
-              onChange={(e) => setLinkSlug(e.target.value)}
-              placeholder="e.g., my-product"
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="image">Main Product Image *</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="image"
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('image')?.click()}
-                className="w-full"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {imageFile ? imageFile.name : "Upload Image"}
-              </Button>
-            </div>
-            {imagePreview && (
-              <img src={imagePreview} alt="Preview" className="mt-2 w-full h-32 object-cover rounded" />
-            )}
-          </div>
-
           <div className="border-t pt-4">
-            <Label>Additional Media (for AI agent)</Label>
+            <Label>Additional Media</Label>
             <div className="space-y-3 mt-2">
               <Input
                 placeholder="Label (e.g., 'front view', 'demo video')"
@@ -357,9 +338,19 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
             )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating..." : "Create Product Link"}
-          </Button>
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1" disabled={loading}>
+              {loading ? "Updating..." : "Update Product"}
+            </Button>
+            <Button 
+              type="button" 
+              variant="destructive" 
+              onClick={handleDelete}
+              disabled={loading}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

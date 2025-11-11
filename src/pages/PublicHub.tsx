@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, Phone } from "lucide-react";
+import { Edit, Eye } from "lucide-react";
 import hubBackground from "@/assets/hub-background.jpg";
+import { EditProductDialog } from "@/components/dashboard/EditProductDialog";
 
 const PublicHub = () => {
   const { slug } = useParams<{ slug: string }>();
   const [customization, setCustomization] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -82,10 +85,17 @@ const PublicHub = () => {
     label: product.name,
     path: `/product/${product.link_slug}`,
     icon: null,
-    image: product.image_url
+    image: product.image_url,
+    isProduct: true,
+    productData: product
   }));
 
   const allLinks = [...links, ...productLinks];
+
+  const handleEditProduct = (product: any) => {
+    setEditingProduct(product);
+    setShowEditDialog(true);
+  };
 
   if (loading) {
     return (
@@ -144,7 +154,7 @@ const PublicHub = () => {
                       <img 
                         src={link.image} 
                         alt={link.label}
-                        className="w-10 h-10 object-contain"
+                        className="w-10 h-10 object-contain rounded"
                       />
                     ) : (
                       <span className="text-3xl">{link.icon}</span>
@@ -158,8 +168,23 @@ const PublicHub = () => {
                     </p>
                   </div>
 
+                  {/* Product Actions */}
+                  {(link as any).isProduct && (
+                    <div className="flex gap-2" onClick={(e) => e.preventDefault()}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditProduct((link as any).productData);
+                        }}
+                        className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                      >
+                        <Edit className="h-4 w-4 text-white" />
+                      </button>
+                    </div>
+                  )}
+
                   {/* Shine effect on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl pointer-events-none" />
                 </div>
               </div>
             );
@@ -186,6 +211,13 @@ const PublicHub = () => {
           })}
         </div>
       </div>
+
+      <EditProductDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        product={editingProduct}
+        onProductUpdated={fetchData}
+      />
     </div>
   );
 };

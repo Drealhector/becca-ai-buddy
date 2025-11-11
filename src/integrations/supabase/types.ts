@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_agents: {
+        Row: {
+          agent_id: string
+          assistant_id: string
+          created_at: string | null
+          id: string
+          product_id: string | null
+          status: string | null
+          web_url: string | null
+        }
+        Insert: {
+          agent_id: string
+          assistant_id: string
+          created_at?: string | null
+          id?: string
+          product_id?: string | null
+          status?: string | null
+          web_url?: string | null
+        }
+        Update: {
+          agent_id?: string
+          assistant_id?: string
+          created_at?: string | null
+          id?: string
+          product_id?: string | null
+          status?: string | null
+          web_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agents_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bot_config: {
         Row: {
           bot_active: boolean | null
@@ -164,6 +202,47 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_interactions: {
+        Row: {
+          assistant_id: string
+          call_id: string
+          duration: number | null
+          id: string
+          outcome: string | null
+          product_id: string | null
+          timestamp: string | null
+          transcript: string | null
+        }
+        Insert: {
+          assistant_id: string
+          call_id: string
+          duration?: number | null
+          id?: string
+          outcome?: string | null
+          product_id?: string | null
+          timestamp?: string | null
+          transcript?: string | null
+        }
+        Update: {
+          assistant_id?: string
+          call_id?: string
+          duration?: number | null
+          id?: string
+          outcome?: string | null
+          product_id?: string | null
+          timestamp?: string | null
+          transcript?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_interactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customizations: {
         Row: {
           assistant_personality: string | null
@@ -283,35 +362,88 @@ export type Database = {
           },
         ]
       }
+      product_media: {
+        Row: {
+          assistant_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          label: string
+          media_type: string
+          media_url: string
+          product_id: string | null
+        }
+        Insert: {
+          assistant_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          label: string
+          media_type: string
+          media_url: string
+          product_id?: string | null
+        }
+        Update: {
+          assistant_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          label?: string
+          media_type?: string
+          media_url?: string
+          product_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_media_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
+          category: string | null
           created_at: string
           description: string | null
+          features: string[] | null
           id: string
           image_url: string | null
           link_slug: string
           name: string
+          price: number | null
           sales_instructions: string | null
+          stock: number | null
           updated_at: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           description?: string | null
+          features?: string[] | null
           id?: string
           image_url?: string | null
           link_slug: string
           name: string
+          price?: number | null
           sales_instructions?: string | null
+          stock?: number | null
           updated_at?: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           description?: string | null
+          features?: string[] | null
           id?: string
           image_url?: string | null
           link_slug?: string
           name?: string
+          price?: number | null
           sales_instructions?: string | null
+          stock?: number | null
           updated_at?: string
         }
         Relationships: []
