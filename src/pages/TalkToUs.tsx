@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,40 +6,42 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import beccaLogo from "@/assets/becca-b-logo.png";
 import { ArrowLeft } from "lucide-react";
 
 const TalkToUs = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const successMessageRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-    countryCode: "+1",
+    countryCode: "+234",
     phoneNumber: "",
     role: "",
     callVolume: "",
     customFunction: "",
   });
 
-  useEffect(() => {
-    // Load VAPI widget script
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/@vapi-ai/client-sdk-react/dist/embed/widget.umd.js';
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, []);
-
   const openVapiChat = () => {
+    // Load VAPI widget script dynamically when button is clicked
+    const existingScript = document.querySelector('script[src*="vapi-ai"]');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/@vapi-ai/client-sdk-react/dist/embed/widget.umd.js';
+      script.async = true;
+      script.onload = () => {
+        createVapiWidget();
+      };
+      document.body.appendChild(script);
+    } else {
+      createVapiWidget();
+    }
+  };
+
+  const createVapiWidget = () => {
     // Create VAPI widget element
     const vapiWidget = document.createElement('vapi-widget');
     vapiWidget.setAttribute('public-key', '208b6005-0953-425b-a478-2748d49d484c');
@@ -67,42 +69,64 @@ const TalkToUs = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setShowSuccess(false);
+    setShowError(false);
+
+    const submissionData = {
+      fullName: formData.fullName,
+      email: formData.email,
+      countryCode: formData.countryCode,
+      phoneNumber: formData.phoneNumber,
+      role: formData.role,
+      supportCalls: formData.callVolume,
+      customFunction: formData.customFunction || ""
+    };
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-contact-email', {
-        body: {
-          fullName: formData.fullName,
-          email: formData.email,
-          phoneNumber: `${formData.countryCode}${formData.phoneNumber}`,
-          role: formData.role,
-          callVolume: formData.callVolume,
-          customFunction: formData.customFunction,
-        }
+      const response = await fetch('https://drealhector334.app.n8n.cloud/webhook/form-submission', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(submissionData)
       });
 
-      if (error) throw error;
+      const result = await response.json();
 
-      toast({
-        title: "Thank you!",
-        description: "We'll get back to you soon.",
-      });
-      
-      setFormData({
-        fullName: "",
-        email: "",
-        countryCode: "+1",
-        phoneNumber: "",
-        role: "",
-        callVolume: "",
-        customFunction: "",
-      });
+      if (result.success || response.ok) {
+        setShowSuccess(true);
+        
+        // Reset form
+        setFormData({
+          fullName: "",
+          email: "",
+          countryCode: "+234",
+          phoneNumber: "",
+          role: "",
+          callVolume: "",
+          customFunction: "",
+        });
+
+        // Scroll to success message
+        setTimeout(() => {
+          successMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+
+        // Hide success message after 5 seconds
+        setTimeout(() => {
+          setShowSuccess(false);
+        }, 5000);
+      } else {
+        throw new Error('Submission failed');
+      }
     } catch (error) {
       console.error("Form submission error:", error);
-      toast({
-        title: "Error",
-        description: "There was an issue submitting your form.",
-        variant: "destructive",
-      });
+      setShowError(true);
+      
+      // Hide error message after 5 seconds
+      setTimeout(() => {
+        setShowError(false);
+      }, 5000);
     } finally {
       setLoading(false);
     }
@@ -141,9 +165,36 @@ const TalkToUs = () => {
             </p>
           </div>
 
+          {/* Success Message */}
+          {showSuccess && (
+            <div
+              ref={successMessageRef}
+              className="bg-emerald-500 text-white p-5 rounded-lg mb-6 text-center shadow-lg"
+            >
+              <div className="text-lg font-bold mb-1">
+                ✅ Success! Your submission has been received.
+              </div>
+              <div className="text-sm font-normal">
+                Check your email for confirmation.
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {showError && (
+            <div className="bg-red-500 text-white p-5 rounded-lg mb-6 text-center shadow-lg">
+              <div className="text-lg font-bold mb-1">
+                ❌ Error! There was a problem submitting your form.
+              </div>
+              <div className="text-sm font-normal">
+                Please try again.
+              </div>
+            </div>
+          )}
+
           {/* Form */}
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 shadow-lg">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} id="contactForm" className="space-y-4">
               <div>
                 <Label htmlFor="fullName" className="text-sm font-medium text-slate-900">
                   Full Name
@@ -165,7 +216,7 @@ const TalkToUs = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="john@gmail.com"
+                  placeholder="becca@gmail.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
@@ -182,15 +233,82 @@ const TalkToUs = () => {
                     value={formData.countryCode}
                     onValueChange={(value) => setFormData({ ...formData, countryCode: value })}
                   >
-                    <SelectTrigger className="w-24 border-slate-300">
+                    <SelectTrigger className="w-32 border-slate-300">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="+1">+1</SelectItem>
-                      <SelectItem value="+234">+234</SelectItem>
-                      <SelectItem value="+233">+233</SelectItem>
-                      <SelectItem value="+44">+44</SelectItem>
-                      <SelectItem value="+91">+91</SelectItem>
+                    <SelectContent className="max-h-[300px]">
+                      {/* African Countries (Priority) */}
+                      <SelectItem value="+234">🇳🇬 +234</SelectItem>
+                      <SelectItem value="+233">🇬🇭 +233</SelectItem>
+                      <SelectItem value="+27">🇿🇦 +27</SelectItem>
+                      <SelectItem value="+254">🇰🇪 +254</SelectItem>
+                      <SelectItem value="+237">🇨🇲 +237</SelectItem>
+                      <SelectItem value="+255">🇹🇿 +255</SelectItem>
+                      <SelectItem value="+256">🇺🇬 +256</SelectItem>
+                      <SelectItem value="+20">🇪🇬 +20</SelectItem>
+                      <SelectItem value="+251">🇪🇹 +251</SelectItem>
+                      <SelectItem value="+225">🇨🇮 +225</SelectItem>
+                      <SelectItem value="+221">🇸🇳 +221</SelectItem>
+                      <SelectItem value="+250">🇷🇼 +250</SelectItem>
+                      <SelectItem value="+212">🇲🇦 +212</SelectItem>
+                      <SelectItem value="+213">🇩🇿 +213</SelectItem>
+                      <SelectItem value="+216">🇹🇳 +216</SelectItem>
+                      <SelectItem value="+260">🇿🇲 +260</SelectItem>
+                      <SelectItem value="+263">🇿🇼 +263</SelectItem>
+                      <SelectItem value="+265">🇲🇼 +265</SelectItem>
+                      <SelectItem value="+267">🇧🇼 +267</SelectItem>
+                      <SelectItem value="+231">🇱🇷 +231</SelectItem>
+                      <SelectItem value="+232">🇸🇱 +232</SelectItem>
+                      <SelectItem value="+220">🇬🇲 +220</SelectItem>
+                      <SelectItem value="+229">🇧🇯 +229</SelectItem>
+                      <SelectItem value="+228">🇹🇬 +228</SelectItem>
+                      <SelectItem value="+227">🇳🇪 +227</SelectItem>
+                      <SelectItem value="+226">🇧🇫 +226</SelectItem>
+                      <SelectItem value="+223">🇲🇱 +223</SelectItem>
+                      <SelectItem value="+252">🇸🇴 +252</SelectItem>
+                      <SelectItem value="+211">🇸🇸 +211</SelectItem>
+                      <SelectItem value="+249">🇸🇩 +249</SelectItem>
+                      {/* Major International Countries */}
+                      <SelectItem value="+1">🇺🇸 +1</SelectItem>
+                      <SelectItem value="+44">🇬🇧 +44</SelectItem>
+                      <SelectItem value="+91">🇮🇳 +91</SelectItem>
+                      <SelectItem value="+86">🇨🇳 +86</SelectItem>
+                      <SelectItem value="+81">🇯🇵 +81</SelectItem>
+                      <SelectItem value="+49">🇩🇪 +49</SelectItem>
+                      <SelectItem value="+33">🇫🇷 +33</SelectItem>
+                      <SelectItem value="+39">🇮🇹 +39</SelectItem>
+                      <SelectItem value="+34">🇪🇸 +34</SelectItem>
+                      <SelectItem value="+7">🇷🇺 +7</SelectItem>
+                      <SelectItem value="+55">🇧🇷 +55</SelectItem>
+                      <SelectItem value="+52">🇲🇽 +52</SelectItem>
+                      <SelectItem value="+61">🇦🇺 +61</SelectItem>
+                      <SelectItem value="+82">🇰🇷 +82</SelectItem>
+                      <SelectItem value="+971">🇦🇪 +971</SelectItem>
+                      <SelectItem value="+966">🇸🇦 +966</SelectItem>
+                      <SelectItem value="+65">🇸🇬 +65</SelectItem>
+                      <SelectItem value="+60">🇲🇾 +60</SelectItem>
+                      <SelectItem value="+62">🇮🇩 +62</SelectItem>
+                      <SelectItem value="+63">🇵🇭 +63</SelectItem>
+                      <SelectItem value="+66">🇹🇭 +66</SelectItem>
+                      <SelectItem value="+84">🇻🇳 +84</SelectItem>
+                      <SelectItem value="+92">🇵🇰 +92</SelectItem>
+                      <SelectItem value="+880">🇧🇩 +880</SelectItem>
+                      <SelectItem value="+90">🇹🇷 +90</SelectItem>
+                      <SelectItem value="+98">🇮🇷 +98</SelectItem>
+                      <SelectItem value="+972">🇮🇱 +972</SelectItem>
+                      <SelectItem value="+31">🇳🇱 +31</SelectItem>
+                      <SelectItem value="+32">🇧🇪 +32</SelectItem>
+                      <SelectItem value="+41">🇨🇭 +41</SelectItem>
+                      <SelectItem value="+43">🇦🇹 +43</SelectItem>
+                      <SelectItem value="+45">🇩🇰 +45</SelectItem>
+                      <SelectItem value="+46">🇸🇪 +46</SelectItem>
+                      <SelectItem value="+47">🇳🇴 +47</SelectItem>
+                      <SelectItem value="+358">🇫🇮 +358</SelectItem>
+                      <SelectItem value="+48">🇵🇱 +48</SelectItem>
+                      <SelectItem value="+351">🇵🇹 +351</SelectItem>
+                      <SelectItem value="+30">🇬🇷 +30</SelectItem>
+                      <SelectItem value="+353">🇮🇪 +353</SelectItem>
+                      <SelectItem value="+64">🇳🇿 +64</SelectItem>
                     </SelectContent>
                   </Select>
                   <Input
@@ -236,7 +354,7 @@ const TalkToUs = () => {
                   className="space-y-2"
                   required
                 >
-                  {["<50,000", "50,001-100,000", "100,001-500,000", "500,001-1,000,000", ">1,000,000"].map((range) => (
+                  {["<50,000", "50,001-100,000", "100,001-500,000", "500,001-1,000,000", "1,000,000"].map((range) => (
                     <div key={range} className="flex items-center space-x-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
                       <RadioGroupItem value={range} id={`calls-${range}`} />
                       <Label htmlFor={`calls-${range}`} className="cursor-pointer flex-1 text-sm">
@@ -249,37 +367,40 @@ const TalkToUs = () => {
 
               <div>
                 <Label htmlFor="customFunction" className="text-sm font-medium text-slate-900">
-                  Custom Function for Becca to Automate
+                  Custom Function for Becca to Automate (Optional)
                 </Label>
                 <Textarea
                   id="customFunction"
                   value={formData.customFunction}
                   onChange={(e) => setFormData({ ...formData, customFunction: e.target.value })}
-                  placeholder="Fully explain the automation needed"
-                  rows={4}
-                  required
+                  placeholder="e.g., Schedule meetings, Send follow-up emails"
+                  rows={5}
                   className="mt-1.5 border-slate-300 focus:border-slate-400 resize-none"
                 />
               </div>
 
-              {/* Footer Buttons */}
-              <div className="flex gap-3 pt-2">
+              {/* Submit Button */}
+              <div className="pt-2">
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-slate-600 text-white hover:bg-slate-700 h-11"
+                  className="w-full bg-slate-600 text-white hover:bg-slate-700 h-11"
                 >
                   {loading ? "Submitting..." : "Submit"}
                 </Button>
-                <Button
-                  type="button"
-                  onClick={openVapiChat}
-                  className="flex-1 bg-gradient-to-r from-indigo-200 to-blue-200 text-slate-900 hover:opacity-90 border-0 h-11 font-medium"
-                >
-                  Chat with Becca
-                </Button>
               </div>
             </form>
+
+            {/* Chat with Becca Button - Below Form */}
+            <div className="mt-4">
+              <Button
+                type="button"
+                onClick={openVapiChat}
+                className="w-full bg-gradient-to-r from-indigo-200 to-blue-200 text-slate-900 hover:opacity-90 border-0 h-11 font-medium"
+              >
+                Chat with Becca
+              </Button>
+            </div>
           </div>
         </div>
       </div>
