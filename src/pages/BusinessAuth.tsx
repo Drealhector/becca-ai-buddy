@@ -18,13 +18,17 @@ const BusinessAuth = () => {
     setLoading(true);
 
     try {
+      console.log("Checking business key:", businessKey);
+      
       // Verify business key
       const { data: keyData, error: keyError } = await supabase
         .from("business_keys")
         .select("business_name, is_active")
-        .eq("business_key", businessKey)
+        .eq("business_key", businessKey.trim())
         .eq("is_active", true)
         .single();
+
+      console.log("Key data:", keyData, "Error:", keyError);
 
       if (keyError || !keyData) {
         toast({
