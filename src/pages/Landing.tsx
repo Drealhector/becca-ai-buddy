@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import beccaLogo from "@/assets/b-logo.png";
+import beccaLogo from "@/assets/becca-full-logo.png";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -13,9 +13,8 @@ const Landing = () => {
       
       {/* Header */}
       <header className="relative z-10 container mx-auto px-4 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <img src={beccaLogo} alt="B" className="h-12 w-12" style={{ filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.2))', mixBlendMode: 'normal' }} />
-          <span className="text-white text-2xl font-bold">ECCA</span>
+        <div className="flex items-center">
+          <img src={beccaLogo} alt="BECCA" className="h-12" style={{ filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))' }} />
         </div>
         <div className="flex items-center gap-4">
           <Button
