@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import beccaLogo from "@/assets/becca-b-logo.png";
 
 const BusinessAuth = () => {
   const [businessName, setBusinessName] = useState("");
@@ -66,7 +65,20 @@ const BusinessAuth = () => {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <div className="w-32 h-32 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-2xl">
-            <img src={beccaLogo} alt="BECCA" className="h-20 w-20 drop-shadow-xl" />
+            <span style={{
+              fontSize: '4rem',
+              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+              fontWeight: 900,
+              lineHeight: 1,
+              color: '#ffffff',
+              WebkitTextStroke: '2px #2c4a6f',
+              textShadow: `
+                -4px -4px 0 #5dd5ed,
+                -8px -8px 0 #5dd5ed,
+                -12px -12px 0 #70dff0,
+                0 4px 12px rgba(0,0,0,0.4)
+              `
+            }}>B</span>
           </div>
         </div>
 
