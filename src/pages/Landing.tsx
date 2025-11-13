@@ -1,12 +1,9 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-
 const Landing = () => {
   const navigate = useNavigate();
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-700 via-slate-600 to-slate-500 relative overflow-hidden">
+  return <div className="min-h-screen bg-gradient-to-br from-slate-700 via-slate-600 to-slate-500 relative overflow-hidden">
       {/* Background overlay */}
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070')] bg-cover bg-center opacity-20"></div>
       
@@ -14,43 +11,36 @@ const Landing = () => {
       <header className="relative z-10 container mx-auto px-4 py-6 flex items-center justify-between">
         <div className="flex items-center">
           <span style={{
-            fontSize: 'clamp(1.5rem, 6vw, 3rem)',
-            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-            fontWeight: 900,
-            letterSpacing: '0',
-            lineHeight: 1,
-            display: 'inline-block'
-          }}>
+          fontSize: 'clamp(1.5rem, 6vw, 3rem)',
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+          fontWeight: 900,
+          letterSpacing: '0',
+          lineHeight: 1,
+          display: 'inline-block'
+        }}>
             <span style={{
-              color: '#ffffff',
-              WebkitTextStroke: '1.5px #2c4a6f',
-              textShadow: `
+            color: '#ffffff',
+            WebkitTextStroke: '1.5px #2c4a6f',
+            textShadow: `
                 -3px -3px 0 #5dd5ed,
                 -6px -6px 0 #5dd5ed,
                 -9px -9px 0 #70dff0,
                 0 4px 12px rgba(0,0,0,0.4)
               `,
-              fontWeight: 900
-            }}>B</span>
+            fontWeight: 900
+          }}>B</span>
             <span style={{
-              color: '#ffffff',
-              fontWeight: 800,
-              textShadow: '0 2px 8px rgba(0,0,0,0.2)'
-            }}>ECCA</span>
+            color: '#ffffff',
+            fontWeight: 800,
+            textShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          }}>ECCA</span>
           </span>
         </div>
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/auth")}
-            className="text-white hover:bg-white/10"
-          >
+          <Button variant="ghost" onClick={() => navigate("/auth")} className="text-white hover:bg-white/10">
             Sign in
           </Button>
-          <Button
-            onClick={() => navigate("/talk-to-us")}
-            className="bg-white text-slate-900 hover:bg-white/90"
-          >
+          <Button onClick={() => navigate("/talk-to-us")} className="bg-white text-slate-900 hover:bg-white/90">
             Talk to us
           </Button>
         </div>
@@ -60,7 +50,17 @@ const Landing = () => {
       <div className="relative z-10 container mx-auto px-4 py-8 sm:py-16 md:py-20 text-center max-w-5xl">
 
         <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 md:mb-8 leading-tight px-2">
-          AI that talks like a human.<br />
+          AI that talks like a human.
+Handles millions of calls.
+integrates into any platform      
+
+
+
+
+
+
+
+        <br />
           Handles millions of calls.
         </h1>
         
@@ -68,16 +68,10 @@ const Landing = () => {
           AI agents for enterprise support
         </p>
 
-        <Button
-          size="lg"
-          onClick={() => navigate("/talk-to-us")}
-          className="bg-white text-slate-900 hover:bg-white/90 text-xs sm:text-base md:text-lg px-4 sm:px-8 py-3 sm:py-5 md:py-6 h-auto"
-        >
+        <Button size="lg" onClick={() => navigate("/talk-to-us")} className="bg-white text-slate-900 hover:bg-white/90 text-xs sm:text-base md:text-lg px-4 sm:px-8 py-3 sm:py-5 md:py-6 h-auto">
           Talk to us
         </Button>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Landing;
