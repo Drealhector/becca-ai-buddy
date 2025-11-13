@@ -1,7 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import beccaLogo from "@/assets/becca-full-logo.png";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -14,7 +13,14 @@ const Landing = () => {
       {/* Header */}
       <header className="relative z-10 container mx-auto px-4 py-6 flex items-center justify-between">
         <div className="flex items-center">
-          <img src={beccaLogo} alt="BECCA" className="h-12" style={{ filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3))' }} />
+          <span className="text-4xl font-bold tracking-tight" style={{
+            color: 'white',
+            textShadow: '-2px -2px 0 #5ed4f4, -2px 2px 0 #5ed4f4, 2px -2px 0 #5ed4f4, 2px 2px 0 #5ed4f4, -4px -4px 0 #87e5f7, -4px 4px 0 #87e5f7, 4px -4px 0 #87e5f7, 4px 4px 0 #87e5f7, 0 4px 6px rgba(0, 0, 0, 0.3)'
+          }}>
+            <span style={{ 
+              textShadow: '-2px -2px 0 #5ed4f4, 2px -2px 0 #5ed4f4, -2px 2px 0 #5ed4f4, 2px 2px 0 #5ed4f4, -3px -3px 0 #4ac3e0, 3px -3px 0 #4ac3e0, -3px 3px 0 #4ac3e0, 3px 3px 0 #4ac3e0, -4px 0 0 #87e5f7, 4px 0 0 #87e5f7, 0 -4px 0 #87e5f7, 0 4px 0 #87e5f7, 0 4px 8px rgba(0, 0, 0, 0.4)'
+            }}>B</span>ECCA
+          </span>
         </div>
         <div className="flex items-center gap-4">
           <Button
