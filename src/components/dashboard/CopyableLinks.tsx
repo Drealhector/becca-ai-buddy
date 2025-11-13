@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, ExternalLink, ChevronDown, ChevronUp, Edit, Eye, EyeOff, FileText } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { AddProductDialog } from "./AddProductDialog";
 import { EditProductDialog } from "./EditProductDialog";
@@ -29,6 +30,8 @@ const CopyableLinks = () => {
   const [showConversationDialog, setShowConversationDialog] = useState(false);
   const [currentConversations, setCurrentConversations] = useState<any[]>([]);
   const [conversationTitle, setConversationTitle] = useState("");
+  const [showHideDialog, setShowHideDialog] = useState(false);
+  const [pendingHideAction, setPendingHideAction] = useState<{ path: string; isCurrentlyHidden: boolean } | null>(null);
 
   const fetchProducts = async () => {
     const { data, error } = await supabase
@@ -106,16 +109,28 @@ const CopyableLinks = () => {
   };
 
   const toggleLinkVisibility = (path: string) => {
+    const isCurrentlyHidden = hiddenLinks.includes(path);
+    setPendingHideAction({ path, isCurrentlyHidden });
+    setShowHideDialog(true);
+  };
+
+  const confirmToggleVisibility = () => {
+    if (!pendingHideAction) return;
+    
+    const { path, isCurrentlyHidden } = pendingHideAction;
     setHiddenLinks(prev => {
-      const newHiddenLinks = prev.includes(path) 
+      const newHiddenLinks = isCurrentlyHidden 
         ? prev.filter(p => p !== path)
         : [...prev, path];
       
       // Store in localStorage so PublicHub can read it
       localStorage.setItem('hiddenLinks', JSON.stringify(newHiddenLinks));
-      toast.success(prev.includes(path) ? "Link shown on public hub" : "Link hidden from public hub");
+      toast.success(isCurrentlyHidden ? "Link shown on public hub" : "Link hidden from public hub");
       return newHiddenLinks;
     });
+    
+    setShowHideDialog(false);
+    setPendingHideAction(null);
   };
 
   // Load hidden links from localStorage on mount
@@ -147,17 +162,6 @@ const CopyableLinks = () => {
             <p className="text-sm text-muted-foreground">{publicHubLink.path}</p>
           </div>
           <div className="flex gap-2 items-center">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleViewWebChatConversations();
-              }}
-              title="View Conversations"
-            >
-              <FileText className="h-4 w-4" />
-            </Button>
             <Button
               size="sm"
               variant="ghost"
@@ -207,20 +211,12 @@ const CopyableLinks = () => {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => handleViewConversations(link.label)}
-                    title="View Conversations"
-                  >
-                    <FileText className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
                     onClick={() => toggleLinkVisibility(link.path)}
-                    className={hiddenLinks.includes(link.path) ? 'text-red-500' : ''}
+                    className={hiddenLinks.includes(link.path) ? 'text-red-600 hover:text-red-700' : ''}
                     title={hiddenLinks.includes(link.path) ? "Show on public hub" : "Hide from public hub"}
                   >
                     {hiddenLinks.includes(link.path) ? (
-                      <EyeOff className="h-4 w-4" style={{ textDecoration: 'line-through' }} />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
                       <Eye className="h-4 w-4" />
                     )}
@@ -274,11 +270,11 @@ const CopyableLinks = () => {
                     size="sm"
                     variant="ghost"
                     onClick={() => toggleLinkVisibility(link.productData.link_slug)}
-                    className={hiddenLinks.includes(link.productData.link_slug) ? 'text-red-500' : ''}
+                    className={hiddenLinks.includes(link.productData.link_slug) ? 'text-red-600 hover:text-red-700' : ''}
                     title={hiddenLinks.includes(link.productData.link_slug) ? "Show on public hub" : "Hide from public hub"}
                   >
                     {hiddenLinks.includes(link.productData.link_slug) ? (
-                      <EyeOff className="h-4 w-4" style={{ textDecoration: 'line-through' }} />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
                       <Eye className="h-4 w-4" />
                     )}
@@ -365,6 +361,33 @@ const CopyableLinks = () => {
         title={conversationTitle}
         conversations={currentConversations}
       />
+
+      {/* Hide/Unhide Confirmation Dialog */}
+      <AlertDialog open={showHideDialog} onOpenChange={setShowHideDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingHideAction?.isCurrentlyHidden ? "Show Link on Public Hub?" : "Hide Link from Public Hub?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingHideAction?.isCurrentlyHidden 
+                ? "This link will become visible to customers on the public hub. Are you sure you want to continue?"
+                : "This link will be hidden from customers on the public hub. You can still see it on your dashboard. Are you sure you want to continue?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowHideDialog(false);
+              setPendingHideAction(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmToggleVisibility}>
+              {pendingHideAction?.isCurrentlyHidden ? "Show" : "Hide"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

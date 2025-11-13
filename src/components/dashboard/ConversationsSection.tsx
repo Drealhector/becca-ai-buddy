@@ -3,9 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ConversationsSection = () => {
   const [conversations, setConversations] = useState<any[]>([]);
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
 
   useEffect(() => {
     fetchConversations();
@@ -28,15 +30,21 @@ const ConversationsSection = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [selectedPlatform]);
 
   const fetchConversations = async () => {
     try {
-      const { data: convos } = await supabase
+      let query = supabase
         .from("conversations")
         .select("*")
         .order("start_time", { ascending: false })
         .limit(10);
+
+      if (selectedPlatform !== "all") {
+        query = query.eq("platform", selectedPlatform);
+      }
+
+      const { data: convos } = await query;
 
       const conversationsWithMessages = await Promise.all(
         (convos || []).map(async (convo) => {
@@ -58,7 +66,22 @@ const ConversationsSection = () => {
 
   return (
     <Card className="p-6">
-      <h3 className="text-lg font-semibold mb-4">Conversations</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">Conversations</h3>
+      </div>
+      <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+        <SelectTrigger className="w-full mb-4">
+          <SelectValue placeholder="Select platform" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Platforms</SelectItem>
+          <SelectItem value="web">Web Chat</SelectItem>
+          <SelectItem value="whatsapp">WhatsApp</SelectItem>
+          <SelectItem value="instagram">Instagram</SelectItem>
+          <SelectItem value="facebook">Facebook</SelectItem>
+          <SelectItem value="telegram">Telegram</SelectItem>
+        </SelectContent>
+      </Select>
       <div className="space-y-4 max-h-96 overflow-y-auto">
         {conversations.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
