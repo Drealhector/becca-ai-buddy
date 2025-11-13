@@ -34,7 +34,7 @@ const BusinessAuth = () => {
       if (keyError || !keyData) {
         toast({
           title: "Invalid Credentials",
-          description: "Please check your business name and password and try again.",
+          description: "Please check your business name and business key and try again.",
           variant: "destructive",
         });
         setLoading(false);
@@ -108,12 +108,12 @@ const BusinessAuth = () => {
 
               <div>
                 <Label htmlFor="businessKey" className="text-white text-sm mb-2 block">
-                  Password
+                  Business Key
                 </Label>
                 <Input
                   id="businessKey"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="Enter your business key"
                   value={businessKey}
                   onChange={(e) => setBusinessKey(e.target.value)}
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
