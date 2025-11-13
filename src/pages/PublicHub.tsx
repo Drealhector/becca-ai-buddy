@@ -8,9 +8,15 @@ const PublicHub = () => {
   const [customization, setCustomization] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hiddenLinks, setHiddenLinks] = useState<string[]>([]);
 
   useEffect(() => {
     fetchData();
+    // Load hidden links from localStorage
+    const stored = localStorage.getItem('hiddenLinks');
+    if (stored) {
+      setHiddenLinks(JSON.parse(stored));
+    }
   }, []);
 
   const fetchData = async () => {
@@ -86,7 +92,12 @@ const PublicHub = () => {
     productData: product
   }));
 
-  const allLinks = [...links, ...productLinks];
+  // Filter out hidden links
+  const allLinks = [...links, ...productLinks].filter((link: any) => {
+    // Check if this link's path or slug is hidden
+    const linkPath = link.isProduct ? `/product/${link.productData?.link_slug}` : link.path;
+    return !hiddenLinks.includes(linkPath) && !hiddenLinks.includes(link.productData?.link_slug || '');
+  });
 
 
   if (loading) {

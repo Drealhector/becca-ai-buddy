@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, Eye } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -269,7 +269,7 @@ const PhoneCallSection = () => {
                         onClick={() => handleViewTranscript(call)}
                         className="h-6 w-6 p-0"
                       >
-                        <Eye className="h-3 w-3" />
+                        <FileText className="h-3 w-3" />
                       </Button>
                     </div>
                     <Badge variant="secondary">
@@ -329,7 +329,7 @@ const PhoneCallSection = () => {
                         onClick={() => handleViewTranscript(call)}
                         className="h-6 w-6 p-0"
                       >
-                        <Eye className="h-3 w-3" />
+                        <FileText className="h-3 w-3" />
                       </Button>
                     </div>
                     <Badge variant="secondary">

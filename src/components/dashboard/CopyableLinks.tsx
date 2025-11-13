@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, ExternalLink, ChevronDown, ChevronUp, Edit, Eye, EyeOff } from "lucide-react";
+import { Copy, ExternalLink, ChevronDown, ChevronUp, Edit, Eye, EyeOff, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { AddProductDialog } from "./AddProductDialog";
 import { EditProductDialog } from "./EditProductDialog";
@@ -106,13 +106,25 @@ const CopyableLinks = () => {
   };
 
   const toggleLinkVisibility = (path: string) => {
-    setHiddenLinks(prev => 
-      prev.includes(path) 
+    setHiddenLinks(prev => {
+      const newHiddenLinks = prev.includes(path) 
         ? prev.filter(p => p !== path)
-        : [...prev, path]
-    );
-    toast.success(hiddenLinks.includes(path) ? "Link shown" : "Link hidden");
+        : [...prev, path];
+      
+      // Store in localStorage so PublicHub can read it
+      localStorage.setItem('hiddenLinks', JSON.stringify(newHiddenLinks));
+      toast.success(prev.includes(path) ? "Link shown on public hub" : "Link hidden from public hub");
+      return newHiddenLinks;
+    });
   };
+
+  // Load hidden links from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('hiddenLinks');
+    if (stored) {
+      setHiddenLinks(JSON.parse(stored));
+    }
+  }, []);
 
   const publicHubLink = { label: "Public Hub", path: "/hector" };
   const productLinks = products.map(product => ({
@@ -144,7 +156,7 @@ const CopyableLinks = () => {
               }}
               title="View Conversations"
             >
-              <Eye className="h-4 w-4" />
+              <FileText className="h-4 w-4" />
             </Button>
             <Button
               size="sm"
@@ -198,15 +210,20 @@ const CopyableLinks = () => {
                     onClick={() => handleViewConversations(link.label)}
                     title="View Conversations"
                   >
-                    <Eye className="h-4 w-4" />
+                    <FileText className="h-4 w-4" />
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => toggleLinkVisibility(link.path)}
-                    title={hiddenLinks.includes(link.path) ? "Show Link" : "Hide Link"}
+                    className={hiddenLinks.includes(link.path) ? 'text-red-500' : ''}
+                    title={hiddenLinks.includes(link.path) ? "Show on public hub" : "Hide from public hub"}
                   >
-                    {hiddenLinks.includes(link.path) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {hiddenLinks.includes(link.path) ? (
+                      <EyeOff className="h-4 w-4" style={{ textDecoration: 'line-through' }} />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </Button>
                   <Button
                     size="sm"
@@ -251,7 +268,20 @@ const CopyableLinks = () => {
                     onClick={() => handleViewInteractions(link.productData)}
                     title="View Interactions"
                   >
-                    <Eye className="h-4 w-4" />
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => toggleLinkVisibility(link.productData.link_slug)}
+                    className={hiddenLinks.includes(link.productData.link_slug) ? 'text-red-500' : ''}
+                    title={hiddenLinks.includes(link.productData.link_slug) ? "Show on public hub" : "Hide from public hub"}
+                  >
+                    {hiddenLinks.includes(link.productData.link_slug) ? (
+                      <EyeOff className="h-4 w-4" style={{ textDecoration: 'line-through' }} />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </Button>
                   <Button
                     size="sm"
