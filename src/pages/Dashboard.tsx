@@ -95,14 +95,14 @@ const Dashboard = () => {
             <Button variant="ghost" size="icon" onClick={() => setShowNav(!showNav)}>
               <Menu className="h-5 w-5" />
             </Button>
-            <h1 className="text-sm sm:text-xl md:text-2xl font-bold flex items-baseline">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold flex items-baseline">
               <span style={{
-                fontSize: 'clamp(1rem, 4vw, 2rem)',
+                fontSize: 'clamp(1.25rem, 4vw, 2rem)',
                 fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
                 fontWeight: 900,
                 display: 'inline-block',
                 color: '#ffffff',
-                WebkitTextStroke: '1px #2c4a6f',
+                WebkitTextStroke: '2px #2c4a6f',
                 textShadow: `
                   -2px -2px 0 #5dd5ed,
                   -4px -4px 0 #5dd5ed,

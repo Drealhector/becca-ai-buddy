@@ -22,7 +22,7 @@ const Welcome = () => {
       <div className="text-center max-w-2xl animate-fade-in">
         <div className="mb-6 md:mb-8 flex justify-center">
           <span style={{
-            fontSize: 'clamp(2.5rem, 12vw, 6rem)',
+            fontSize: 'clamp(3.5rem, 12vw, 6rem)',
             fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
             fontWeight: 900,
             letterSpacing: '0',
@@ -43,18 +43,18 @@ const Welcome = () => {
           </span>
         </div>
 
-        <h1 className="text-white text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-4 px-2">
+        <h1 className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 md:mb-4 px-2">
           Welcome DREALHECTOR
         </h1>
 
-        <p className="text-white/90 text-sm sm:text-lg md:text-xl mb-6 md:mb-12 px-4">
+        <p className="text-white/90 text-base sm:text-lg md:text-xl mb-8 md:mb-12 px-4">
           Your AI business assistant is ready to help
         </p>
 
         <Button
           size="lg"
           onClick={handleContinue}
-          className="bg-white text-slate-900 hover:bg-white/90 text-xs sm:text-base md:text-lg px-4 sm:px-8 md:px-12 py-3 md:py-6 h-auto animate-pulse hover:animate-none"
+          className="bg-white text-slate-900 hover:bg-white/90 text-sm sm:text-base md:text-lg px-6 sm:px-8 md:px-12 py-4 md:py-6 h-auto animate-pulse hover:animate-none"
         >
           Continue to your BECCA Dashboard
         </Button>
