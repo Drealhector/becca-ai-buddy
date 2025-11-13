@@ -47,27 +47,16 @@ const Landing = () => {
       </header>
 
       {/* Hero Content */}
-      <div className="relative z-10 container mx-auto px-4 py-8 sm:py-16 md:py-20 text-center max-w-5xl">
+      <div className="relative z-10 container mx-auto px-4 py-8 sm:py-12 md:py-16 text-center max-w-5xl flex flex-col items-center justify-center min-h-[60vh]">
 
-        <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 md:mb-8 leading-tight px-2">
-          AI that talks like a human. Handles millions of calls. integrates into any platform      
-
-      
-
-            
-
-
-
-
-
-
-
-        <br />
-          Handles millions of calls.
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 md:mb-8 leading-tight px-2 flex flex-col items-center">
+          <span className="text-center">AI that talks like a human.</span>
+          <span className="text-center">Handles millions of calls.</span>
+          <span className="text-center">Integrates into any platform.</span>
         </h1>
         
         <p className="text-sm sm:text-lg md:text-xl lg:text-2xl text-white/90 mb-6 md:mb-12 px-4">
-          AI agents for enterprise support
+          AI brain for enterprise support
         </p>
 
         <Button size="lg" onClick={() => navigate("/talk-to-us")} className="bg-white text-slate-900 hover:bg-white/90 text-xs sm:text-base md:text-lg px-4 sm:px-8 py-3 sm:py-5 md:py-6 h-auto">

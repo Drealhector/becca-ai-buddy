@@ -141,13 +141,16 @@ const TalkToUs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-blue-50 to-indigo-200 relative">
+    <div className="min-h-screen bg-gradient-to-br from-slate-700 via-slate-600 to-slate-500 relative overflow-hidden">
+      {/* Background overlay with nature image */}
+      <div className="absolute inset-0 bg-[url('/nature-background.jpg')] bg-cover bg-center opacity-30 brightness-50"></div>
+      
       {/* Header */}
       <header className="relative z-10 container mx-auto px-4 py-6">
         <Button
           variant="ghost"
           onClick={() => navigate("/")}
-          className="text-slate-900 hover:bg-white/50"
+          className="text-white hover:bg-white/10"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back to Home
@@ -155,8 +158,8 @@ const TalkToUs = () => {
       </header>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto">
+      <div className="relative z-10 container mx-auto px-4 py-8 flex items-center justify-center min-h-[calc(100vh-88px)]">
+        <div className="max-w-md mx-auto w-full">
           {/* Info Section */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center mb-4">
@@ -170,29 +173,24 @@ const TalkToUs = () => {
               }}>
                 <span style={{
                   color: '#ffffff',
-                  WebkitTextStroke: '2px #2c4a6f',
+                  WebkitTextStroke: '1.5px #2c4a6f',
                   textShadow: `
-                    -4px -4px 0 #5dd5ed,
-                    -8px -8px 0 #5dd5ed,
-                    -12px -12px 0 #70dff0,
+                    -3px -3px 0 #5dd5ed,
+                    -6px -6px 0 #5dd5ed,
+                    -9px -9px 0 #70dff0,
                     0 4px 12px rgba(0,0,0,0.4)
                   `,
                   fontWeight: 900
                 }}>B</span>
                 <span style={{
-                  color: '#1e293b',
+                  color: '#ffffff',
                   fontWeight: 800,
                   textShadow: '0 2px 8px rgba(0,0,0,0.2)'
                 }}>ECCA</span>
               </span>
             </div>
-            <p className="text-xl text-slate-800 mb-3 font-semibold">
-              Your AI Business Assistant That Never Sleeps
-            </p>
-            <p className="text-sm text-slate-700">
-              BECCA is an advanced AI agent designed to handle customer conversations across all platforms - 
-              phone calls, chat, WhatsApp, Instagram, Facebook, and Telegram. Available 24/7 to support your 
-              business needs and scale with your growth.
+            <p className="text-lg sm:text-xl md:text-2xl text-white mb-3 font-semibold text-center leading-relaxed">
+              BECCA is an advanced AI brain designed to make calls, receive calls and integrate into any platform, website and social media accounts and handle interactions for businesses. Available 24/7 to support your business needs and scale with your growth.
             </p>
           </div>
 
@@ -224,7 +222,7 @@ const TalkToUs = () => {
           )}
 
           {/* Form */}
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 shadow-lg">
+          <div className="bg-white backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg">
             <form onSubmit={handleSubmit} id="contactForm" className="space-y-4">
               <div>
                 <Label htmlFor="fullName" className="text-sm font-medium text-slate-900">
@@ -427,7 +425,7 @@ const TalkToUs = () => {
               <Button
                 type="button"
                 onClick={openVapiChat}
-                className="w-full bg-gradient-to-r from-indigo-200 to-blue-200 text-slate-900 hover:opacity-90 border-0 h-11 font-medium"
+                className="w-full bg-white text-slate-900 hover:bg-white/90 border-0 h-11 font-medium"
               >
                 Chat with Becca
               </Button>
