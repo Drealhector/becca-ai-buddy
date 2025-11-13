@@ -13,25 +13,55 @@ const Landing = () => {
       {/* Header */}
       <header className="relative z-10 container mx-auto px-4 py-6 flex items-center justify-between">
         <div className="flex items-center">
-          <span className="text-5xl font-black tracking-wide flex items-center">
+          <span className="flex items-center justify-center" style={{
+            fontSize: '3rem',
+            fontFamily: 'Montserrat, Futura, sans-serif',
+            fontWeight: 900,
+            letterSpacing: '0.05em',
+            lineHeight: 1,
+            textShadow: '0 4px 8px rgba(0,0,0,0.3)',
+            gap: '0.02em'
+          }}>
             <span className="relative inline-block" style={{
-              color: 'white',
-              WebkitTextStroke: '2px #2d4a6f',
-              textShadow: `
-                -3px -3px 0 #5bc5e5,
-                -3px 3px 0 #5bc5e5,
-                3px -3px 0 #5bc5e5,
-                3px 3px 0 #5bc5e5,
-                -6px -6px 0 #7dd8ef,
-                -6px 6px 0 #7dd8ef,
-                6px -6px 0 #7dd8ef,
-                6px 6px 0 #7dd8ef,
-                0 6px 10px rgba(0, 0, 0, 0.4)
-              `
+              color: '#ffffff',
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+              WebkitTextStroke: '2px #06b6d4',
+              textShadow: '-2px -2px 0 #06b6d4, 2px -2px 0 #06b6d4, -2px 2px 0 #06b6d4, 2px 2px 0 #06b6d4',
+              transform: 'skewX(-2deg)',
+              transition: 'transform 0.3s ease'
             }}>B</span>
-            <span className="text-white" style={{
-              textShadow: '0 4px 8px rgba(0, 0, 0, 0.3)'
-            }}>ECCA</span>
+            <span style={{
+              color: '#ffffff',
+              transform: 'skewX(-5deg)',
+              WebkitTextStroke: '0.5px #06b6d4'
+            }}>E</span>
+            <span style={{
+              color: '#ffffff',
+              WebkitTextStroke: '1.5px #06b6d4',
+              WebkitTextFillColor: 'transparent'
+            }}>C</span>
+            <span style={{
+              color: '#ffffff',
+              WebkitTextStroke: '1.5px #06b6d4',
+              WebkitTextFillColor: 'transparent',
+              transform: 'scale(0.95)'
+            }}>C</span>
+            <span className="relative" style={{
+              color: '#ffffff',
+              WebkitTextStroke: '0.8px #06b6d4',
+              transform: 'skewX(-3deg)'
+            }}>
+              A
+              <span className="absolute" style={{
+                content: '*',
+                fontSize: '0.2em',
+                color: '#06b6d4',
+                top: '-0.1em',
+                right: '-0.1em',
+                animation: 'pulse 2s infinite',
+                opacity: 0.8
+              }}>✦</span>
+            </span>
           </span>
         </div>
         <div className="flex items-center gap-4">
