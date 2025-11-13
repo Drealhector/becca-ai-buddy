@@ -50,9 +50,11 @@ const Landing = () => {
       <div className="relative z-10 container mx-auto px-4 py-8 sm:py-16 md:py-20 text-center max-w-5xl">
 
         <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 md:mb-8 leading-tight px-2">
-          AI that talks like a human.
-Handles millions of calls.
-integrates into any platform      
+          AI that talks like a human. Handles millions of calls. integrates into any platform      
+
+      
+
+            
 
 
 
