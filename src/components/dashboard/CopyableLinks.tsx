@@ -12,10 +12,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { ConversationViewDialog } from "./ConversationViewDialog";
 
 const defaultLinks = [
-  { label: "WhatsApp", path: "/whatsapp/hector" },
-  { label: "Instagram Page", path: "/instagram/hector" },
-  { label: "Facebook Page", path: "/facebook/hector" },
-  { label: "Telegram", path: "/telegram/hector" },
+  { key: "whatsapp", label: "WhatsApp", path: "/whatsapp/hector" },
+  { key: "instagram", label: "Instagram Page", path: "/instagram/hector" },
+  { key: "facebook", label: "Facebook Page", path: "/facebook/hector" },
+  { key: "telegram", label: "Telegram", path: "/telegram/hector" },
 ];
 
 const CopyableLinks = () => {
@@ -198,7 +198,7 @@ const CopyableLinks = () => {
         {/* Expanded Links */}
         {expanded && (
           <div className="space-y-3 pl-4">
-            {defaultLinks.filter(link => !hiddenLinks.includes(link.path)).map((link) => (
+            {defaultLinks.map((link) => (
               <div
                 key={link.path}
                 className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
@@ -211,11 +211,11 @@ const CopyableLinks = () => {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => toggleLinkVisibility(link.path)}
-                    className={hiddenLinks.includes(link.path) ? 'text-red-600 hover:text-red-700' : ''}
-                    title={hiddenLinks.includes(link.path) ? "Show on public hub" : "Hide from public hub"}
+                    onClick={() => toggleLinkVisibility(link.key)}
+                    className={hiddenLinks.includes(link.key) ? 'text-destructive hover:text-destructive/90' : ''}
+                    title={hiddenLinks.includes(link.key) ? "Show on public hub" : "Hide from public hub"}
                   >
-                    {hiddenLinks.includes(link.path) ? (
+                    {hiddenLinks.includes(link.key) ? (
                       <EyeOff className="h-4 w-4" />
                     ) : (
                       <Eye className="h-4 w-4" />
@@ -269,11 +269,11 @@ const CopyableLinks = () => {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => toggleLinkVisibility(link.productData.link_slug)}
-                    className={hiddenLinks.includes(link.productData.link_slug) ? 'text-red-600 hover:text-red-700' : ''}
-                    title={hiddenLinks.includes(link.productData.link_slug) ? "Show on public hub" : "Hide from public hub"}
+                    onClick={() => toggleLinkVisibility(link.path)}
+                    className={hiddenLinks.includes(link.path) ? 'text-destructive hover:text-destructive/90' : ''}
+                    title={hiddenLinks.includes(link.path) ? "Show on public hub" : "Hide from public hub"}
                   >
-                    {hiddenLinks.includes(link.productData.link_slug) ? (
+                    {hiddenLinks.includes(link.path) ? (
                       <EyeOff className="h-4 w-4" />
                     ) : (
                       <Eye className="h-4 w-4" />

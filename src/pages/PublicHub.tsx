@@ -94,9 +94,28 @@ const PublicHub = () => {
 
   // Filter out hidden links
   const allLinks = [...links, ...productLinks].filter((link: any) => {
-    // Check if this link's path or slug is hidden
+    // Normalize keys to support both channel keys and paths
     const linkPath = link.isProduct ? `/product/${link.productData?.link_slug}` : link.path;
-    return !hiddenLinks.includes(linkPath) && !hiddenLinks.includes(link.productData?.link_slug || '');
+    const channelKey = !link.isProduct
+      ? (link.label?.toLowerCase().includes('whatsapp') ? 'whatsapp'
+        : link.label?.toLowerCase().includes('instagram') ? 'instagram'
+        : link.label?.toLowerCase().includes('facebook') ? 'facebook'
+        : link.label?.toLowerCase().includes('telegram') ? 'telegram'
+        : link.label?.toLowerCase().includes('chat') ? 'chat'
+        : link.label?.toLowerCase().includes('call') ? 'call'
+        : '')
+      : '';
+    const legacyChannelPath = !link.isProduct && slug ? (
+      channelKey === 'whatsapp' ? `/whatsapp/${slug}` :
+      channelKey === 'instagram' ? `/instagram/${slug}` :
+      channelKey === 'facebook' ? `/facebook/${slug}` :
+      channelKey === 'telegram' ? `/telegram/${slug}` : ''
+    ) : '';
+    const slugVal = link.productData?.link_slug || '';
+    return !hiddenLinks.includes(linkPath)
+      && !hiddenLinks.includes(slugVal)
+      && (!channelKey || !hiddenLinks.includes(channelKey))
+      && (!legacyChannelPath || !hiddenLinks.includes(legacyChannelPath));
   });
 
 
