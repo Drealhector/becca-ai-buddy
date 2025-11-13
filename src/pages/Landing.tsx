@@ -13,56 +13,25 @@ const Landing = () => {
       {/* Header */}
       <header className="relative z-10 container mx-auto px-4 py-6 flex items-center justify-between">
         <div className="flex items-center">
-          <span className="flex items-center" style={{
+          <span style={{
             fontSize: '3rem',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
             fontWeight: 900,
-            letterSpacing: '-0.02em',
+            letterSpacing: '0',
             lineHeight: 1,
-            gap: '0'
+            display: 'inline-block'
           }}>
-            <span className="relative inline-block" style={{
-              width: '2.5em',
-              height: '1em'
-            }}>
-              <span style={{
-                position: 'absolute',
-                left: '12px',
-                top: '12px',
-                color: 'transparent',
-                WebkitTextStroke: '3px #5dd5ed',
-                fontWeight: 900,
-                fontSize: '1em'
-              }}>B</span>
-              <span style={{
-                position: 'absolute',
-                left: '8px',
-                top: '8px',
-                color: 'transparent',
-                WebkitTextStroke: '3px #5dd5ed',
-                fontWeight: 900,
-                fontSize: '1em'
-              }}>B</span>
-              <span style={{
-                position: 'absolute',
-                left: '4px',
-                top: '4px',
-                color: 'transparent',
-                WebkitTextStroke: '3px #5dd5ed',
-                fontWeight: 900,
-                fontSize: '1em'
-              }}>B</span>
-              <span style={{
-                position: 'absolute',
-                left: '0',
-                top: '0',
-                color: '#ffffff',
-                WebkitTextStroke: '2px #1e3a5f',
-                fontWeight: 900,
-                fontSize: '1em',
-                textShadow: '0 4px 12px rgba(0,0,0,0.3)'
-              }}>B</span>
-            </span>
+            <span style={{
+              color: '#ffffff',
+              WebkitTextStroke: '2px #2c4a6f',
+              textShadow: `
+                -4px -4px 0 #5dd5ed,
+                -8px -8px 0 #5dd5ed,
+                -12px -12px 0 #70dff0,
+                0 4px 12px rgba(0,0,0,0.4)
+              `,
+              fontWeight: 900
+            }}>B</span>
             <span style={{
               color: '#ffffff',
               fontWeight: 800,
