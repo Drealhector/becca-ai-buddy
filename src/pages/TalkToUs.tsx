@@ -425,7 +425,7 @@ const TalkToUs = () => {
               <Button
                 type="button"
                 onClick={openVapiChat}
-                className="w-full bg-white text-slate-900 hover:bg-white/90 border-0 h-11 font-medium"
+                className="w-full bg-green-500 text-white hover:bg-green-600 border-0 h-11 font-medium"
               >
                 Chat with Becca
               </Button>
