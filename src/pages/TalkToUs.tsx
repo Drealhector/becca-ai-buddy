@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import beccaLogo from "@/assets/becca-b-logo.png";
 import { ArrowLeft } from "lucide-react";
 
 const TalkToUs = () => {
@@ -160,9 +159,32 @@ const TalkToUs = () => {
         <div className="max-w-md mx-auto">
           {/* Info Section */}
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <img src={beccaLogo} alt="B" className="h-10 w-10 drop-shadow-lg" />
-              <h1 className="text-4xl font-bold text-slate-900">ECCA</h1>
+            <div className="flex items-center justify-center mb-4">
+              <span style={{
+                fontSize: '2.5rem',
+                fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                fontWeight: 900,
+                letterSpacing: '0',
+                lineHeight: 1,
+                display: 'inline-block'
+              }}>
+                <span style={{
+                  color: '#ffffff',
+                  WebkitTextStroke: '2px #2c4a6f',
+                  textShadow: `
+                    -4px -4px 0 #5dd5ed,
+                    -8px -8px 0 #5dd5ed,
+                    -12px -12px 0 #70dff0,
+                    0 4px 12px rgba(0,0,0,0.4)
+                  `,
+                  fontWeight: 900
+                }}>B</span>
+                <span style={{
+                  color: '#1e293b',
+                  fontWeight: 800,
+                  textShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                }}>ECCA</span>
+              </span>
             </div>
             <p className="text-xl text-slate-800 mb-3 font-semibold">
               Your AI Business Assistant That Never Sleeps
