@@ -95,9 +95,9 @@ const Dashboard = () => {
             <Button variant="ghost" size="icon" onClick={() => setShowNav(!showNav)}>
               <Menu className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold flex items-baseline">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold flex items-baseline">
               <span style={{
-                fontSize: '2rem',
+                fontSize: 'clamp(1.25rem, 4vw, 2rem)',
                 fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
                 fontWeight: 900,
                 display: 'inline-block',
@@ -110,7 +110,8 @@ const Dashboard = () => {
                   0 2px 6px rgba(0,0,0,0.4)
                 `
               }}>B</span>
-              <span className="bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">ECCA Dashboard</span>
+              <span className="bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent hidden sm:inline">ECCA Dashboard</span>
+              <span className="bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent sm:hidden">ECCA</span>
             </h1>
           </div>
           <div className="flex items-center gap-4">

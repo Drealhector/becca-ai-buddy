@@ -14,7 +14,7 @@ const Landing = () => {
       <header className="relative z-10 container mx-auto px-4 py-6 flex items-center justify-between">
         <div className="flex items-center">
           <span style={{
-            fontSize: '3rem',
+            fontSize: 'clamp(2rem, 6vw, 3rem)',
             fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
             fontWeight: 900,
             letterSpacing: '0',
@@ -57,21 +57,21 @@ const Landing = () => {
       </header>
 
       {/* Hero Content */}
-      <div className="relative z-10 container mx-auto px-4 py-20 text-center max-w-5xl">
+      <div className="relative z-10 container mx-auto px-4 py-12 sm:py-16 md:py-20 text-center max-w-5xl">
 
-        <h1 className="text-6xl md:text-7xl font-bold text-white mb-8 leading-tight">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 md:mb-8 leading-tight px-2">
           AI that talks like a human.<br />
           Handles millions of calls.
         </h1>
         
-        <p className="text-xl md:text-2xl text-white/90 mb-12">
+        <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 mb-8 md:mb-12 px-4">
           AI agents for enterprise support
         </p>
 
         <Button
           size="lg"
           onClick={() => navigate("/talk-to-us")}
-          className="bg-white text-slate-900 hover:bg-white/90 text-lg px-8 py-6 h-auto"
+          className="bg-white text-slate-900 hover:bg-white/90 text-sm sm:text-base md:text-lg px-6 sm:px-8 py-4 sm:py-5 md:py-6 h-auto"
         >
           Talk to us
         </Button>

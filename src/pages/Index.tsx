@@ -8,28 +8,28 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-accent to-primary">
       {/* Hero Section */}
-      <div className="container mx-auto px-4 py-20">
+      <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
         <div className="text-center max-w-4xl mx-auto">
-          <div className="inline-block mb-6">
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-              <Sparkles className="h-5 w-5 text-white" />
-              <span className="text-white text-sm font-medium">AI-Powered Business Assistant</span>
+          <div className="inline-block mb-4 md:mb-6">
+            <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              <span className="text-white text-xs sm:text-sm font-medium">AI-Powered Business Assistant</span>
             </div>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 md:mb-6 leading-tight px-2">
             Meet BECCA
           </h1>
           
-          <p className="text-xl md:text-2xl text-white/90 mb-12 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 mb-8 md:mb-12 max-w-2xl mx-auto px-4">
             Your 24/7 AI business assistant that handles customer conversations across all platforms
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12 md:mb-16 px-4">
             <Button
               size="lg"
               onClick={() => navigate("/hector/becca")}
-              className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-6 h-auto shadow-glow"
+              className="bg-white text-primary hover:bg-white/90 text-sm sm:text-base md:text-lg px-6 sm:px-8 py-4 sm:py-5 md:py-6 h-auto shadow-glow"
             >
               Try Demo
             </Button>
@@ -37,7 +37,7 @@ const Index = () => {
               size="lg"
               variant="outline"
               onClick={() => navigate("/auth")}
-              className="border-white text-white hover:bg-white/10 text-lg px-8 py-6 h-auto"
+              className="border-white text-white hover:bg-white/10 text-sm sm:text-base md:text-lg px-6 sm:px-8 py-4 sm:py-5 md:py-6 h-auto"
             >
               Dashboard Login
             </Button>
