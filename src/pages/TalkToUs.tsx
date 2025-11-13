@@ -7,12 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
+import VapiChatDialog from "@/components/chat/VapiChatDialog";
 
 const TalkToUs = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const successMessageRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -24,46 +26,6 @@ const TalkToUs = () => {
     customFunction: "",
   });
 
-  const openVapiChat = () => {
-    // Load VAPI widget script dynamically when button is clicked
-    const existingScript = document.querySelector('script[src*="vapi-ai"]');
-    if (!existingScript) {
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/@vapi-ai/client-sdk-react/dist/embed/widget.umd.js';
-      script.async = true;
-      script.onload = () => {
-        createVapiWidget();
-      };
-      document.body.appendChild(script);
-    } else {
-      createVapiWidget();
-    }
-  };
-
-  const createVapiWidget = () => {
-    // Create VAPI widget element
-    const vapiWidget = document.createElement('vapi-widget');
-    vapiWidget.setAttribute('public-key', '208b6005-0953-425b-a478-2748d49d484c');
-    vapiWidget.setAttribute('assistant-id', 'b09cc3ec-1180-4b2a-a6c8-49f80bc10da8');
-    vapiWidget.setAttribute('mode', 'chat');
-    vapiWidget.setAttribute('theme', 'dark');
-    vapiWidget.setAttribute('base-bg-color', '#000000');
-    vapiWidget.setAttribute('accent-color', '#14B8A6');
-    vapiWidget.setAttribute('cta-button-color', '#000000');
-    vapiWidget.setAttribute('cta-button-text-color', '#ffffff');
-    vapiWidget.setAttribute('border-radius', 'large');
-    vapiWidget.setAttribute('size', 'full');
-    vapiWidget.setAttribute('position', 'bottom-right');
-    vapiWidget.setAttribute('title', 'CHAT WITH BECCA');
-    vapiWidget.setAttribute('start-button-text', 'Start');
-    vapiWidget.setAttribute('end-button-text', 'End Call');
-    vapiWidget.setAttribute('chat-first-message', 'Hey, How can I help you today?');
-    vapiWidget.setAttribute('chat-placeholder', 'Type your message...');
-    vapiWidget.setAttribute('voice-show-transcript', 'true');
-    vapiWidget.setAttribute('consent-required', 'false');
-    
-    document.body.appendChild(vapiWidget);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -424,7 +386,7 @@ const TalkToUs = () => {
             <div className="mt-4">
               <Button
                 type="button"
-                onClick={openVapiChat}
+                onClick={() => setIsChatOpen(true)}
                 className="w-full bg-green-500 text-white hover:bg-green-600 border-0 h-11 font-medium"
               >
                 Chat with Becca
@@ -433,6 +395,9 @@ const TalkToUs = () => {
           </div>
         </div>
       </div>
+
+      {/* Vapi Chat Dialog */}
+      <VapiChatDialog open={isChatOpen} onOpenChange={setIsChatOpen} />
     </div>
   );
 };
