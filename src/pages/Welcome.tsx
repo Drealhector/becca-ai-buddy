@@ -1,10 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import beccaLogo from "@/assets/becca-b-logo.png";
 
 const Welcome = () => {
-  const [businessName, setBusinessName] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -13,7 +11,6 @@ const Welcome = () => {
       navigate("/auth");
       return;
     }
-    setBusinessName(name);
   }, [navigate]);
 
   const handleContinue = () => {
@@ -21,14 +18,33 @@ const Welcome = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary via-accent to-primary flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="text-center max-w-2xl animate-fade-in">
         <div className="mb-8 flex justify-center">
-          <img src={beccaLogo} alt="BECCA" className="h-24 w-24 drop-shadow-2xl animate-scale-in" />
+          <span style={{
+            fontSize: '6rem',
+            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+            fontWeight: 900,
+            letterSpacing: '0',
+            lineHeight: 1,
+            display: 'inline-block'
+          }}>
+            <span style={{
+              color: '#ffffff',
+              WebkitTextStroke: '2px #2c4a6f',
+              textShadow: `
+                -4px -4px 0 #5dd5ed,
+                -8px -8px 0 #5dd5ed,
+                -12px -12px 0 #70dff0,
+                0 4px 12px rgba(0,0,0,0.4)
+              `,
+              fontWeight: 900
+            }}>B</span>
+          </span>
         </div>
 
         <h1 className="text-white text-5xl md:text-6xl font-bold mb-4">
-          Welcome {businessName}
+          Welcome DREALHECTOR
         </h1>
 
         <p className="text-white/90 text-xl mb-12">
@@ -38,7 +54,7 @@ const Welcome = () => {
         <Button
           size="lg"
           onClick={handleContinue}
-          className="bg-white text-primary hover:bg-white/90 text-lg px-12 py-6 h-auto animate-pulse hover:animate-none"
+          className="bg-white text-slate-900 hover:bg-white/90 text-lg px-12 py-6 h-auto animate-pulse hover:animate-none"
         >
           Continue to your BECCA Dashboard
         </Button>
