@@ -46,76 +46,74 @@ const PublicHub = () => {
 
   const links = [
     { 
-      label: "Chat", 
+      key: 'chat',
+      label: 'Chat', 
       path: `/chat/${slug}`, 
-      icon: "💬",
-      image: null
+      icon: '💬',
+      image: null,
+      legacyPath: ''
     },
     { 
-      label: "Call", 
+      key: 'call',
+      label: 'Call', 
       path: `/call/${slug}`, 
-      icon: "📞",
-      image: null
+      icon: '📞',
+      image: null,
+      legacyPath: ''
     },
     { 
+      key: 'whatsapp',
       label: `WhatsApp/${slug}`, 
-      path: customization?.whatsapp_username ? `https://wa.me/${customization.whatsapp_username}` : "#", 
+      path: customization?.whatsapp_username ? `https://wa.me/${customization.whatsapp_username}` : '#', 
       icon: null,
-      image: "https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"
+      image: 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg',
+      legacyPath: slug ? `/whatsapp/${slug}` : ''
     },
     { 
+      key: 'instagram',
       label: `Instagram/${slug}`, 
-      path: customization?.instagram_username ? `https://instagram.com/${customization.instagram_username}` : "#", 
+      path: customization?.instagram_username ? `https://instagram.com/${customization.instagram_username}` : '#', 
       icon: null,
-      image: "https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg"
+      image: 'https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg',
+      legacyPath: slug ? `/instagram/${slug}` : ''
     },
     { 
+      key: 'facebook',
       label: `Facebook/${slug}`, 
-      path: customization?.facebook_username ? `https://facebook.com/${customization.facebook_username}` : "#", 
+      path: customization?.facebook_username ? `https://facebook.com/${customization.facebook_username}` : '#', 
       icon: null,
-      image: "https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg"
+      image: 'https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg',
+      legacyPath: slug ? `/facebook/${slug}` : ''
     },
     { 
+      key: 'telegram',
       label: `Telegram/${slug}`, 
-      path: customization?.telegram_username ? `https://t.me/${customization.telegram_username}` : "#", 
+      path: customization?.telegram_username ? `https://t.me/${customization.telegram_username}` : '#', 
       icon: null,
-      image: "https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg"
+      image: 'https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg',
+      legacyPath: slug ? `/telegram/${slug}` : ''
     },
   ];
 
   const productLinks = products.map(product => ({
+    key: `/product/${product.link_slug}`,
     label: product.name,
     path: `/product/${product.link_slug}`,
     icon: null,
     image: product.image_url,
     isProduct: true,
-    productData: product
+    productData: product,
+    slug: product.link_slug,
+    legacyPath: ''
   }));
 
   // Filter out hidden links
+  const hiddenSet = new Set(hiddenLinks);
   const allLinks = [...links, ...productLinks].filter((link: any) => {
-    // Normalize keys to support both channel keys and paths
-    const linkPath = link.isProduct ? `/product/${link.productData?.link_slug}` : link.path;
-    const channelKey = !link.isProduct
-      ? (link.label?.toLowerCase().includes('whatsapp') ? 'whatsapp'
-        : link.label?.toLowerCase().includes('instagram') ? 'instagram'
-        : link.label?.toLowerCase().includes('facebook') ? 'facebook'
-        : link.label?.toLowerCase().includes('telegram') ? 'telegram'
-        : link.label?.toLowerCase().includes('chat') ? 'chat'
-        : link.label?.toLowerCase().includes('call') ? 'call'
-        : '')
-      : '';
-    const legacyChannelPath = !link.isProduct && slug ? (
-      channelKey === 'whatsapp' ? `/whatsapp/${slug}` :
-      channelKey === 'instagram' ? `/instagram/${slug}` :
-      channelKey === 'facebook' ? `/facebook/${slug}` :
-      channelKey === 'telegram' ? `/telegram/${slug}` : ''
-    ) : '';
-    const slugVal = link.productData?.link_slug || '';
-    return !hiddenLinks.includes(linkPath)
-      && !hiddenLinks.includes(slugVal)
-      && (!channelKey || !hiddenLinks.includes(channelKey))
-      && (!legacyChannelPath || !hiddenLinks.includes(legacyChannelPath));
+    return !hiddenSet.has(link.key)
+      && !hiddenSet.has(link.path)
+      && !(link.slug && hiddenSet.has(link.slug))
+      && !(link.legacyPath && hiddenSet.has(link.legacyPath));
   });
 
 

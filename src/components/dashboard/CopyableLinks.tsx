@@ -212,10 +212,10 @@ const CopyableLinks = () => {
                     size="sm"
                     variant="ghost"
                     onClick={() => toggleLinkVisibility(link.key)}
-                    className={hiddenLinks.includes(link.key) ? 'text-destructive hover:text-destructive/90' : ''}
-                    title={hiddenLinks.includes(link.key) ? "Show on public hub" : "Hide from public hub"}
+                    className={hiddenLinks.some(id => id === link.key || id === link.path) ? 'text-destructive hover:text-destructive/90' : ''}
+                    title={hiddenLinks.some(id => id === link.key || id === link.path) ? "Show on public hub" : "Hide from public hub"}
                   >
-                    {hiddenLinks.includes(link.key) ? (
+                    {hiddenLinks.some(id => id === link.key || id === link.path) ? (
                       <EyeOff className="h-4 w-4" />
                     ) : (
                       <Eye className="h-4 w-4" />
@@ -270,10 +270,10 @@ const CopyableLinks = () => {
                     size="sm"
                     variant="ghost"
                     onClick={() => toggleLinkVisibility(link.path)}
-                    className={hiddenLinks.includes(link.path) ? 'text-destructive hover:text-destructive/90' : ''}
-                    title={hiddenLinks.includes(link.path) ? "Show on public hub" : "Hide from public hub"}
+                    className={hiddenLinks.some(id => id === link.path || id === link.productData.link_slug) ? 'text-destructive hover:text-destructive/90' : ''}
+                    title={hiddenLinks.some(id => id === link.path || id === link.productData.link_slug) ? "Show on public hub" : "Hide from public hub"}
                   >
-                    {hiddenLinks.includes(link.path) ? (
+                    {hiddenLinks.some(id => id === link.path || id === link.productData.link_slug) ? (
                       <EyeOff className="h-4 w-4" />
                     ) : (
                       <Eye className="h-4 w-4" />
