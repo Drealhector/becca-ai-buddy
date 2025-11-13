@@ -66,18 +66,21 @@ const BusinessAuth = () => {
         <div className="flex justify-center mb-8">
           <div className="w-32 h-32 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-2xl">
             <span style={{
-              fontSize: '4rem',
+              fontSize: '5rem',
               fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
               fontWeight: 900,
               lineHeight: 1,
               color: '#ffffff',
               WebkitTextStroke: '2px #2c4a6f',
               textShadow: `
-                -4px -4px 0 #5dd5ed,
-                -8px -8px 0 #5dd5ed,
-                -12px -12px 0 #70dff0,
-                0 4px 12px rgba(0,0,0,0.4)
-              `
+                -3px -3px 0 #5dd5ed,
+                -6px -6px 0 #5dd5ed,
+                -9px -9px 0 #70dff0,
+                0 3px 10px rgba(0,0,0,0.4)
+              `,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}>B</span>
           </div>
         </div>
