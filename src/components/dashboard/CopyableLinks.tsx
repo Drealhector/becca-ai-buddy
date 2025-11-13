@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, ExternalLink, ChevronDown, ChevronUp, Edit, Eye } from "lucide-react";
+import { Copy, ExternalLink, ChevronDown, ChevronUp, Edit, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { AddProductDialog } from "./AddProductDialog";
 import { EditProductDialog } from "./EditProductDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
+import { ConversationViewDialog } from "./ConversationViewDialog";
 
 const defaultLinks = [
   { label: "WhatsApp", path: "/whatsapp/hector" },
@@ -24,6 +25,10 @@ const CopyableLinks = () => {
   const [viewingInteractions, setViewingInteractions] = useState<any>(null);
   const [showInteractionsDialog, setShowInteractionsDialog] = useState(false);
   const [interactions, setInteractions] = useState<any[]>([]);
+  const [hiddenLinks, setHiddenLinks] = useState<string[]>([]);
+  const [showConversationDialog, setShowConversationDialog] = useState(false);
+  const [currentConversations, setCurrentConversations] = useState<any[]>([]);
+  const [conversationTitle, setConversationTitle] = useState("");
 
   const fetchProducts = async () => {
     const { data, error } = await supabase
@@ -75,6 +80,40 @@ const CopyableLinks = () => {
     setShowInteractionsDialog(true);
   };
 
+  const handleViewConversations = async (linkLabel: string) => {
+    setConversationTitle(linkLabel);
+    // Fetch messages/conversations for this platform
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('platform', linkLabel.toLowerCase())
+      .order('timestamp', { ascending: false });
+    
+    setCurrentConversations(data || []);
+    setShowConversationDialog(true);
+  };
+
+  const handleViewWebChatConversations = async () => {
+    setConversationTitle("Web Chat");
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('platform', 'web')
+      .order('timestamp', { ascending: false });
+    
+    setCurrentConversations(data || []);
+    setShowConversationDialog(true);
+  };
+
+  const toggleLinkVisibility = (path: string) => {
+    setHiddenLinks(prev => 
+      prev.includes(path) 
+        ? prev.filter(p => p !== path)
+        : [...prev, path]
+    );
+    toast.success(hiddenLinks.includes(path) ? "Link shown" : "Link hidden");
+  };
+
   const publicHubLink = { label: "Public Hub", path: "/hector" };
   const productLinks = products.map(product => ({
     label: product.name,
@@ -96,6 +135,17 @@ const CopyableLinks = () => {
             <p className="text-sm text-muted-foreground">{publicHubLink.path}</p>
           </div>
           <div className="flex gap-2 items-center">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleViewWebChatConversations();
+              }}
+              title="View Conversations"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
             <Button
               size="sm"
               variant="ghost"
@@ -132,7 +182,7 @@ const CopyableLinks = () => {
         {/* Expanded Links */}
         {expanded && (
           <div className="space-y-3 pl-4">
-            {defaultLinks.map((link) => (
+            {defaultLinks.filter(link => !hiddenLinks.includes(link.path)).map((link) => (
               <div
                 key={link.path}
                 className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
@@ -142,6 +192,22 @@ const CopyableLinks = () => {
                   <p className="text-sm text-muted-foreground">{link.path}</p>
                 </div>
                 <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleViewConversations(link.label)}
+                    title="View Conversations"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => toggleLinkVisibility(link.path)}
+                    title={hiddenLinks.includes(link.path) ? "Show Link" : "Hide Link"}
+                  >
+                    {hiddenLinks.includes(link.path) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -261,6 +327,14 @@ const CopyableLinks = () => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Conversation View Dialog */}
+      <ConversationViewDialog
+        open={showConversationDialog}
+        onOpenChange={setShowConversationDialog}
+        title={conversationTitle}
+        conversations={currentConversations}
+      />
     </Card>
   );
 };

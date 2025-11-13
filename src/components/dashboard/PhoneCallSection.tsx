@@ -4,9 +4,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2 } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const PhoneCallSection = () => {
   const [callHistory, setCallHistory] = useState<any[]>([]);
@@ -19,6 +21,8 @@ const PhoneCallSection = () => {
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
+  const [showTranscriptDialog, setShowTranscriptDialog] = useState(false);
+  const [selectedCallTranscript, setSelectedCallTranscript] = useState<any>(null);
 
   useEffect(() => {
     fetchCallHistory();
@@ -141,6 +145,11 @@ const PhoneCallSection = () => {
     }
   };
 
+  const handleViewTranscript = (call: any) => {
+    setSelectedCallTranscript(call);
+    setShowTranscriptDialog(true);
+  };
+
   const incomingCalls = callHistory.filter((call) => call.type === "incoming");
   const outgoingCalls = callHistory.filter((call) => call.type === "outgoing");
 
@@ -184,7 +193,7 @@ const PhoneCallSection = () => {
         </div>
         <Button
           onClick={() => setShowMakeCall(!showMakeCall)}
-          className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
+          className="bg-green-600 hover:bg-green-700 text-white"
         >
           Make a Call
         </Button>
@@ -252,7 +261,17 @@ const PhoneCallSection = () => {
                     </Button>
                   )}
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-sm">{call.number}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{call.number}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleViewTranscript(call)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <Badge variant="secondary">
                       {call.duration_minutes || 0} min
                     </Badge>
@@ -302,7 +321,17 @@ const PhoneCallSection = () => {
                     </Button>
                   )}
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-sm">{call.number}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{call.number}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleViewTranscript(call)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <Badge variant="secondary">
                       {call.duration_minutes || 0} min
                     </Badge>
@@ -319,6 +348,38 @@ const PhoneCallSection = () => {
           </div>
         </div>
       </div>
+
+      {/* Transcript Dialog */}
+      <Dialog open={showTranscriptDialog} onOpenChange={setShowTranscriptDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Call Transcript - {selectedCallTranscript?.number}</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-4">
+              <div className="border border-border rounded-lg p-4">
+                <p className="text-sm text-muted-foreground mb-2">
+                  {selectedCallTranscript?.timestamp && format(new Date(selectedCallTranscript.timestamp), "MMM dd, yyyy HH:mm")}
+                </p>
+                <p className="text-sm font-medium mb-2">
+                  Duration: {selectedCallTranscript?.duration_minutes || 0} minutes
+                </p>
+                {selectedCallTranscript?.topic && (
+                  <p className="text-sm mb-3">
+                    <span className="font-medium">Topic:</span> {selectedCallTranscript.topic}
+                  </p>
+                )}
+                <div className="mt-3 p-3 bg-muted/50 rounded">
+                  <p className="text-xs text-muted-foreground mb-1">Transcript:</p>
+                  <p className="text-sm whitespace-pre-wrap">
+                    {selectedCallTranscript?.transcript || "No transcript available for this call"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

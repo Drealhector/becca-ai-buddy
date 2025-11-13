@@ -58,14 +58,6 @@ const Landing = () => {
 
       {/* Hero Content */}
       <div className="relative z-10 container mx-auto px-4 py-20 text-center max-w-5xl">
-        <div className="mb-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
-            <span className="text-white text-sm">BECCA RAISES $61M SERIES A</span>
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </div>
 
         <h1 className="text-6xl md:text-7xl font-bold text-white mb-8 leading-tight">
           AI that talks like a human.<br />

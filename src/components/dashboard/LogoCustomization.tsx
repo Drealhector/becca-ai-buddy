@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Upload, Sparkles, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Upload, Image as ImageIcon, Loader2 } from "lucide-react";
+import { AILogoGeneratorDialog } from "./AILogoGeneratorDialog";
 
 const LogoCustomization = () => {
   const [logoUrl, setLogoUrl] = useState("");
@@ -66,28 +67,6 @@ const LogoCustomization = () => {
     }
   };
 
-  const handleGenerateLogo = async () => {
-    setGenerating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("generate-logo");
-
-      if (error) throw error;
-      if (!data?.imageDataUrl) throw new Error("No image generated");
-
-      // Convert base64 to blob and upload
-      const base64Response = await fetch(data.imageDataUrl);
-      const blob = await base64Response.blob();
-      const file = new File([blob], "generated-logo.png", { type: "image/png" });
-      
-      await handleFileUpload(file, "chat");
-      toast.success("Logo generated and uploaded!");
-    } catch (error) {
-      console.error("Error generating logo:", error);
-      toast.error("Failed to generate logo");
-    } finally {
-      setGenerating(false);
-    }
-  };
 
 
   return (
@@ -97,9 +76,9 @@ const LogoCustomization = () => {
         <h3 className="text-lg font-semibold">Hub Logo</h3>
       </div>
 
-      <div>
+      <div className="space-y-3">
         <Label>Hub Logo (for Public Hub page)</Label>
-        <div className="mt-2 flex items-center gap-4">
+        <div className="flex items-center gap-4">
           <input
             type="file"
             accept="image/*"
@@ -129,6 +108,7 @@ const LogoCustomization = () => {
             <img src={logoUrl} alt="Hub Logo" className="w-16 h-16 object-cover rounded-lg border" />
           )}
         </div>
+        <AILogoGeneratorDialog onLogoGenerated={fetchLogos} />
       </div>
     </Card>
   );
