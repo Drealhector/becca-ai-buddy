@@ -12,12 +12,14 @@ serve(async (req) => {
   }
 
   try {
-    const { platform, messages, conversation_id } = await req.json();
+    const { platform, messages, conversation_id, sender_name, timestamp } = await req.json();
     
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+
+    console.log("Received webhook data:", { platform, conversation_id, sender_name, timestamp, messages });
 
     // Create or update conversation
     const { data: conversation } = await supabase
@@ -30,17 +32,25 @@ serve(async (req) => {
       .select()
       .single();
 
+    console.log("Conversation created/updated:", conversation);
+
     // Save messages
     let salesFlagged = false;
     for (const message of messages) {
-      await supabase.from("messages").insert({
+      // Use message-level sender_name/timestamp if provided, otherwise use top-level
+      const messageSenderName = message.sender_name || sender_name || (message.role === "user" ? "Unknown" : "Becca");
+      const messageTimestamp = message.timestamp || timestamp || new Date().toISOString();
+      
+      const insertResult = await supabase.from("messages").insert({
         conversation_id: conversation_id,
         role: message.role,
         content: message.content,
-        sender_name: message.sender_name || (message.role === "user" ? "Unknown" : "Becca"),
-        timestamp: message.timestamp || new Date().toISOString(),
+        sender_name: messageSenderName,
+        timestamp: messageTimestamp,
         platform,
       });
+      
+      console.log("Message inserted:", insertResult);
 
       // Check for sales keywords
       if (message.content.toLowerCase().includes("buy") || 
