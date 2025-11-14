@@ -289,17 +289,17 @@ const PhoneCallSection = () => {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-full bg-primary/10">
             <Phone className="h-6 w-6 text-primary" />
           </div>
           <h3 className="text-lg font-semibold">Phone Calls</h3>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button
             onClick={() => setShowMakeCall(!showMakeCall)}
-            className="bg-green-600 hover:bg-green-700 text-white gap-2"
+            className="bg-green-600 hover:bg-green-700 text-white gap-2 w-full sm:w-auto"
           >
             <Phone className="w-4 h-4" />
             Make a Call
@@ -307,7 +307,7 @@ const PhoneCallSection = () => {
           <Button
             onClick={() => setShowScheduleCall(!showScheduleCall)}
             variant="outline"
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
           >
             <Clock className="w-4 h-4" />
             Schedule Calls
@@ -328,14 +328,14 @@ const PhoneCallSection = () => {
             onChange={(e) => setCallNumber(e.target.value)}
             placeholder="Phone number (e.g., +1-555-123-4567)"
           />
-          <div className="flex gap-2">
-            <Button onClick={handleMakeCall} className="flex-1">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={handleMakeCall} className="flex-1 w-full">
               Start Call
             </Button>
             <Button
               variant="outline"
               onClick={() => setShowMakeCall(false)}
-              className="flex-1"
+              className="flex-1 w-full"
             >
               Cancel
             </Button>
@@ -361,14 +361,14 @@ const PhoneCallSection = () => {
             value={scheduleTime}
             onChange={(e) => setScheduleTime(e.target.value)}
           />
-          <div className="flex gap-2">
-            <Button onClick={handleScheduleCall} className="flex-1">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={handleScheduleCall} className="flex-1 w-full">
               Queue Call
             </Button>
             <Button
               variant="outline"
               onClick={() => setShowQueuedCalls(!showQueuedCalls)}
-              className="relative"
+              className="relative w-full sm:w-auto"
             >
               Queued Calls
               {queuedCalls.length > 0 && (
@@ -383,6 +383,7 @@ const PhoneCallSection = () => {
             <Button
               variant="outline"
               onClick={() => setShowScheduleCall(false)}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
