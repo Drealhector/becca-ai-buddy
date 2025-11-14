@@ -271,7 +271,7 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
               <Input
                 value={humanName}
                 onChange={(e) => setHumanName(e.target.value)}
-                placeholder="e.g., Elon Musk"
+                placeholder="e.g., Elon Musk, SpaceX CEO, American entrepreneur"
               />
             </div>
             {humanContext && (
