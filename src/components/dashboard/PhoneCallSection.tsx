@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, FileText } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, FileText, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,8 +13,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 const PhoneCallSection = () => {
   const [callHistory, setCallHistory] = useState<any[]>([]);
   const [showMakeCall, setShowMakeCall] = useState(false);
+  const [showScheduleCall, setShowScheduleCall] = useState(false);
+  const [showQueuedCalls, setShowQueuedCalls] = useState(false);
   const [callTopic, setCallTopic] = useState("");
   const [callNumber, setCallNumber] = useState("");
+  const [scheduleTopic, setScheduleTopic] = useState("");
+  const [scheduleNumber, setScheduleNumber] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("");
+  const [queuedCalls, setQueuedCalls] = useState<any[]>([]);
   const [isInCall, setIsInCall] = useState(false);
   const [callStatus, setCallStatus] = useState<"calling" | "connected" | null>(null);
   const [callDuration, setCallDuration] = useState(0);
@@ -26,6 +32,7 @@ const PhoneCallSection = () => {
 
   useEffect(() => {
     fetchCallHistory();
+    fetchQueuedCalls();
 
     const channel = supabase
       .channel("call-history-changes")
@@ -46,6 +53,15 @@ const PhoneCallSection = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Check queued calls every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkAndExecuteQueuedCalls();
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [queuedCalls]);
 
   // Call timer effect
   useEffect(() => {
@@ -73,6 +89,50 @@ const PhoneCallSection = () => {
     }
   };
 
+  const fetchQueuedCalls = async () => {
+    try {
+      // For demo purposes, get from localStorage
+      const stored = localStorage.getItem("queuedCalls");
+      if (stored) {
+        setQueuedCalls(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error("Error fetching queued calls:", error);
+    }
+  };
+
+  const checkAndExecuteQueuedCalls = () => {
+    const now = new Date();
+    const updatedQueue = queuedCalls.filter((call) => {
+      const scheduledTime = new Date(call.scheduledTime);
+      if (scheduledTime <= now) {
+        // Execute the call
+        executeScheduledCall(call);
+        return false; // Remove from queue
+      }
+      return true; // Keep in queue
+    });
+
+    if (updatedQueue.length !== queuedCalls.length) {
+      setQueuedCalls(updatedQueue);
+      localStorage.setItem("queuedCalls", JSON.stringify(updatedQueue));
+    }
+  };
+
+  const executeScheduledCall = async (call: any) => {
+    try {
+      await supabase.from("call_history").insert({
+        type: "outgoing",
+        number: call.number,
+        topic: call.topic,
+        duration_minutes: 0,
+      });
+      toast.success(`Scheduled call to ${call.number} executed`);
+    } catch (error) {
+      console.error("Error executing scheduled call:", error);
+    }
+  };
+
   const formatCallDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -94,6 +154,51 @@ const PhoneCallSection = () => {
       setCallStatus("connected");
       setCallStartTime(new Date());
     }, 3000);
+  };
+
+  const handleScheduleCall = () => {
+    if (!scheduleTopic || !scheduleNumber || !scheduleTime) {
+      toast.error("Please enter topic, number, and time");
+      return;
+    }
+
+    const newCall = {
+      id: Date.now().toString(),
+      topic: scheduleTopic,
+      number: scheduleNumber,
+      scheduledTime: scheduleTime,
+    };
+
+    const updatedQueue = [...queuedCalls, newCall];
+    setQueuedCalls(updatedQueue);
+    localStorage.setItem("queuedCalls", JSON.stringify(updatedQueue));
+
+    toast.success("Call queued successfully");
+    setScheduleTopic("");
+    setScheduleNumber("");
+    setScheduleTime("");
+    setShowScheduleCall(false);
+  };
+
+  const handleRemoveQueuedCall = (callId: string) => {
+    const updatedQueue = queuedCalls.filter((call) => call.id !== callId);
+    setQueuedCalls(updatedQueue);
+    localStorage.setItem("queuedCalls", JSON.stringify(updatedQueue));
+    toast.success("Call removed from queue");
+  };
+
+  const getTimeLeft = (scheduledTime: string) => {
+    const now = new Date();
+    const scheduled = new Date(scheduledTime);
+    const diff = scheduled.getTime() - now.getTime();
+
+    if (diff <= 0) return "Executing...";
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   };
 
   const handleEndCall = async () => {
@@ -191,12 +296,23 @@ const PhoneCallSection = () => {
           </div>
           <h3 className="text-lg font-semibold">Phone Calls</h3>
         </div>
-        <Button
-          onClick={() => setShowMakeCall(!showMakeCall)}
-          className="bg-green-600 hover:bg-green-700 text-white"
-        >
-          Make a Call
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowMakeCall(!showMakeCall)}
+            className="bg-green-600 hover:bg-green-700 text-white gap-2"
+          >
+            <Phone className="w-4 h-4" />
+            Make a Call
+          </Button>
+          <Button
+            onClick={() => setShowScheduleCall(!showScheduleCall)}
+            variant="outline"
+            className="gap-2"
+          >
+            <Clock className="w-4 h-4" />
+            Schedule Calls
+          </Button>
+        </div>
       </div>
 
       {showMakeCall && (
@@ -224,6 +340,84 @@ const PhoneCallSection = () => {
               Cancel
             </Button>
           </div>
+        </div>
+      )}
+
+      {showScheduleCall && (
+        <div className="mb-6 p-4 border border-border rounded-lg space-y-3">
+          <p className="font-medium">Schedule a call for later</p>
+          <Input
+            value={scheduleTopic}
+            onChange={(e) => setScheduleTopic(e.target.value)}
+            placeholder="Topic or purpose of the call"
+          />
+          <Input
+            value={scheduleNumber}
+            onChange={(e) => setScheduleNumber(e.target.value)}
+            placeholder="Phone number (e.g., +1-555-123-4567)"
+          />
+          <Input
+            type="datetime-local"
+            value={scheduleTime}
+            onChange={(e) => setScheduleTime(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <Button onClick={handleScheduleCall} className="flex-1">
+              Queue Call
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowQueuedCalls(!showQueuedCalls)}
+              className="relative"
+            >
+              Queued Calls
+              {queuedCalls.length > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                >
+                  {queuedCalls.length}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowScheduleCall(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+
+          {showQueuedCalls && queuedCalls.length > 0 && (
+            <div className="mt-4 p-3 border border-border rounded-lg bg-muted/50">
+              <h4 className="font-semibold text-sm mb-3">Queued Calls</h4>
+              <ScrollArea className="h-48">
+                <div className="space-y-2">
+                  {queuedCalls.map((call) => (
+                    <div
+                      key={call.id}
+                      className="flex items-center justify-between p-3 border border-border rounded bg-background"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{call.topic}</p>
+                        <p className="text-xs text-muted-foreground">{call.number}</p>
+                        <p className="text-xs text-primary font-semibold mt-1">
+                          Time left: {getTimeLeft(call.scheduledTime)}
+                        </p>
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleRemoveQueuedCall(call.id)}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
         </div>
       )}
 
