@@ -143,7 +143,7 @@ const ConversationsSection = () => {
                     >
                       <span className="font-semibold text-xs block mb-1">
                         {msg.role === "user" 
-                          ? (msg.sender_name || "User")
+                          ? (msg.sender_name || "Customer")
                           : "Becca"
                         }
                       </span>
