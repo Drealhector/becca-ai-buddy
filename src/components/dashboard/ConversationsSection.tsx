@@ -34,31 +34,55 @@ const ConversationsSection = () => {
 
   const fetchConversations = async () => {
     try {
-      let query = supabase
-        .from("conversations")
-        .select("*")
-        .order("start_time", { ascending: false })
-        .limit(10);
+      if (selectedPlatform === "all") {
+        // For "All", fetch last 15 messages across all platforms sorted by time
+        const { data: allMessages } = await supabase
+          .from("messages")
+          .select("*")
+          .order("timestamp", { ascending: false })
+          .limit(15);
 
-      if (selectedPlatform !== "all") {
-        query = query.eq("platform", selectedPlatform);
+        // Group by conversation for display
+        const grouped: any = {};
+        (allMessages || []).reverse().forEach((msg: any) => {
+          if (!grouped[msg.conversation_id]) {
+            grouped[msg.conversation_id] = {
+              id: msg.conversation_id,
+              platform: msg.platform,
+              start_time: msg.timestamp,
+              messages: []
+            };
+          }
+          grouped[msg.conversation_id].messages.push(msg);
+        });
+
+        setConversations(Object.values(grouped));
+      } else {
+        // For specific platform, fetch conversations with last 15 messages each
+        let query = supabase
+          .from("conversations")
+          .select("*")
+          .eq("platform", selectedPlatform)
+          .order("start_time", { ascending: false })
+          .limit(10);
+
+        const { data: convos } = await query;
+
+        const conversationsWithMessages = await Promise.all(
+          (convos || []).map(async (convo) => {
+            const { data: messages } = await supabase
+              .from("messages")
+              .select("*")
+              .eq("conversation_id", convo.id)
+              .order("timestamp", { ascending: false })
+              .limit(15);
+
+            return { ...convo, messages: (messages || []).reverse() };
+          })
+        );
+
+        setConversations(conversationsWithMessages);
       }
-
-      const { data: convos } = await query;
-
-      const conversationsWithMessages = await Promise.all(
-        (convos || []).map(async (convo) => {
-          const { data: messages } = await supabase
-            .from("messages")
-            .select("*")
-            .eq("conversation_id", convo.id)
-            .order("timestamp", { ascending: true });
-
-          return { ...convo, messages: messages || [] };
-        })
-      );
-
-      setConversations(conversationsWithMessages);
     } catch (error) {
       console.error("Error fetching conversations:", error);
     }
@@ -103,26 +127,33 @@ const ConversationsSection = () => {
               </div>
 
               <div className="space-y-2">
-                {convo.messages.slice(0, 3).map((msg: any) => (
-                  <div
-                    key={msg.id}
-                    className={`text-sm p-2 rounded ${
-                      msg.role === "user"
-                        ? "bg-muted ml-8"
-                        : "bg-primary/10 mr-8"
-                    }`}
-                  >
-                    <span className="font-medium">
-                      {msg.role === "user" ? "User" : "BECCA"}:
-                    </span>{" "}
-                    {msg.content}
+                {convo.messages.map((msg: any) => (
+                  <div key={msg.id} className="space-y-1">
+                    {selectedPlatform === "all" && (
+                      <Badge variant="outline" className="text-xs">
+                        {msg.platform}
+                      </Badge>
+                    )}
+                    <div
+                      className={`text-sm p-3 rounded-lg ${
+                        msg.role === "user"
+                          ? "bg-muted ml-8"
+                          : "bg-primary/10 mr-8"
+                      }`}
+                    >
+                      <span className="font-semibold text-xs block mb-1">
+                        {msg.role === "user" 
+                          ? (msg.sender_name || "User")
+                          : "Becca"
+                        }
+                      </span>
+                      <p>{msg.content}</p>
+                      <span className="text-xs text-muted-foreground block mt-1">
+                        {format(new Date(msg.timestamp), "HH:mm")}
+                      </span>
+                    </div>
                   </div>
                 ))}
-                {convo.messages.length > 3 && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    + {convo.messages.length - 3} more messages
-                  </p>
-                )}
               </div>
             </div>
           ))

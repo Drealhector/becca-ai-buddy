@@ -37,6 +37,7 @@ serve(async (req) => {
         conversation_id: conversation_id,
         role: message.role,
         content: message.content,
+        sender_name: message.sender_name || (message.role === "user" ? "Unknown" : "Becca"),
         timestamp: message.timestamp || new Date().toISOString(),
         platform,
       });
