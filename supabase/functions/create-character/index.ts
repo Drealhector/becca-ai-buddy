@@ -22,17 +22,79 @@ serve(async (req) => {
     let userPrompt = "";
 
     if (type === "generate_new") {
-      systemPrompt = "You are an expert character designer. Create a detailed personality based on the user's description. Include tone, style, behavior guidelines, and specific traits that make the character unique and engaging.";
-      userPrompt = `Create a detailed character personality based on this description: ${input.description}`;
+      systemPrompt = "You are an expert character designer. Create a complete, structured personality guide that can be used directly. Format it with clear sections: ## Identity & Purpose, ## Voice & Persona (with subsections for Personality and Speech Characteristics), ## Response Guidelines, and any other relevant sections for the character type.";
+      userPrompt = `Create a complete personality guide based on this description: ${input.description}
+
+Format the personality with these sections:
+## Identity & Purpose
+(Define who they are and their main purpose)
+
+## Voice & Persona
+### Personality
+(Key personality traits and demeanor)
+
+### Speech Characteristics
+(How they speak, language style, tone)
+
+## Response Guidelines
+(How they should respond in different situations)
+
+Make it detailed, authentic, and ready to use. Start with "You are [name]" in the Identity section.`;
     } else if (type === "search_human") {
       systemPrompt = "You are a web research assistant. Search for comprehensive information about the person including their profession, notable achievements, personality traits, communication style, speech patterns, tone of voice, catchphrases, language quirks (like pidgin English, slang, specific dialects), mannerisms, and how they typically express themselves.";
       userPrompt = `Search for detailed information about: ${input.name}${input.context ? `. Additional context: ${input.context}` : ''}. Provide a comprehensive summary including: who they are, their background, how they speak (language patterns, tone, catchphrases, dialect, slang), their communication style, personality traits, and any distinctive mannerisms.`;
     } else if (type === "create_human_character") {
-      systemPrompt = "You are an expert at creating authentic character personalities based on real people. Using the provided information, create a detailed first-person personality profile that captures this person's exact communication style, speech patterns, tone, language quirks, and expertise. Start with 'You are [name]' and write as if you ARE this person. Never mention 'AI' or 'assistant' - make it feel like the actual person speaking.";
-      userPrompt = `Based on this information about ${input.name}: ${input.info}\n\nCreate a first-person personality profile starting with "You are ${input.name}". Capture their exact communication style, speech patterns, tone, language (including any slang, pidgin, dialect, or unique expressions), mannerisms, and expertise. Make it authentic and realistic as if this person is speaking directly. Never reference AI or being an assistant.`;
+      systemPrompt = "You are an expert at creating authentic character personalities based on real people. Create a complete, structured personality guide formatted with clear sections that captures this person's exact essence. Never mention 'AI' or 'assistant' - write as if this IS the person.";
+      userPrompt = `Based on this information about ${input.name}: ${input.info}
+
+Create a complete personality guide with these sections:
+
+## Identity & Purpose
+Start with "You are ${input.name}" and describe their identity, background, and what they're known for.
+
+## Voice & Persona
+### Personality
+Describe their key personality traits, demeanor, and how they carry themselves.
+
+### Speech Characteristics
+Detail their EXACT speech patterns including:
+- Specific words/phrases they use frequently
+- Their tone and style (formal/casual, serious/humorous)
+- Any slang, pidgin, dialect, or unique expressions they use
+- Rhythm and pacing of their speech
+- Catchphrases or signature expressions
+
+## Response Guidelines
+Provide guidelines on how they respond in conversations, including:
+- How they greet people
+- How they explain things
+- How they express opinions
+- How they handle disagreements
+- Typical conversational patterns
+
+## Knowledge Base
+List their areas of expertise and what they're known for.
+
+Make it authentic, detailed, and capture their true essence. Use first-person perspective throughout.`;
     } else if (type === "refine") {
-      systemPrompt = "You are an expert character designer. Refine and enhance the given character personality with the additional business context, tasks, and information provided. Make it more specific, engaging, and aligned with the business needs while maintaining the authentic voice and style.";
-      userPrompt = `Refine this character personality:\n\n${input.basePersonality}\n\nAdditional context:\n- Task: ${input.task}\n- Link to share: ${input.link || 'Not provided'}\n- Business information: ${input.businessInfo}\n\nEnhance the personality to be more aligned with these requirements while maintaining the core character traits and authentic voice. Keep it in first person and realistic.`;
+      systemPrompt = "You are an expert character designer. Take the existing personality and refine it with the business context provided. Maintain all the authentic voice, speech patterns, and personality traits while adding the specific business application details.";
+      userPrompt = `Refine this personality for business use:
+
+${input.basePersonality}
+
+Business Context:
+- Task: ${input.task}
+- Link to share: ${input.link || 'Not provided'}
+- Business information: ${input.businessInfo}
+
+Enhance the personality by:
+1. Keeping ALL existing sections and authentic voice
+2. Adding specific business application details
+3. Including how they handle the specific task mentioned
+4. Maintaining their speech patterns and personality traits
+5. Adding any business-specific response guidelines
+
+Keep the same format with ## sections and make it ready to use.`;
     }
 
     console.log(`Creating character with type: ${type}`);
