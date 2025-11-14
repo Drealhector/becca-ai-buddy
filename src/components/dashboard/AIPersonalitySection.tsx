@@ -4,11 +4,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Brain } from "lucide-react";
+import { Brain, Sparkles } from "lucide-react";
+import { AICharacterCreatorDialog } from "./AICharacterCreatorDialog";
 
 export const AIPersonalitySection = () => {
   const [personality, setPersonality] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showCreatorDialog, setShowCreatorDialog] = useState(false);
 
   useEffect(() => {
     fetchPersonality();
@@ -71,9 +73,25 @@ export const AIPersonalitySection = () => {
         placeholder="e.g., You are a helpful and friendly AI assistant. Be warm, engaging, and professional in all your responses."
         className="min-h-[120px] mb-4"
       />
-      <Button onClick={handleSave} disabled={loading}>
-        {loading ? "Saving..." : "Save Personality"}
-      </Button>
+      <div className="flex gap-2">
+        <Button onClick={handleSave} disabled={loading}>
+          {loading ? "Saving..." : "Save Personality"}
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={() => setShowCreatorDialog(true)}
+          className="gap-2"
+        >
+          <Sparkles className="h-4 w-4" />
+          Create Character
+        </Button>
+      </div>
+
+      <AICharacterCreatorDialog
+        open={showCreatorDialog}
+        onOpenChange={setShowCreatorDialog}
+        onCopyToPersonality={setPersonality}
+      />
     </Card>
   );
 };
