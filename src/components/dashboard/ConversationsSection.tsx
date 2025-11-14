@@ -35,28 +35,40 @@ const ConversationsSection = () => {
   const fetchConversations = async () => {
     try {
       if (selectedPlatform === "all") {
-        // For "All", fetch last 15 messages across all platforms sorted by time
-        const { data: allMessages } = await supabase
-          .from("messages")
+        // Fetch all conversations across all platforms (exclude web if needed)
+        const { data: allConvos } = await supabase
+          .from("conversations")
           .select("*")
-          .order("timestamp", { ascending: false })
-          .limit(15);
+          .neq("platform", "web") // Exclude web chat
+          .order("start_time", { ascending: false })
+          .limit(20);
 
-        // Group by conversation for display
-        const grouped: any = {};
-        (allMessages || []).reverse().forEach((msg: any) => {
-          if (!grouped[msg.conversation_id]) {
-            grouped[msg.conversation_id] = {
-              id: msg.conversation_id,
-              platform: msg.platform,
-              start_time: msg.timestamp,
-              messages: []
+        // For each conversation, fetch the latest messages
+        const conversationsWithMessages = await Promise.all(
+          (allConvos || []).map(async (convo) => {
+            const { data: messages } = await supabase
+              .from("messages")
+              .select("*")
+              .eq("conversation_id", convo.id)
+              .order("timestamp", { ascending: true })
+              .limit(15);
+
+            return { 
+              ...convo, 
+              messages: messages || [],
+              latest_message_time: messages && messages.length > 0 
+                ? messages[messages.length - 1].timestamp 
+                : convo.start_time
             };
-          }
-          grouped[msg.conversation_id].messages.push(msg);
-        });
+          })
+        );
 
-        setConversations(Object.values(grouped));
+        // Sort by latest message timestamp (most recent first)
+        conversationsWithMessages.sort((a, b) => 
+          new Date(b.latest_message_time).getTime() - new Date(a.latest_message_time).getTime()
+        );
+
+        setConversations(conversationsWithMessages);
       } else {
         // For specific platform, fetch conversations with last 15 messages each
         let query = supabase
@@ -74,10 +86,10 @@ const ConversationsSection = () => {
               .from("messages")
               .select("*")
               .eq("conversation_id", convo.id)
-              .order("timestamp", { ascending: false })
+              .order("timestamp", { ascending: true })
               .limit(15);
 
-            return { ...convo, messages: (messages || []).reverse() };
+            return { ...convo, messages: messages || [] };
           })
         );
 
