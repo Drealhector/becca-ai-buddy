@@ -13,7 +13,7 @@ serve(async (req) => {
 
   try {
     const { platform, messages, conversation_id, sender_name, timestamp } = await req.json();
-    
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -21,41 +21,100 @@ serve(async (req) => {
 
     console.log("Received webhook data:", { platform, conversation_id, sender_name, timestamp, messages });
 
-    // Create or update conversation
-    const { data: conversation } = await supabase
+    // Helpers
+    const isValidUUID = (id: string) => {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      return typeof id === 'string' && uuidRegex.test(id);
+    };
+
+    const toISOTime = (ts: string | number | undefined): string => {
+      try {
+        if (ts === undefined || ts === null) return new Date().toISOString();
+        if (typeof ts === 'number') {
+          const d = ts > 1e12 ? new Date(ts) : new Date(ts * 1000);
+          return d.toISOString();
+        }
+        const s = String(ts).trim();
+        if (/^\d{10}$/.test(s)) return new Date(Number(s) * 1000).toISOString();
+        if (/^\d{13}$/.test(s)) return new Date(Number(s)).toISOString();
+        // If it's already ISO or another parseable format
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) return d.toISOString();
+        return new Date().toISOString();
+      } catch {
+        return new Date().toISOString();
+      }
+    };
+
+    // Deterministic UUID v5-like from platform + external id using SHA-1
+    const toDeterministicUUID = async (input: string): Promise<string> => {
+      const data = new TextEncoder().encode(input);
+      const hashBuf = await crypto.subtle.digest('SHA-1', data); // 20 bytes
+      const bytes = new Uint8Array(hashBuf).slice(0, 16); // take first 16 bytes
+      // Set version (5)
+      bytes[6] = (bytes[6] & 0x0f) | 0x50;
+      // Set variant (RFC 4122)
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+      return `${hex.substring(0,8)}-${hex.substring(8,12)}-${hex.substring(12,16)}-${hex.substring(16,20)}-${hex.substring(20,32)}`;
+    };
+
+    const resolvedConversationId = isValidUUID(conversation_id)
+      ? conversation_id
+      : await toDeterministicUUID(`${platform || 'unknown'}:${conversation_id}`);
+
+    console.log("Resolved conversation_id:", { original: conversation_id, resolved: resolvedConversationId });
+
+    // Ensure conversation exists (insert if missing)
+    const { data: existingConversation, error: fetchConvError } = await supabase
       .from("conversations")
-      .upsert({
-        id: conversation_id,
-        platform,
-        start_time: new Date().toISOString(),
-      })
-      .select()
-      .single();
+      .select("id")
+      .eq("id", resolvedConversationId)
+      .maybeSingle();
 
-    console.log("Conversation created/updated:", conversation);
+    if (fetchConvError) {
+      console.error("Error fetching conversation:", fetchConvError);
+    }
 
+    if (!existingConversation) {
+      const { error: insertConvError } = await supabase
+        .from("conversations")
+        .insert({ id: resolvedConversationId, platform, start_time: new Date().toISOString() });
+      if (insertConvError) {
+        console.error("Error inserting conversation:", insertConvError);
+      } else {
+        console.log("Conversation inserted:", resolvedConversationId);
+      }
+    } else {
+      console.log("Conversation exists:", resolvedConversationId);
+    }
+
+    console.log("Conversation created/updated:", resolvedConversationId);
     // Save messages
     let salesFlagged = false;
     for (const message of messages) {
+      // Normalize role to match app expectations
+      const rawRole = (message.role || '').toLowerCase();
+      const role = rawRole === 'assistant' || rawRole === 'bot' ? 'ai' : rawRole || 'user';
+
       // Use message-level sender_name/timestamp if provided, otherwise use top-level
-      const messageSenderName = message.sender_name || sender_name || (message.role === "user" ? "Unknown" : "Becca");
-      const messageTimestamp = message.timestamp || timestamp || new Date().toISOString();
-      
+      const messageSenderName = message.sender_name || sender_name || (role === 'user' ? 'Customer' : 'Becca');
+      const messageTimestampISO = toISOTime(message.timestamp ?? timestamp);
+
       const insertResult = await supabase.from("messages").insert({
-        conversation_id: conversation_id,
-        role: message.role,
+        conversation_id: resolvedConversationId,
+        role,
         content: message.content,
         sender_name: messageSenderName,
-        timestamp: messageTimestamp,
+        timestamp: messageTimestampISO,
         platform,
       });
-      
+
       console.log("Message inserted:", insertResult);
 
       // Check for sales keywords
-      if (message.content.toLowerCase().includes("buy") || 
-          message.content.includes("$") ||
-          message.content.toLowerCase().includes("purchase")) {
+      const content = (message.content || '').toLowerCase();
+      if (content.includes("buy") || content.includes("purchase") || (message.content || '').includes("$")) {
         salesFlagged = true;
       }
     }
@@ -64,7 +123,7 @@ serve(async (req) => {
     if (salesFlagged) {
       const amount = 0; // Extract amount from message if needed
       await supabase.from("sales").insert({
-        conversation_id,
+        conversation_id: resolvedConversationId,
         amount,
         description: "Sale detected from conversation",
         timestamp: new Date().toISOString(),
