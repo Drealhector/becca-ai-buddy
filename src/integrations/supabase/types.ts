@@ -358,6 +358,7 @@ export type Database = {
           id: string
           platform: string | null
           role: string | null
+          sender_name: string | null
           timestamp: string | null
         }
         Insert: {
@@ -366,6 +367,7 @@ export type Database = {
           id?: string
           platform?: string | null
           role?: string | null
+          sender_name?: string | null
           timestamp?: string | null
         }
         Update: {
@@ -374,6 +376,7 @@ export type Database = {
           id?: string
           platform?: string | null
           role?: string | null
+          sender_name?: string | null
           timestamp?: string | null
         }
         Relationships: [
