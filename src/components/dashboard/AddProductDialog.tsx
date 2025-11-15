@@ -46,28 +46,6 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
     }
   };
 
-  const handleAddMedia = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && currentMediaLabel) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setMediaItems([...mediaItems, {
-          file,
-          preview: reader.result as string,
-          label: currentMediaLabel,
-          description: currentMediaDescription
-        }]);
-        setCurrentMediaLabel("");
-        setCurrentMediaDescription("");
-        // Reset file input
-        const input = document.getElementById('media') as HTMLInputElement;
-        if (input) input.value = "";
-      };
-      reader.readAsDataURL(file);
-    } else {
-      toast.error("Please add a label for the media");
-    }
-  };
 
   const removeMedia = (index: number) => {
     setMediaItems(mediaItems.filter((_, i) => i !== index));
@@ -341,15 +319,35 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
                   id="media"
                   type="file"
                   accept="image/*,video/*"
-                  onChange={handleAddMedia}
                   className="hidden"
                 />
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => document.getElementById('media')?.click()}
+                  onClick={() => {
+                    const input = document.getElementById('media') as HTMLInputElement;
+                    const file = input?.files?.[0];
+                    if (file && currentMediaLabel) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setMediaItems([...mediaItems, {
+                          file,
+                          preview: reader.result as string,
+                          label: currentMediaLabel,
+                          description: currentMediaDescription
+                        }]);
+                        setCurrentMediaLabel("");
+                        setCurrentMediaDescription("");
+                        input.value = "";
+                      };
+                      reader.readAsDataURL(file);
+                    } else if (!file) {
+                      input?.click();
+                    } else {
+                      toast.error("Please add a label");
+                    }
+                  }}
                   className="w-full"
-                  disabled={!currentMediaLabel}
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   Add Media

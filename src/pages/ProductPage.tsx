@@ -237,11 +237,21 @@ const ProductPage = () => {
 
       {/* Chat Dialog */}
       <Dialog open={showChat} onOpenChange={setShowChat}>
-        <DialogContent className="max-w-2xl h-[80vh]">
+        <DialogContent className="max-w-2xl h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Chat with AI Assistant</DialogTitle>
           </DialogHeader>
-          <div id="vapi-chat-widget" className="flex-1"></div>
+          <div className="flex-1 flex items-center justify-center">
+            {agentId ? (
+              <div className="text-center">
+                <p className="text-muted-foreground mb-2">AI Assistant is ready</p>
+                <p className="text-sm text-muted-foreground">Assistant ID: {agentId}</p>
+                <div id="vapi-chat-widget" className="mt-4 w-full"></div>
+              </div>
+            ) : (
+              <p className="text-muted-foreground">Loading AI assistant...</p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
