@@ -34,11 +34,23 @@ const ProductPage = () => {
   }, [showChat, showVoice, agentId]);
 
   const initializeVapi = () => {
-    if (!(window as any).Vapi || !agentId) return;
+    if (!(window as any).Vapi || !agentId || !product) return;
 
     const vapi = new (window as any).Vapi({
       apiKey: 'cb6d31db-2209-4ffa-ac27-794c02fcd8ec',
-      assistant: agentId
+      assistant: {
+        assistantId: agentId,
+        // Pass product context so AI knows which product customer clicked
+        variableValues: {
+          product_name: product.name,
+          product_id: product.id,
+          product_description: product.description
+        },
+        // Override first message to be contextual
+        firstMessage: `Hey! I see you're interested in ${product.name}. ${
+          product.description ? product.description.split('.')[0] + '.' : ''
+        } What would you like to know?`
+      }
     });
 
     vapi.start();

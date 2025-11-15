@@ -12,28 +12,24 @@ serve(async (req) => {
   }
 
   try {
-    const { product_id, label, media_type } = await req.json();
+    const { product_name, label_filter } = await req.json();
 
-    console.log('Fetching product media:', { product_id, label, media_type });
+    console.log('🖼️  Fetching media for product:', product_name, 'filter:', label_filter);
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Build query
+    // Build query - search by product name in label
     let query = supabase
       .from('product_media')
       .select('*')
-      .eq('product_id', product_id);
+      .ilike('label', `%${product_name}%`);
 
-    // Optional filters
-    if (label) {
-      query = query.ilike('label', `%${label}%`);
-    }
-
-    if (media_type) {
-      query = query.eq('media_type', media_type);
+    // Optional filter for specific views
+    if (label_filter) {
+      query = query.ilike('label', `%${label_filter}%`);
     }
 
     const { data, error } = await query.order('created_at', { ascending: true });
@@ -43,9 +39,9 @@ serve(async (req) => {
       throw error;
     }
 
-    console.log(`Found ${data?.length || 0} media items`);
+    console.log(`✅ Found ${data?.length || 0} media items for ${product_name}`);
 
-    // Format response for Vapi
+    // Format response for Vapi function calling
     const mediaList = data?.map(item => ({
       url: item.media_url,
       type: item.media_type,
@@ -53,9 +49,13 @@ serve(async (req) => {
       description: item.description || ''
     })) || [];
 
+    const message = mediaList.length > 0
+      ? `Found ${mediaList.length} media item(s) for ${product_name}. Display these to the customer.`
+      : `No media available for ${product_name} yet.`;
+
     return new Response(
       JSON.stringify({ 
-        success: true,
+        result: message,
         media: mediaList,
         count: mediaList.length
       }),

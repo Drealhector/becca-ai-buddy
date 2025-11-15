@@ -12,95 +12,61 @@ serve(async (req) => {
   }
 
   try {
-    const { 
-      productId, 
-      productName, 
-      productDescription, 
-      productPrice, 
-      productCategory,
-      productFeatures,
-      sellerInfo 
-    } = await req.json();
+    const { productId } = await req.json();
+    console.log('🔄 Triggering master assistant update for product:', productId);
 
-    console.log('Creating AI agent for product:', productId);
-
-    const VAPI_API_KEY = Deno.env.get('VAPI_API_KEY');
-    if (!VAPI_API_KEY) {
-      throw new Error('VAPI_API_KEY is not configured');
-    }
-
-    // Create VAPI assistant
-    const systemPrompt = `You are a sales assistant for ${productName}.
-
-Product Details:
-- Name: ${productName}
-- Description: ${productDescription}
-- Price: ${productPrice}
-- Category: ${productCategory}
-${productFeatures ? `- Features: ${productFeatures.join(', ')}` : ''}
-
-${sellerInfo ? `Seller Information: ${sellerInfo}` : ''}
-
-Your role is to help customers learn about this product and answer their questions. Be helpful, professional, and enthusiastic about the product.`;
-
-    const vapiResponse = await fetch('https://api.vapi.ai/assistant', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${VAPI_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name: productName,
-        model: {
-          provider: 'openai',
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'system',
-              content: systemPrompt
-            }
-          ]
-        },
-        voice: {
-          provider: 'playht',
-          voiceId: 'jennifer'
-        },
-        firstMessage: `Hi! I'm here to help you learn about ${productName}. What would you like to know?`
-      })
-    });
-
-    if (!vapiResponse.ok) {
-      const errorText = await vapiResponse.text();
-      console.error('VAPI API error:', errorText);
-      throw new Error(`Failed to create VAPI assistant: ${errorText}`);
-    }
-
-    const vapiAssistant = await vapiResponse.json();
-    console.log('VAPI assistant created:', vapiAssistant.id);
-
-    // Store agent in database
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { error } = await supabase.from('ai_agents').insert({
+    // Call the update-master-assistant function
+    const { data: updateResult, error: updateError } = await supabase.functions.invoke(
+      'update-master-assistant'
+    );
+
+    if (updateError) {
+      console.error('❌ Error updating master assistant:', updateError);
+      throw updateError;
+    }
+
+    console.log('✅ Master assistant updated:', updateResult);
+
+    // Get the master assistant ID from connections
+    const { data: connection } = await supabase
+      .from('connections')
+      .select('vapi_assistant_id')
+      .limit(1)
+      .single();
+
+    const assistantId = connection?.vapi_assistant_id;
+
+    if (!assistantId) {
+      throw new Error('Master assistant not found');
+    }
+
+    // Store reference in ai_agents table (for tracking)
+    const { error: agentError } = await supabase.from('ai_agents').insert({
       product_id: productId,
-      agent_id: vapiAssistant.id,
-      assistant_id: vapiAssistant.id,
+      agent_id: assistantId,
+      assistant_id: assistantId,
       web_url: null,
       status: 'active'
     });
 
-    if (error) {
-      console.error('Database error:', error);
-      throw error;
+    if (agentError && !agentError.message.includes('duplicate')) {
+      console.error('Database error:', agentError);
+      throw agentError;
     }
 
-    console.log('Successfully created AI agent for product:', productId);
+    console.log('✅ Product linked to master assistant:', productId);
 
     return new Response(
-      JSON.stringify({ success: true, agentId: vapiAssistant.id }),
+      JSON.stringify({ 
+        success: true, 
+        agentId: assistantId,
+        message: 'Master assistant updated with new product'
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
