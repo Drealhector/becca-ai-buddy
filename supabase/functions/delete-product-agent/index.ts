@@ -14,29 +14,44 @@ serve(async (req) => {
   try {
     const { productId, assistantId } = await req.json();
 
-    console.log('Deleting AI agent for product:', productId);
+    console.log('Deleting product and AI agent:', productId, assistantId);
 
-    // Call n8n webhook to delete AI agent
-    const n8nResponse = await fetch('https://drealhector467.app.n8n.cloud/webhook/product-delete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        productId,
-        assistantId
-      })
-    });
-
-    const result = await n8nResponse.json();
-    console.log('n8n response:', result);
-
-    // Delete from database (cascade will handle related tables)
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { error } = await supabase.from('products').delete().eq('id', productId);
+    // Delete AI agent first (if exists)
+    if (assistantId) {
+      const { error: agentError } = await supabase
+        .from('ai_agents')
+        .delete()
+        .eq('assistant_id', assistantId);
+      
+      if (agentError) {
+        console.error('Error deleting AI agent:', agentError);
+      }
+    }
+
+    // Delete product media
+    const { error: mediaError } = await supabase
+      .from('product_media')
+      .delete()
+      .eq('product_id', productId);
+    
+    if (mediaError) {
+      console.error('Error deleting product media:', mediaError);
+    }
+
+    // Delete product (this will cascade to related tables)
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId);
+    
     if (error) throw error;
+
+    console.log('Successfully deleted product:', productId);
 
     return new Response(
       JSON.stringify({ success: true }),
