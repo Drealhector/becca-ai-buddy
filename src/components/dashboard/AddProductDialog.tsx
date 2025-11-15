@@ -93,21 +93,14 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
 
       if (insertError) throw insertError;
 
-      // Create AI agent via n8n
+      // Update master assistant with new product
       const { data: agentData } = await supabase.functions.invoke('create-product-agent', {
         body: {
-          productId: productData.id,
-          productName: name,
-          productDescription: description,
-          productPrice: price,
-          productCategory: category,
-          productFeatures: features ? features.split(',').map(f => f.trim()) : [],
-          sellerInfo: {
-            name: "Product Owner",
-            email: "owner@example.com"
-          }
+          productId: productData.id
         }
       });
+
+      console.log('Master assistant updated:', agentData);
 
       // Upload additional media if any
       if (mediaItems.length > 0 && agentData?.agentId) {
@@ -124,13 +117,16 @@ export const AddProductDialog = ({ onProductAdded }: { onProductAdded: () => voi
             .from('product-images')
             .getPublicUrl(mediaFileName);
 
+          // Auto-prefix label with product name
+          const fullLabel = `${name} - ${media.label}`;
+
           await supabase.functions.invoke('upload-product-media', {
             body: {
               assistantId: agentData.agentId,
               productId: productData.id,
               mediaUrl,
               mediaType: media.file.type.startsWith('image/') ? 'image' : 'video',
-              label: media.label,
+              label: fullLabel,
               description: media.description
             }
           });
