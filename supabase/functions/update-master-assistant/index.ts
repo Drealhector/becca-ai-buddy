@@ -127,7 +127,9 @@ IMPORTANT: When a conversation starts with {{product_name}}, that means the cust
               required: ["product_name"]
             },
             async: false,
-            url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/get-product-media`
+            server: {
+              url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/get-product-media`
+            }
           }
         ]
       },
