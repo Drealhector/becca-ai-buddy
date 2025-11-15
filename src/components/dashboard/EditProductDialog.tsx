@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, X, Trash2 } from "lucide-react";
+import { Upload, X, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -87,28 +87,6 @@ export const EditProductDialog = ({ open, onOpenChange, product, onProductUpdate
     }
   };
 
-  const handleAddMedia = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && currentMediaLabel) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setMediaItems([...mediaItems, {
-          file,
-          preview: reader.result as string,
-          label: currentMediaLabel,
-          description: currentMediaDescription
-        }]);
-        setCurrentMediaLabel("");
-        setCurrentMediaDescription("");
-        // Reset file input
-        const input = document.getElementById('media') as HTMLInputElement;
-        if (input) input.value = "";
-      };
-      reader.readAsDataURL(file);
-    } else {
-      toast.error("Please add a label for the media");
-    }
-  };
 
   const removeMedia = async (index: number) => {
     const media = mediaItems[index];
@@ -130,21 +108,24 @@ export const EditProductDialog = ({ open, onOpenChange, product, onProductUpdate
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    if (!confirm("Are you sure you want to delete this product? This action cannot be undone.")) return;
 
     setLoading(true);
     try {
-      await supabase.functions.invoke('delete-product-agent', {
+      const { data, error } = await supabase.functions.invoke('delete-product-agent', {
         body: {
           productId: product.id,
           assistantId: agentId
         }
       });
 
+      if (error) throw error;
+
       toast.success("Product deleted successfully!");
       onOpenChange(false);
       onProductUpdated();
     } catch (error: any) {
+      console.error("Delete error:", error);
       toast.error(error.message || "Failed to delete product");
     } finally {
       setLoading(false);
@@ -322,15 +303,35 @@ export const EditProductDialog = ({ open, onOpenChange, product, onProductUpdate
                   id="media"
                   type="file"
                   accept="image/*,video/*"
-                  onChange={handleAddMedia}
                   className="hidden"
                 />
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => document.getElementById('media')?.click()}
+                  onClick={() => {
+                    const input = document.getElementById('media') as HTMLInputElement;
+                    const file = input?.files?.[0];
+                    if (file && currentMediaLabel) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setMediaItems([...mediaItems, {
+                          file,
+                          preview: reader.result as string,
+                          label: currentMediaLabel,
+                          description: currentMediaDescription
+                        }]);
+                        setCurrentMediaLabel("");
+                        setCurrentMediaDescription("");
+                        input.value = "";
+                      };
+                      reader.readAsDataURL(file);
+                    } else if (!file) {
+                      input?.click();
+                    } else {
+                      toast.error("Please add a label");
+                    }
+                  }}
                   className="w-full"
-                  disabled={!currentMediaLabel}
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   Add Media
