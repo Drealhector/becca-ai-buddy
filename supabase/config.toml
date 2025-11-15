@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.log-interaction]
 verify_jwt = false
+
+[functions.get-product-media]
+verify_jwt = false
+
+[functions.create-character]
+verify_jwt = false

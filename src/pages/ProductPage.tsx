@@ -13,6 +13,7 @@ const ProductPage = () => {
   const [showInteractions, setShowInteractions] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showVoice, setShowVoice] = useState(false);
+  const [displayedMedia, setDisplayedMedia] = useState<any[]>([]);
 
   useEffect(() => {
     fetchProduct();
@@ -156,6 +157,40 @@ const ProductPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Media Display Section */}
+          {displayedMedia.length > 0 && (
+            <div className="mt-8 w-full max-w-2xl">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+                <h3 className="text-white text-xl font-semibold mb-4">Product Media</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {displayedMedia.map((media, index) => (
+                    <div key={index} className="space-y-2">
+                      {media.type === 'image' ? (
+                        <img 
+                          src={media.url} 
+                          alt={media.label}
+                          className="w-full h-48 object-cover rounded-lg border-2 border-white/20"
+                        />
+                      ) : media.type === 'video' ? (
+                        <video 
+                          src={media.url}
+                          controls
+                          className="w-full h-48 rounded-lg border-2 border-white/20"
+                        />
+                      ) : null}
+                      <div className="text-sm text-white">
+                        <p className="font-medium">{media.label}</p>
+                        {media.description && (
+                          <p className="text-white/70 text-xs">{media.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* View Interactions Button */}
           {interactions.length > 0 && (
