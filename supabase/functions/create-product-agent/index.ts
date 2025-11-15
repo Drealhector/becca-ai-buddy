@@ -24,49 +24,85 @@ serve(async (req) => {
 
     console.log('Creating AI agent for product:', productId);
 
-    // Call n8n webhook to create AI agent
-    const n8nResponse = await fetch('https://drealhector467.app.n8n.cloud/webhook/product-upload', {
+    const VAPI_API_KEY = Deno.env.get('VAPI_API_KEY');
+    if (!VAPI_API_KEY) {
+      throw new Error('VAPI_API_KEY is not configured');
+    }
+
+    // Create VAPI assistant
+    const systemPrompt = `You are a sales assistant for ${productName}.
+
+Product Details:
+- Name: ${productName}
+- Description: ${productDescription}
+- Price: ${productPrice}
+- Category: ${productCategory}
+${productFeatures ? `- Features: ${productFeatures.join(', ')}` : ''}
+
+${sellerInfo ? `Seller Information: ${sellerInfo}` : ''}
+
+Your role is to help customers learn about this product and answer their questions. Be helpful, professional, and enthusiastic about the product.`;
+
+    const vapiResponse = await fetch('https://api.vapi.ai/assistant', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${VAPI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
-        productId,
-        productName,
-        productDescription,
-        productPrice,
-        productCategory,
-        productFeatures,
-        mediaItems: [],
-        sellerInfo
+        name: productName,
+        model: {
+          provider: 'openai',
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt
+            }
+          ]
+        },
+        voice: {
+          provider: 'playht',
+          voiceId: 'jennifer'
+        },
+        firstMessage: `Hi! I'm here to help you learn about ${productName}. What would you like to know?`
       })
     });
 
-    const result = await n8nResponse.json();
-    console.log('n8n response:', result);
-
-    if (result.success && result.agentId) {
-      // Store agent in database
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
-
-      const { error } = await supabase.from('ai_agents').insert({
-        product_id: productId,
-        agent_id: result.agentId,
-        assistant_id: result.agentId,
-        web_url: result.webUrl || null,
-        status: 'active'
-      });
-
-      if (error) throw error;
-
-      return new Response(
-        JSON.stringify({ success: true, agentId: result.agentId, webUrl: result.webUrl }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!vapiResponse.ok) {
+      const errorText = await vapiResponse.text();
+      console.error('VAPI API error:', errorText);
+      throw new Error(`Failed to create VAPI assistant: ${errorText}`);
     }
 
-    throw new Error('Failed to create AI agent');
+    const vapiAssistant = await vapiResponse.json();
+    console.log('VAPI assistant created:', vapiAssistant.id);
+
+    // Store agent in database
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { error } = await supabase.from('ai_agents').insert({
+      product_id: productId,
+      agent_id: vapiAssistant.id,
+      assistant_id: vapiAssistant.id,
+      web_url: null,
+      status: 'active'
+    });
+
+    if (error) {
+      console.error('Database error:', error);
+      throw error;
+    }
+
+    console.log('Successfully created AI agent for product:', productId);
+
+    return new Response(
+      JSON.stringify({ success: true, agentId: vapiAssistant.id }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error('Error:', error);
     return new Response(
