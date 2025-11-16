@@ -87,10 +87,12 @@ const ProductChat = ({ productId, productName, salesInstructions, onClose }: Pro
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let aiContent = "";
+      let pendingToolCalls: any[] = [];
 
       const aiMessage = {
         role: "assistant",
         content: "",
+        imageUrl: null as string | null,
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, aiMessage]);
@@ -120,7 +122,10 @@ const ProductChat = ({ productId, productName, salesInstructions, onClose }: Pro
 
           try {
             const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            const delta = parsed.choices?.[0]?.delta;
+            
+            // Handle text content
+            const content = delta?.content as string | undefined;
             if (content) {
               aiContent += content;
               setMessages((prev) => {
@@ -131,6 +136,38 @@ const ProductChat = ({ productId, productName, salesInstructions, onClose }: Pro
                 }
                 return newMessages;
               });
+            }
+
+            // Handle tool calls
+            if (delta?.tool_calls) {
+              for (const toolCall of delta.tool_calls) {
+                if (toolCall.function?.name === "show_product_image") {
+                  const args = JSON.parse(toolCall.function.arguments || "{}");
+                  const label = args.label;
+                  
+                  // Fetch the image URL for this label
+                  const { data: mediaData } = await fetch(
+                    `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/product_media?product_id=eq.${productId}&label=ilike.%${label}%&select=media_url`,
+                    {
+                      headers: {
+                        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                        "Content-Type": "application/json",
+                      },
+                    }
+                  ).then(r => r.json());
+
+                  if (mediaData && mediaData.length > 0) {
+                    setMessages((prev) => {
+                      const newMessages = [...prev];
+                      const lastMessage = newMessages[newMessages.length - 1];
+                      if (lastMessage.role === "assistant") {
+                        lastMessage.imageUrl = mediaData[0].media_url;
+                      }
+                      return newMessages;
+                    });
+                  }
+                }
+              }
             }
           } catch (e) {
             textBuffer = line + "\n" + textBuffer;
@@ -186,7 +223,16 @@ const ProductChat = ({ productId, productName, salesInstructions, onClose }: Pro
                   : "bg-muted text-foreground"
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              {message.content && (
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              )}
+              {message.imageUrl && (
+                <img 
+                  src={message.imageUrl} 
+                  alt="Product" 
+                  className="mt-2 rounded-lg max-w-full h-auto"
+                />
+              )}
             </div>
           </div>
         ))}
