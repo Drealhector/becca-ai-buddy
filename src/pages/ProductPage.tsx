@@ -3,58 +3,19 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import ProductChat from "@/components/chat/ProductChat";
 
 const ProductPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [agentId, setAgentId] = useState("");
   const [interactions, setInteractions] = useState<any[]>([]);
   const [showInteractions, setShowInteractions] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [showVoice, setShowVoice] = useState(false);
-  const [displayedMedia, setDisplayedMedia] = useState<any[]>([]);
 
   useEffect(() => {
     fetchProduct();
   }, [slug]);
-
-  useEffect(() => {
-    if (showChat || showVoice) {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@vapi-ai/web@latest/dist/index.js';
-      script.async = true;
-      script.onload = () => initializeVapi();
-      document.head.appendChild(script);
-
-      return () => {
-        document.head.removeChild(script);
-      };
-    }
-  }, [showChat, showVoice, agentId]);
-
-  const initializeVapi = () => {
-    if (!(window as any).Vapi || !agentId || !product) return;
-
-    const vapi = new (window as any).Vapi({
-      apiKey: 'cb6d31db-2209-4ffa-ac27-794c02fcd8ec',
-      assistant: {
-        assistantId: agentId,
-        // Pass product context so AI knows which product customer clicked
-        variableValues: {
-          product_name: product.name,
-          product_id: product.id,
-          product_description: product.description
-        },
-        // Override first message to be contextual
-        firstMessage: `Hey! I see you're interested in ${product.name}. ${
-          product.description ? product.description.split('.')[0] + '.' : ''
-        } What would you like to know?`
-      }
-    });
-
-    vapi.start();
-  };
 
   const fetchProduct = async () => {
     try {
@@ -66,17 +27,6 @@ const ProductPage = () => {
 
       if (error) throw error;
       setProduct(data);
-
-      // Fetch agent ID
-      const { data: agentData } = await supabase
-        .from("ai_agents")
-        .select("*")
-        .eq("product_id", data.id)
-        .single();
-
-      if (agentData) {
-        setAgentId(agentData.assistant_id);
-      }
 
       // Fetch interactions
       const { data: interactionsData } = await supabase
@@ -143,66 +93,31 @@ const ProductPage = () => {
             </p>
           )}
 
-          {/* Interaction Balls */}
-          <div className="flex gap-8 mt-8 items-center">
-            {/* Chat Ball */}
-            <div className="relative w-32 h-32">
-              <div className="absolute inset-0 animate-[swing_3s_ease-in-out_infinite]">
-                <div 
-                  onClick={() => setShowChat(true)}
-                  className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 shadow-glow flex items-center justify-center cursor-pointer hover:scale-110 transition-transform"
+          {/* Learn More Button */}
+          <div className="relative mt-8">
+            <button
+              onClick={() => setShowChat(true)}
+              className="group relative w-40 h-40 rounded-full bg-primary/20 backdrop-blur-md border-2 border-primary flex items-center justify-center hover:scale-110 transition-all duration-300 animate-float shadow-[0_0_30px_rgba(139,92,246,0.3)]"
+            >
+              <div className="absolute inset-0 rounded-full bg-primary/10 animate-pulse"></div>
+              <div className="relative flex flex-col items-center gap-2">
+                <svg
+                  className="w-16 h-16 text-primary"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <span className="text-white font-bold text-sm">Chat</span>
-                </div>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span className="text-primary font-semibold">Learn More</span>
               </div>
-            </div>
-
-            {/* Voice Ball */}
-            <div className="relative w-32 h-32">
-              <div className="absolute inset-0 animate-[swing_3s_ease-in-out_infinite_1.5s]">
-                <div 
-                  onClick={() => setShowVoice(true)}
-                  className="w-32 h-32 rounded-full bg-gradient-to-br from-green-500 via-green-600 to-green-700 shadow-glow flex items-center justify-center cursor-pointer hover:scale-110 transition-transform"
-                >
-                  <span className="text-white font-bold text-sm">Voice</span>
-                </div>
-              </div>
-            </div>
+            </button>
           </div>
-
-          {/* Media Display Section */}
-          {displayedMedia.length > 0 && (
-            <div className="mt-8 w-full max-w-2xl">
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
-                <h3 className="text-white text-xl font-semibold mb-4">Product Media</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {displayedMedia.map((media, index) => (
-                    <div key={index} className="space-y-2">
-                      {media.type === 'image' ? (
-                        <img 
-                          src={media.url} 
-                          alt={media.label}
-                          className="w-full h-48 object-cover rounded-lg border-2 border-white/20"
-                        />
-                      ) : media.type === 'video' ? (
-                        <video 
-                          src={media.url}
-                          controls
-                          className="w-full h-48 rounded-lg border-2 border-white/20"
-                        />
-                      ) : null}
-                      <div className="text-sm text-white">
-                        <p className="font-medium">{media.label}</p>
-                        {media.description && (
-                          <p className="text-white/70 text-xs">{media.description}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* View Interactions Button */}
           {interactions.length > 0 && (
@@ -216,77 +131,75 @@ const ProductPage = () => {
         </div>
       </div>
 
+      {/* Chat Dialog */}
+      <Dialog open={showChat} onOpenChange={setShowChat}>
+        <DialogContent className="max-w-2xl h-[80vh] p-0">
+          <ProductChat
+            productId={product.id}
+            productName={product.name}
+            salesInstructions={product.sales_instructions}
+            onClose={() => setShowChat(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Interactions Dialog */}
       <Dialog open={showInteractions} onOpenChange={setShowInteractions}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Customer Interactions</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-4">
-              {interactions.map((interaction) => (
-                <div key={interaction.id} className="p-4 bg-muted rounded-lg">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-sm font-medium">
-                      {new Date(interaction.timestamp).toLocaleString()}
-                    </span>
-                    <span className="text-xs bg-primary/20 px-2 py-1 rounded">
-                      {Math.floor(interaction.duration / 60)}:{(interaction.duration % 60).toString().padStart(2, '0')}
-                    </span>
+          <ScrollArea className="h-[60vh]">
+            {interactions.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No interactions yet</p>
+            ) : (
+              <div className="space-y-4">
+                {interactions.map((interaction) => (
+                  <div key={interaction.id} className="border border-border rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(interaction.timestamp).toLocaleString()}
+                        </p>
+                        {interaction.duration && (
+                          <p className="text-sm text-muted-foreground">
+                            Duration: {Math.floor(interaction.duration / 60)}m {interaction.duration % 60}s
+                          </p>
+                        )}
+                      </div>
+                      {interaction.outcome && (
+                        <span className="px-2 py-1 bg-primary/10 text-primary rounded text-sm">
+                          {interaction.outcome}
+                        </span>
+                      )}
+                    </div>
+                    {interaction.transcript && (
+                      <div className="mt-2">
+                        <p className="text-sm font-semibold mb-1">Transcript:</p>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                          {interaction.transcript}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {interaction.transcript}
-                  </p>
-                  <span className="text-xs text-muted-foreground mt-2 block">
-                    Outcome: {interaction.outcome}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </ScrollArea>
         </DialogContent>
       </Dialog>
 
-      {/* Chat Dialog */}
-      <Dialog open={showChat} onOpenChange={setShowChat}>
-        <DialogContent className="max-w-2xl h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Chat with AI Assistant</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 flex items-center justify-center">
-            {agentId ? (
-              <div className="text-center">
-                <p className="text-muted-foreground mb-2">AI Assistant is ready</p>
-                <p className="text-sm text-muted-foreground">Assistant ID: {agentId}</p>
-                <div id="vapi-chat-widget" className="mt-4 w-full"></div>
-              </div>
-            ) : (
-              <p className="text-muted-foreground">Loading AI assistant...</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Voice Dialog */}
-      <Dialog open={showVoice} onOpenChange={setShowVoice}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Voice Call with AI Assistant</DialogTitle>
-          </DialogHeader>
-          <div id="vapi-voice-widget" className="p-8 text-center">
-            <p className="text-muted-foreground">Connecting to voice assistant...</p>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <style>{`
-        @keyframes swing {
+        @keyframes float {
           0%, 100% {
-            transform: translateX(-15px) rotate(-5deg);
+            transform: translateY(0px);
           }
           50% {
-            transform: translateX(15px) rotate(5deg);
+            transform: translateY(-10px);
           }
+        }
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
         }
       `}</style>
     </div>
