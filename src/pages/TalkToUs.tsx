@@ -7,14 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
-import VapiChatDialog from "@/components/chat/VapiChatDialog";
+import FloatingVapiAssistant from "@/components/dashboard/FloatingVapiAssistant";
 
 const TalkToUs = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [showBecca, setShowBecca] = useState(false);
   const successMessageRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -382,22 +382,28 @@ const TalkToUs = () => {
               </div>
             </form>
 
-            {/* Chat with Becca Button - Below Form */}
+            {/* Talk to Becca Button - Below Form */}
             <div className="mt-4">
               <Button
                 type="button"
-                onClick={() => setIsChatOpen(true)}
+                onClick={() => setShowBecca(true)}
                 className="w-full bg-green-500 text-white hover:bg-green-600 border-0 h-11 font-medium"
               >
-                Chat with Becca
+                Talk to Becca
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Vapi Chat Dialog */}
-      <VapiChatDialog open={isChatOpen} onOpenChange={setIsChatOpen} />
+      {/* Becca Voice Assistant */}
+      {showBecca && (
+        <FloatingVapiAssistant
+          publicKey="79d6faa5-06c4-4b59-ade5-7b29c12228c4"
+          assistantId="8b841de4-f607-4f25-ab44-43071c2e4002"
+          initialPosition={{ x: window.innerWidth / 2 - 40, y: window.innerHeight / 2 - 40 }}
+        />
+      )}
     </div>
   );
 };
