@@ -22,6 +22,7 @@ const FloatingVapiAssistant = () => {
 
     // Set up event listeners with faster response
     vapi.on("call-start", () => {
+      console.log("Call started successfully");
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
         connectionTimeoutRef.current = null;
@@ -29,10 +30,12 @@ const FloatingVapiAssistant = () => {
       setIsLoading(false);
       setIsActive(true);
       setRetryCount(0);
+      toggleLockRef.current = false; // Unlock after successful start
       toast.success("Assistant activated");
     });
 
     vapi.on("call-end", () => {
+      console.log("Call ended");
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
         connectionTimeoutRef.current = null;
@@ -40,6 +43,8 @@ const FloatingVapiAssistant = () => {
       setIsActive(false);
       setIsSpeaking(false);
       setIsLoading(false);
+      setRetryCount(0);
+      toggleLockRef.current = false;
     });
 
     vapi.on("speech-start", () => {
@@ -185,39 +190,53 @@ const FloatingVapiAssistant = () => {
         setIsSpeaking(false);
         toast.info("Assistant stopped");
       } else {
-        // Check microphone permissions first
+        // Check microphone permissions first with proper cleanup
         try {
-          await navigator.mediaDevices.getUserMedia({ audio: true });
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // Immediately stop the test stream
+          stream.getTracks().forEach(track => track.stop());
         } catch (permError) {
           console.error("Microphone permission error:", permError);
-          toast.error("Microphone access required. Please allow microphone permissions.");
+          toast.error("Microphone access required. Please allow microphone permissions in your browser settings.");
           toggleLockRef.current = false;
           return;
         }
 
         setIsLoading(true);
         
-        // Set connection timeout (15 seconds)
+        // Set connection timeout (30 seconds for better reliability)
         connectionTimeoutRef.current = setTimeout(() => {
-          if (isLoading) {
+          if (isLoading && !isActive) {
             console.log('Connection timeout');
-            setIsLoading(false);
-            setIsActive(false);
+            
             if (vapiRef.current) {
               vapiRef.current.stop();
             }
             
-            // Retry logic
-            if (retryCount < 2) {
-              setRetryCount(prev => prev + 1);
-              toast.error(`Connection timeout. Retrying... (${retryCount + 1}/2)`);
-              setTimeout(() => handleClick(), 1000);
+            // Retry logic with exponential backoff
+            if (retryCount < 3) {
+              const newRetryCount = retryCount + 1;
+              setRetryCount(newRetryCount);
+              
+              // Exponential backoff: 2s, 4s, 8s
+              const retryDelay = Math.pow(2, newRetryCount) * 1000;
+              
+              toast.error(`Connection timeout. Retrying in ${retryDelay/1000}s... (${newRetryCount}/3)`);
+              
+              setTimeout(() => {
+                setIsLoading(false);
+                toggleLockRef.current = false;
+                handleClick();
+              }, retryDelay);
             } else {
-              toast.error("Connection failed after multiple attempts. Please check your network and try again.");
+              setIsLoading(false);
+              setIsActive(false);
               setRetryCount(0);
+              toggleLockRef.current = false;
+              toast.error("Unable to connect after multiple attempts. Please check your internet connection and try again later.");
             }
           }
-        }, 15000);
+        }, 30000);
 
         // Start the call
         await vapiRef.current.start("8eb153bb-e605-438c-85e6-bbe3484a64ff");
@@ -233,20 +252,25 @@ const FloatingVapiAssistant = () => {
       
       const errorMessage = error instanceof Error ? error.message : String(error);
       
-      // Retry logic for network errors
-      if ((errorMessage.includes('network') || errorMessage.includes('fetch')) && retryCount < 2) {
-        setRetryCount(prev => prev + 1);
-        toast.error(`Connection failed. Retrying... (${retryCount + 1}/2)`);
-        setTimeout(() => handleClick(), 2000);
+      // Retry logic for network errors with exponential backoff
+      if ((errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('timeout')) && retryCount < 3) {
+        const newRetryCount = retryCount + 1;
+        setRetryCount(newRetryCount);
+        
+        // Exponential backoff: 2s, 4s, 8s
+        const retryDelay = Math.pow(2, newRetryCount) * 1000;
+        
+        toast.error(`Connection failed. Retrying in ${retryDelay/1000}s... (${newRetryCount}/3)`);
+        
+        setTimeout(() => {
+          toggleLockRef.current = false;
+          handleClick();
+        }, retryDelay);
       } else {
-        toast.error("Failed to connect. Please try again.");
+        toast.error("Failed to connect. Please try again in a moment.");
         setRetryCount(0);
-      }
-    } finally {
-      // Unlock after a short delay to prevent double-clicks
-      setTimeout(() => {
         toggleLockRef.current = false;
-      }, 500);
+      }
     }
   };
 
