@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.create-character]
 verify_jwt = false
+
+[functions.product-chat]
+verify_jwt = false
