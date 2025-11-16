@@ -6,6 +6,7 @@ const FloatingVapiAssistant = () => {
   const [position, setPosition] = useState({ x: window.innerWidth - 120, y: window.innerHeight - 120 });
   const [isDragging, setIsDragging] = useState(false);
   const [isActive, setIsActive] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
   const vapiRef = useRef<Vapi | null>(null);
@@ -18,6 +19,7 @@ const FloatingVapiAssistant = () => {
 
     // Set up event listeners
     vapi.on("call-start", () => {
+      setIsLoading(false);
       setIsActive(true);
       toast.success("Assistant activated");
     });
@@ -38,8 +40,9 @@ const FloatingVapiAssistant = () => {
 
     vapi.on("error", (error: any) => {
       console.error("Vapi error:", error);
-      toast.error("Assistant error");
+      toast.error("Assistant connection error. Please verify your Vapi credentials.");
       setIsActive(false);
+      setIsLoading(false);
     });
 
     return () => {
@@ -93,12 +96,15 @@ const FloatingVapiAssistant = () => {
     try {
       if (isActive) {
         vapiRef.current.stop();
+        setIsLoading(false);
       } else {
+        setIsLoading(true);
         await vapiRef.current.start("8eb153bb-e605-438c-85e6-bbe3484a64ff");
       }
     } catch (error) {
       console.error("Failed to toggle assistant:", error);
-      toast.error("Failed to toggle assistant");
+      setIsLoading(false);
+      toast.error("Failed to connect to assistant. Please check your Vapi settings.");
     }
   };
 
@@ -128,19 +134,24 @@ const FloatingVapiAssistant = () => {
       <div className="relative w-full h-full">
         {/* Outer glow rings */}
         <div className={`absolute inset-0 rounded-full transition-all duration-700 ${
-          isActive ? 'animate-pulse' : ''
+          isLoading ? 'animate-[spin_1s_linear_infinite]' : isActive ? 'animate-pulse' : ''
         }`}>
-          <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-xl animate-[ping_2s_ease-in-out_infinite]" />
-          <div className="absolute inset-0 rounded-full bg-blue-400/30 blur-lg animate-[ping_2.5s_ease-in-out_infinite]" 
-               style={{ animationDelay: '0.5s' }} />
+          <div className={`absolute inset-0 rounded-full blur-xl ${
+            isLoading ? 'bg-blue-300/40 animate-[ping_0.8s_ease-in-out_infinite]' : 'bg-blue-500/20 animate-[ping_2s_ease-in-out_infinite]'
+          }`} />
+          <div className={`absolute inset-0 rounded-full blur-lg ${
+            isLoading ? 'bg-blue-400/50 animate-[ping_1s_ease-in-out_infinite]' : 'bg-blue-400/30 animate-[ping_2.5s_ease-in-out_infinite]'
+          }`} style={{ animationDelay: isLoading ? '0.2s' : '0.5s' }} />
         </div>
 
         {/* Main sphere with B */}
         <div className={`relative w-full h-full rounded-full overflow-hidden transition-all duration-500 ${
-          isActive ? 'scale-110 shadow-2xl shadow-blue-500/50' : 'scale-100 shadow-lg'
+          isLoading ? 'scale-105 shadow-xl shadow-blue-400/60' : isActive ? 'scale-110 shadow-2xl shadow-blue-500/50' : 'scale-100 shadow-lg'
         }`}
         style={{
-          boxShadow: 'inset 0 -20px 40px rgba(59, 130, 246, 0.3), inset 0 20px 40px rgba(255, 255, 255, 0.5), 0 10px 30px rgba(59, 130, 246, 0.4)'
+          boxShadow: isLoading 
+            ? 'inset 0 -20px 40px rgba(96, 165, 250, 0.5), inset 0 20px 40px rgba(255, 255, 255, 0.7), 0 10px 30px rgba(96, 165, 250, 0.6)'
+            : 'inset 0 -20px 40px rgba(59, 130, 246, 0.3), inset 0 20px 40px rgba(255, 255, 255, 0.5), 0 10px 30px rgba(59, 130, 246, 0.4)'
         }}>
           {/* Deep 3D gradient base */}
           <div className="absolute inset-0 bg-gradient-to-br from-white via-blue-50 to-blue-200" />
@@ -181,12 +192,16 @@ const FloatingVapiAssistant = () => {
           {/* B Letter with depth */}
           <div className="absolute inset-0 flex items-center justify-center">
             <span className={`text-4xl font-bold transition-all duration-300 relative ${
-              isActive 
+              isLoading
+                ? 'text-blue-400 animate-pulse'
+                : isActive 
                 ? 'text-blue-600' 
                 : 'text-blue-500'
             }`}
             style={{
-              textShadow: isActive 
+              textShadow: isLoading
+                ? '0 0 25px rgba(96, 165, 250, 1), 0 0 50px rgba(96, 165, 250, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3)'
+                : isActive 
                 ? '0 0 20px rgba(37, 99, 235, 0.8), 0 0 40px rgba(37, 99, 235, 0.4), 0 4px 8px rgba(0, 0, 0, 0.3)'
                 : '0 0 10px rgba(59, 130, 246, 0.6), 0 0 20px rgba(59, 130, 246, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2)',
               filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.8))'
@@ -203,23 +218,30 @@ const FloatingVapiAssistant = () => {
             </div>
           )}
 
-          {/* Active state border glow */}
-          {isActive && (
+          {/* Loading/Active state border glow */}
+          {isLoading && (
+            <div className="absolute inset-0 rounded-full border-2 border-blue-300/70 animate-[spin_0.8s_linear_infinite]" />
+          )}
+          {isActive && !isLoading && (
             <div className="absolute inset-0 rounded-full border-2 border-blue-400/50 animate-[spin_3s_linear_infinite]" />
           )}
         </div>
 
-        {/* Digital brain particles when active */}
-        {isActive && (
+        {/* Digital brain particles when loading/active */}
+        {(isLoading || isActive) && (
           <>
-            <div className="absolute top-0 left-1/2 w-1 h-1 rounded-full bg-blue-400 animate-[ping_1.5s_ease-out_infinite]" 
-                 style={{ animationDelay: '0s' }} />
-            <div className="absolute top-1/4 right-0 w-1 h-1 rounded-full bg-blue-300 animate-[ping_1.5s_ease-out_infinite]" 
-                 style={{ animationDelay: '0.3s' }} />
-            <div className="absolute bottom-1/4 left-0 w-1 h-1 rounded-full bg-blue-500 animate-[ping_1.5s_ease-out_infinite]" 
-                 style={{ animationDelay: '0.6s' }} />
-            <div className="absolute bottom-0 right-1/3 w-1 h-1 rounded-full bg-blue-400 animate-[ping_1.5s_ease-out_infinite]" 
-                 style={{ animationDelay: '0.9s' }} />
+            <div className={`absolute top-0 left-1/2 w-1 h-1 rounded-full animate-[ping_1.5s_ease-out_infinite] ${
+              isLoading ? 'bg-blue-300 w-1.5 h-1.5' : 'bg-blue-400'
+            }`} style={{ animationDelay: '0s' }} />
+            <div className={`absolute top-1/4 right-0 w-1 h-1 rounded-full animate-[ping_1.5s_ease-out_infinite] ${
+              isLoading ? 'bg-blue-200 w-1.5 h-1.5' : 'bg-blue-300'
+            }`} style={{ animationDelay: '0.3s' }} />
+            <div className={`absolute bottom-1/4 left-0 w-1 h-1 rounded-full animate-[ping_1.5s_ease-out_infinite] ${
+              isLoading ? 'bg-blue-400 w-1.5 h-1.5' : 'bg-blue-500'
+            }`} style={{ animationDelay: '0.6s' }} />
+            <div className={`absolute bottom-0 right-1/3 w-1 h-1 rounded-full animate-[ping_1.5s_ease-out_infinite] ${
+              isLoading ? 'bg-blue-300 w-1.5 h-1.5' : 'bg-blue-400'
+            }`} style={{ animationDelay: '0.9s' }} />
           </>
         )}
       </div>
