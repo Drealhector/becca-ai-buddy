@@ -116,7 +116,7 @@ const FloatingVapiAssistant = () => {
   return (
     <div
       ref={buttonRef}
-      className="fixed z-50 cursor-grab active:cursor-grabbing"
+      className="fixed z-50 cursor-grab active:cursor-grabbing animate-float"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -138,24 +138,59 @@ const FloatingVapiAssistant = () => {
         {/* Main sphere with B */}
         <div className={`relative w-full h-full rounded-full overflow-hidden transition-all duration-500 ${
           isActive ? 'scale-110 shadow-2xl shadow-blue-500/50' : 'scale-100 shadow-lg'
-        }`}>
-          {/* Animated gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white via-blue-100 to-blue-300 animate-[spin_8s_linear_infinite]" />
+        }`}
+        style={{
+          boxShadow: 'inset 0 -20px 40px rgba(59, 130, 246, 0.3), inset 0 20px 40px rgba(255, 255, 255, 0.5), 0 10px 30px rgba(59, 130, 246, 0.4)'
+        }}>
+          {/* Deep 3D gradient base */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white via-blue-50 to-blue-200" />
           
-          {/* Cloudy overlay effect */}
-          <div className="absolute inset-0 opacity-40">
-            <div className="absolute inset-0 bg-gradient-radial from-white/80 via-blue-200/50 to-transparent animate-[pulse_3s_ease-in-out_infinite]" />
-            <div className="absolute inset-0 bg-gradient-radial from-transparent via-white/60 to-blue-300/40 animate-[pulse_4s_ease-in-out_infinite]" 
-                 style={{ animationDelay: '1s' }} />
+          {/* Rotating cloud layer 1 - slow */}
+          <div className="absolute inset-0 opacity-60 animate-[cloud-rotate_20s_linear_infinite]">
+            <div className="absolute inset-0 bg-gradient-radial from-white/90 via-blue-100/60 to-transparent" 
+                 style={{ transform: 'translate(10%, 10%) scale(1.2)' }} />
+            <div className="absolute inset-0 bg-gradient-radial from-blue-200/40 via-white/50 to-transparent" 
+                 style={{ transform: 'translate(-15%, 5%) scale(1.3)' }} />
           </div>
 
-          {/* B Letter */}
+          {/* Rotating cloud layer 2 - medium */}
+          <div className="absolute inset-0 opacity-50 animate-[cloud-rotate_15s_linear_infinite_reverse]">
+            <div className="absolute inset-0 bg-gradient-radial from-transparent via-blue-100/70 to-white/60" 
+                 style={{ transform: 'translate(-10%, -10%) scale(1.4)' }} />
+            <div className="absolute inset-0 bg-gradient-radial from-white/80 via-transparent to-blue-200/50" 
+                 style={{ transform: 'translate(20%, -5%) scale(1.2)' }} />
+          </div>
+
+          {/* Rotating cloud layer 3 - fast */}
+          <div className="absolute inset-0 opacity-40 animate-[cloud-rotate_10s_linear_infinite]">
+            <div className="absolute inset-0 bg-gradient-radial from-blue-300/50 via-white/70 to-transparent" 
+                 style={{ transform: 'translate(5%, -15%) scale(1.5)' }} />
+            <div className="absolute inset-0 bg-gradient-radial from-transparent via-blue-100/60 to-white/40" 
+                 style={{ transform: 'translate(-20%, 10%) scale(1.3)' }} />
+          </div>
+
+          {/* Swirling mist effect */}
+          <div className="absolute inset-0 opacity-30 animate-[swirl_25s_ease-in-out_infinite]">
+            <div className="absolute inset-0 bg-gradient-conic from-white via-blue-200 to-white blur-md" />
+          </div>
+
+          {/* 3D highlight effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent" 
+               style={{ clipPath: 'circle(45% at 30% 30%)' }} />
+
+          {/* B Letter with depth */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className={`text-4xl font-bold transition-all duration-300 ${
+            <span className={`text-4xl font-bold transition-all duration-300 relative ${
               isActive 
-                ? 'text-blue-600 drop-shadow-[0_0_8px_rgba(37,99,235,0.8)]' 
-                : 'text-blue-500 drop-shadow-[0_0_4px_rgba(59,130,246,0.6)]'
-            }`}>
+                ? 'text-blue-600' 
+                : 'text-blue-500'
+            }`}
+            style={{
+              textShadow: isActive 
+                ? '0 0 20px rgba(37, 99, 235, 0.8), 0 0 40px rgba(37, 99, 235, 0.4), 0 4px 8px rgba(0, 0, 0, 0.3)'
+                : '0 0 10px rgba(59, 130, 246, 0.6), 0 0 20px rgba(59, 130, 246, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2)',
+              filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.8))'
+            }}>
               B
             </span>
           </div>
@@ -194,8 +229,26 @@ const FloatingVapiAssistant = () => {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
+        @keyframes cloud-rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes swirl {
+          0%, 100% { transform: rotate(0deg) scale(1); }
+          50% { transform: rotate(180deg) scale(1.1); }
+        }
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
         .bg-gradient-radial {
           background: radial-gradient(circle, var(--tw-gradient-stops));
+        }
+        .bg-gradient-conic {
+          background: conic-gradient(var(--tw-gradient-stops));
         }
       `}</style>
     </div>
