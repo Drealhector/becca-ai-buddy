@@ -14,6 +14,7 @@ const FloatingVapiAssistant = () => {
   const buttonRef = useRef<HTMLDivElement>(null);
   const toggleLockRef = useRef<boolean>(false);
   const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const touchEventRef = useRef<boolean>(false);
 
   useEffect(() => {
     // Initialize Vapi with optimized settings
@@ -93,6 +94,9 @@ const FloatingVapiAssistant = () => {
   }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Ignore mouse events if touch just happened
+    if (touchEventRef.current) return;
+    
     e.preventDefault();
     setIsDragging(true);
     dragRef.current = {
@@ -105,6 +109,13 @@ const FloatingVapiAssistant = () => {
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
+    
+    // Mark that touch event occurred to prevent mouse events
+    touchEventRef.current = true;
+    setTimeout(() => {
+      touchEventRef.current = false;
+    }, 500);
+    
     const touch = e.touches[0];
     setIsDragging(true);
     dragRef.current = {
@@ -141,6 +152,8 @@ const FloatingVapiAssistant = () => {
   };
 
   const handleMouseUp = (e: MouseEvent) => {
+    // Ignore mouse events if touch just happened
+    if (touchEventRef.current) return;
     if (!isDragging) return;
     
     const deltaX = Math.abs(e.clientX - (dragRef.current?.startX || 0));
