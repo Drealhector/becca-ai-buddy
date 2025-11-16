@@ -114,7 +114,7 @@ const FloatingVapiAssistant = () => {
     const deltaY = Math.abs(e.clientY - (dragRef.current?.startY || 0));
     
     // If barely moved, treat as click
-    if (deltaX < 5 && deltaY < 5) {
+    if (deltaX < 10 && deltaY < 10) {
       handleClick();
     }
     
@@ -130,7 +130,7 @@ const FloatingVapiAssistant = () => {
     const deltaY = Math.abs(touch.clientY - (dragRef.current?.startY || 0));
     
     // If barely moved, treat as click
-    if (deltaX < 5 && deltaY < 5) {
+    if (deltaX < 10 && deltaY < 10) {
       handleClick();
     }
     
@@ -144,7 +144,9 @@ const FloatingVapiAssistant = () => {
     try {
       if (isActive) {
         vapiRef.current.stop();
+        setIsActive(false);
         setIsLoading(false);
+        setIsSpeaking(false);
       } else {
         setIsLoading(true);
         // Start the call
