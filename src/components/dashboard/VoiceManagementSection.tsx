@@ -94,7 +94,7 @@ const VoiceManagementSection = () => {
     
     // Simulate upload process
     setTimeout(() => {
-      toast.success("Voice uploaded - pending admin approval");
+      toast.success(<span className="font-bold">Voice uploaded - pending admin approval</span>);
       setNewVoiceName("");
       setLoading(false);
     }, 1500);
