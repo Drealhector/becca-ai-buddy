@@ -13,6 +13,7 @@ const VoiceManagementSection = () => {
   const [loading, setLoading] = useState(false);
   const [newVoiceName, setNewVoiceName] = useState("");
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     fetchVoices();
@@ -84,9 +85,21 @@ const VoiceManagementSection = () => {
     }
   };
 
-  const handleVoiceUpload = async (file: File) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleVoiceUpload = async () => {
     if (!newVoiceName.trim()) {
       toast.error("Please enter a voice name");
+      return;
+    }
+
+    if (!selectedFile) {
+      toast.error("Please select a voice file");
       return;
     }
 
@@ -96,6 +109,7 @@ const VoiceManagementSection = () => {
     setTimeout(() => {
       toast.success(<span className="font-bold">Voice uploaded - pending admin approval</span>);
       setNewVoiceName("");
+      setSelectedFile(null);
       setLoading(false);
     }, 1500);
   };
@@ -180,20 +194,33 @@ const VoiceManagementSection = () => {
               value={newVoiceName}
               onChange={(e) => setNewVoiceName(e.target.value)}
             />
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => {
-                const input = document.createElement("input");
-                input.type = "file";
-                input.accept = "audio/*";
-                input.onchange = (e: any) => handleVoiceUpload(e.target.files[0]);
-                input.click();
-              }}
-            >
-              <Upload className="w-4 h-4" />
-              Upload Custom Voice
-            </Button>
+            <div className="space-y-2">
+              <input
+                type="file"
+                accept="audio/*"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="voice-file-input"
+              />
+              <label
+                htmlFor="voice-file-input"
+                className="flex items-center justify-center gap-2 w-full p-3 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                <span>{selectedFile ? selectedFile.name : "Select Voice File"}</span>
+              </label>
+              
+              {selectedFile && (
+                <Button
+                  className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={handleVoiceUpload}
+                  disabled={loading}
+                >
+                  <Upload className="w-4 h-4" />
+                  {loading ? "Uploading..." : "Upload Voice"}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
