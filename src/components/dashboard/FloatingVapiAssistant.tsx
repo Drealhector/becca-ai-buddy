@@ -11,6 +11,7 @@ const FloatingVapiAssistant = () => {
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
   const vapiRef = useRef<Vapi | null>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
+  const toggleLockRef = useRef<boolean>(false);
 
   useEffect(() => {
     // Initialize Vapi with optimized settings
@@ -139,7 +140,10 @@ const FloatingVapiAssistant = () => {
   };
 
   const handleClick = async () => {
-    if (!vapiRef.current) return;
+    if (!vapiRef.current || toggleLockRef.current) return;
+
+    // Lock to prevent rapid toggling
+    toggleLockRef.current = true;
 
     console.log('=== CLICK DEBUG ===');
     console.log('isActive:', isActive);
@@ -164,6 +168,11 @@ const FloatingVapiAssistant = () => {
       console.error("Failed to toggle assistant:", error);
       setIsLoading(false);
       toast.error("Failed to connect. Please try again.");
+    } finally {
+      // Unlock after a short delay to prevent double-clicks
+      setTimeout(() => {
+        toggleLockRef.current = false;
+      }, 500);
     }
   };
 
