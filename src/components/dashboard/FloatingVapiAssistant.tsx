@@ -2,8 +2,19 @@ import React, { useState, useRef, useEffect } from "react";
 import Vapi from "@vapi-ai/web";
 import { toast } from "sonner";
 
-const FloatingVapiAssistant = () => {
-  const [position, setPosition] = useState({ x: window.innerWidth - 120, y: window.innerHeight - 120 });
+interface FloatingVapiAssistantProps {
+  publicKey?: string;
+  assistantId?: string;
+  initialPosition?: { x: number; y: number };
+}
+
+const FloatingVapiAssistant = ({ 
+  publicKey = "cb6d31db-2209-4ffa-ac27-794c02fcd8ec",
+  assistantId = "8eb153bb-e605-438c-85e6-bbe3484a64ff",
+  initialPosition
+}: FloatingVapiAssistantProps = {}) => {
+  const defaultPosition = initialPosition || { x: window.innerWidth - 120, y: window.innerHeight - 120 };
+  const [position, setPosition] = useState(defaultPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -18,7 +29,7 @@ const FloatingVapiAssistant = () => {
 
   useEffect(() => {
     // Initialize Vapi with optimized settings
-    const vapi = new Vapi("cb6d31db-2209-4ffa-ac27-794c02fcd8ec");
+    const vapi = new Vapi(publicKey);
     vapiRef.current = vapi;
 
     // Set up event listeners with faster response
@@ -252,7 +263,7 @@ const FloatingVapiAssistant = () => {
         }, 30000);
 
         // Start the call
-        await vapiRef.current.start("8eb153bb-e605-438c-85e6-bbe3484a64ff");
+        await vapiRef.current.start(assistantId);
       }
     } catch (error) {
       console.error("Failed to toggle assistant:", error);
