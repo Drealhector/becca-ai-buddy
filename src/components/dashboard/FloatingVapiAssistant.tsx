@@ -141,15 +141,21 @@ const FloatingVapiAssistant = () => {
   const handleClick = async () => {
     if (!vapiRef.current) return;
 
+    console.log('=== CLICK DEBUG ===');
+    console.log('isActive:', isActive);
+    console.log('isLoading:', isLoading);
+
     try {
       // If active OR loading, stop immediately
       if (isActive || isLoading) {
+        console.log('Stopping assistant...');
         vapiRef.current.stop();
         setIsActive(false);
         setIsLoading(false);
         setIsSpeaking(false);
         toast.info("Assistant stopped");
       } else {
+        console.log('Starting assistant...');
         setIsLoading(true);
         // Start the call
         await vapiRef.current.start("8eb153bb-e605-438c-85e6-bbe3484a64ff");
