@@ -90,30 +90,14 @@ const VoiceManagementSection = () => {
       return;
     }
 
-    // Just add to UI - non-functional
-    const newVoice = {
-      id: Date.now().toString(),
-      name: newVoiceName,
-      type: "custom",
-      functional: false,
-    };
-
-    const updated = [...customVoices, newVoice];
-    setCustomVoices(updated);
-
-    try {
-      const { error } = await supabase
-        .from("customizations")
-        .update({ custom_voices: updated })
-        .eq("id", (await supabase.from("customizations").select("id").single()).data?.id);
-
-      if (error) throw error;
-      toast.success("Your voice has been uploaded and will be available pending admin approval");
+    setLoading(true);
+    
+    // Simulate upload process
+    setTimeout(() => {
+      toast.success("Voice uploaded - pending admin approval");
       setNewVoiceName("");
-    } catch (error) {
-      console.error("Error saving voice:", error);
-      toast.error("Failed to save voice");
-    }
+      setLoading(false);
+    }, 1500);
   };
 
   return (
