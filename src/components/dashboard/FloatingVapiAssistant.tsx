@@ -142,11 +142,13 @@ const FloatingVapiAssistant = () => {
     if (!vapiRef.current) return;
 
     try {
-      if (isActive) {
+      // If active OR loading, stop immediately
+      if (isActive || isLoading) {
         vapiRef.current.stop();
         setIsActive(false);
         setIsLoading(false);
         setIsSpeaking(false);
+        toast.info("Assistant stopped");
       } else {
         setIsLoading(true);
         // Start the call
