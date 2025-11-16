@@ -70,6 +70,18 @@ const FloatingVapiAssistant = () => {
     };
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    setIsDragging(true);
+    dragRef.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      startPosX: position.x,
+      startPosY: position.y,
+    };
+  };
+
   const handleMouseMove = (e: MouseEvent) => {
     if (!isDragging || !dragRef.current) return;
 
@@ -82,11 +94,40 @@ const FloatingVapiAssistant = () => {
     setPosition({ x: newX, y: newY });
   };
 
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!isDragging || !dragRef.current) return;
+
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - dragRef.current.startX;
+    const deltaY = touch.clientY - dragRef.current.startY;
+
+    const newX = Math.max(0, Math.min(window.innerWidth - 80, dragRef.current.startPosX + deltaX));
+    const newY = Math.max(0, Math.min(window.innerHeight - 80, dragRef.current.startPosY + deltaY));
+
+    setPosition({ x: newX, y: newY });
+  };
+
   const handleMouseUp = (e: MouseEvent) => {
     if (!isDragging) return;
     
     const deltaX = Math.abs(e.clientX - (dragRef.current?.startX || 0));
     const deltaY = Math.abs(e.clientY - (dragRef.current?.startY || 0));
+    
+    // If barely moved, treat as click
+    if (deltaX < 5 && deltaY < 5) {
+      handleClick();
+    }
+    
+    setIsDragging(false);
+    dragRef.current = null;
+  };
+
+  const handleTouchEnd = (e: TouchEvent) => {
+    if (!isDragging) return;
+    
+    const touch = e.changedTouches[0];
+    const deltaX = Math.abs(touch.clientX - (dragRef.current?.startX || 0));
+    const deltaY = Math.abs(touch.clientY - (dragRef.current?.startY || 0));
     
     // If barely moved, treat as click
     if (deltaX < 5 && deltaY < 5) {
@@ -120,9 +161,13 @@ const FloatingVapiAssistant = () => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
+      window.addEventListener("touchmove", handleTouchMove);
+      window.addEventListener("touchend", handleTouchEnd);
       return () => {
         window.removeEventListener("mousemove", handleMouseMove);
         window.removeEventListener("mouseup", handleMouseUp);
+        window.removeEventListener("touchmove", handleTouchMove);
+        window.removeEventListener("touchend", handleTouchEnd);
       };
     }
   }, [isDragging]);
@@ -138,6 +183,7 @@ const FloatingVapiAssistant = () => {
         height: '80px',
       }}
       onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
     >
       <div className="relative w-full h-full">
         {/* Outer glow rings */}
@@ -197,22 +243,20 @@ const FloatingVapiAssistant = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent" 
                style={{ clipPath: 'circle(45% at 30% 30%)' }} />
 
-          {/* B Letter with depth */}
+          {/* B Letter with depth - matching hero section */}
           <div className="absolute inset-0 flex items-center justify-center">
             <span className={`text-4xl font-bold transition-all duration-300 relative ${
-              isLoading
-                ? 'text-blue-400 animate-pulse'
-                : isActive 
-                ? 'text-blue-600' 
-                : 'text-blue-500'
+              isLoading ? 'animate-pulse' : ''
             }`}
             style={{
+              color: '#ffffff',
+              WebkitTextStroke: isLoading ? '1.5px #60a5fa' : isActive ? '1.5px #2563eb' : '1.5px #2c4a6f',
               textShadow: isLoading
-                ? '0 0 25px rgba(96, 165, 250, 1), 0 0 50px rgba(96, 165, 250, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3)'
+                ? '-2px -2px 0 #60a5fa, -4px -4px 0 #60a5fa, -6px -6px 0 #93c5fd, 0 4px 12px rgba(0,0,0,0.5), 0 0 30px rgba(96, 165, 250, 0.8)'
                 : isActive 
-                ? '0 0 20px rgba(37, 99, 235, 0.8), 0 0 40px rgba(37, 99, 235, 0.4), 0 4px 8px rgba(0, 0, 0, 0.3)'
-                : '0 0 10px rgba(59, 130, 246, 0.6), 0 0 20px rgba(59, 130, 246, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2)',
-              filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.8))'
+                ? '-2px -2px 0 #5dd5ed, -4px -4px 0 #5dd5ed, -6px -6px 0 #70dff0, 0 4px 12px rgba(0,0,0,0.4), 0 0 20px rgba(37, 99, 235, 0.6)'
+                : '-2px -2px 0 #5dd5ed, -4px -4px 0 #5dd5ed, -6px -6px 0 #70dff0, 0 4px 12px rgba(0,0,0,0.4)',
+              fontWeight: 900
             }}>
               B
             </span>
