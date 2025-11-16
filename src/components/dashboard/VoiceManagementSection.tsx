@@ -108,7 +108,7 @@ const VoiceManagementSection = () => {
         .eq("id", (await supabase.from("customizations").select("id").single()).data?.id);
 
       if (error) throw error;
-      toast.success("Voice added to library (preview only)");
+      toast.success("Your voice has been uploaded and will be available pending admin approval");
       setNewVoiceName("");
     } catch (error) {
       console.error("Error saving voice:", error);

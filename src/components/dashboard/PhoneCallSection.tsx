@@ -149,11 +149,11 @@ const PhoneCallSection = () => {
     setCallStatus("calling");
     setShowMakeCall(false);
 
-    // Simulate ringing
+    // Simulate ringing - 5 seconds connecting phase
     setTimeout(() => {
       setCallStatus("connected");
       setCallStartTime(new Date());
-    }, 3000);
+    }, 5000);
   };
 
   const handleScheduleCall = () => {
@@ -202,7 +202,8 @@ const PhoneCallSection = () => {
   };
 
   const handleEndCall = async () => {
-    const finalDuration = Math.floor(callDuration / 60); // Convert to minutes
+    // Convert to minutes, minimum 1 minute if call duration was at least 1 second
+    const finalDuration = callDuration > 0 ? Math.max(1, Math.ceil(callDuration / 60)) : 0;
     
     try {
       await supabase.from("call_history").insert({
