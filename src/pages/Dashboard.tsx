@@ -14,6 +14,7 @@ import LogoCustomization from "@/components/dashboard/LogoCustomization";
 import VoiceManagementSection from "@/components/dashboard/VoiceManagementSection";
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
 import { PhoneConnectionDialog } from "@/components/dashboard/PhoneConnectionDialog";
+import FloatingVapiAssistant from "@/components/dashboard/FloatingVapiAssistant";
 import { Menu, LogOut, Phone, Link as LinkIcon, Settings, MessageSquare, Mic, Trash2 } from "lucide-react";
 
 
@@ -292,6 +293,9 @@ const Dashboard = () => {
         provider={selectedProvider}
         onConnect={handleProviderConnect}
       />
+
+      {/* Floating Vapi Assistant */}
+      <FloatingVapiAssistant />
     </div>
   );
 };
