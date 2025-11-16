@@ -13,11 +13,11 @@ const FloatingVapiAssistant = () => {
   const buttonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Initialize Vapi
+    // Initialize Vapi with optimized settings
     const vapi = new Vapi("cb6d31db-2209-4ffa-ac27-794c02fcd8ec");
     vapiRef.current = vapi;
 
-    // Set up event listeners
+    // Set up event listeners with faster response
     vapi.on("call-start", () => {
       setIsLoading(false);
       setIsActive(true);
@@ -36,6 +36,13 @@ const FloatingVapiAssistant = () => {
 
     vapi.on("speech-end", () => {
       setIsSpeaking(false);
+    });
+
+    vapi.on("volume-level", (volume: number) => {
+      // Visual feedback for audio activity
+      if (volume > 0.1) {
+        setIsSpeaking(true);
+      }
     });
 
     vapi.on("error", (error: any) => {
@@ -99,12 +106,13 @@ const FloatingVapiAssistant = () => {
         setIsLoading(false);
       } else {
         setIsLoading(true);
+        // Start the call
         await vapiRef.current.start("8eb153bb-e605-438c-85e6-bbe3484a64ff");
       }
     } catch (error) {
       console.error("Failed to toggle assistant:", error);
       setIsLoading(false);
-      toast.error("Failed to connect to assistant. Please check your Vapi settings.");
+      toast.error("Failed to connect. Please try again.");
     }
   };
 
