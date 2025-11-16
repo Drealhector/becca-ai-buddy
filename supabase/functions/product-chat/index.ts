@@ -76,6 +76,27 @@ AVAILABLE MEDIA:`;
 
     console.log("Calling Lovable AI with system prompt");
 
+    // Add function calling to enable image display
+    const tools = mediaData && mediaData.length > 0 ? [
+      {
+        type: "function",
+        function: {
+          name: "show_product_image",
+          description: "Display a product image to the customer. Use this when customer asks to see photos or specific views.",
+          parameters: {
+            type: "object",
+            properties: {
+              label: {
+                type: "string",
+                description: "The label of the image to show (e.g., 'front view', 'back view', 'detail shot')"
+              }
+            },
+            required: ["label"]
+          }
+        }
+      }
+    ] : [];
+
     // Call Lovable AI
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -89,6 +110,7 @@ AVAILABLE MEDIA:`;
           { role: "system", content: systemPrompt },
           ...messages,
         ],
+        tools: tools.length > 0 ? tools : undefined,
         stream: true,
       }),
     });
