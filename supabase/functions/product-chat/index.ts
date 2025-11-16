@@ -74,28 +74,12 @@ AVAILABLE MEDIA:`;
 
     systemPrompt += `\n\nYour goal is to help customers learn about ${product.name}, answer their questions, and guide them toward making a purchase. Be enthusiastic, knowledgeable, and helpful. Follow the sales instructions carefully.`;
 
-    console.log("Calling Lovable AI with system prompt");
+    // Add special instruction for showing images
+    if (mediaData && mediaData.length > 0) {
+      systemPrompt += `\n\nIMPORTANT: When a customer asks to see a photo or image, respond with text AND include the special tag [SHOW_IMAGE:label] where label matches one of the available media labels. For example, if they ask to see the back view, say "Sure! Here's the back view:" followed by [SHOW_IMAGE:back view]. This will display the image to them.`;
+    }
 
-    // Add function calling to enable image display
-    const tools = mediaData && mediaData.length > 0 ? [
-      {
-        type: "function",
-        function: {
-          name: "show_product_image",
-          description: "Display a product image to the customer. Use this when customer asks to see photos or specific views.",
-          parameters: {
-            type: "object",
-            properties: {
-              label: {
-                type: "string",
-                description: "The label of the image to show (e.g., 'front view', 'back view', 'detail shot')"
-              }
-            },
-            required: ["label"]
-          }
-        }
-      }
-    ] : [];
+    console.log("Calling Lovable AI with system prompt");
 
     // Call Lovable AI
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -110,7 +94,6 @@ AVAILABLE MEDIA:`;
           { role: "system", content: systemPrompt },
           ...messages,
         ],
-        tools: tools.length > 0 ? tools : undefined,
         stream: true,
       }),
     });
