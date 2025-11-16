@@ -87,7 +87,6 @@ const ProductChat = ({ productId, productName, salesInstructions, onClose }: Pro
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let aiContent = "";
-      let pendingToolCalls: any[] = [];
 
       const aiMessage = {
         role: "assistant",
@@ -122,31 +121,23 @@ const ProductChat = ({ productId, productName, salesInstructions, onClose }: Pro
 
           try {
             const parsed = JSON.parse(jsonStr);
-            const delta = parsed.choices?.[0]?.delta;
-            
-            // Handle text content
-            const content = delta?.content as string | undefined;
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
               aiContent += content;
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                const lastMessage = newMessages[newMessages.length - 1];
-                if (lastMessage.role === "assistant") {
-                  lastMessage.content = aiContent;
-                }
-                return newMessages;
-              });
-            }
+              
+              // Check for image tags in the content
+              const imageMatch = aiContent.match(/\[SHOW_IMAGE:([^\]]+)\]/);
+              let displayContent = aiContent;
+              let imageUrl = null;
 
-            // Handle tool calls
-            if (delta?.tool_calls) {
-              for (const toolCall of delta.tool_calls) {
-                if (toolCall.function?.name === "show_product_image") {
-                  const args = JSON.parse(toolCall.function.arguments || "{}");
-                  const label = args.label;
-                  
-                  // Fetch the image URL for this label
-                  const { data: mediaData } = await fetch(
+              if (imageMatch) {
+                const label = imageMatch[1];
+                // Remove the tag from display
+                displayContent = aiContent.replace(/\[SHOW_IMAGE:([^\]]+)\]/, '').trim();
+                
+                // Fetch the image URL for this label
+                try {
+                  const response = await fetch(
                     `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/product_media?product_id=eq.${productId}&label=ilike.%${label}%&select=media_url`,
                     {
                       headers: {
@@ -154,20 +145,27 @@ const ProductChat = ({ productId, productName, salesInstructions, onClose }: Pro
                         "Content-Type": "application/json",
                       },
                     }
-                  ).then(r => r.json());
-
+                  );
+                  const mediaData = await response.json();
                   if (mediaData && mediaData.length > 0) {
-                    setMessages((prev) => {
-                      const newMessages = [...prev];
-                      const lastMessage = newMessages[newMessages.length - 1];
-                      if (lastMessage.role === "assistant") {
-                        lastMessage.imageUrl = mediaData[0].media_url;
-                      }
-                      return newMessages;
-                    });
+                    imageUrl = mediaData[0].media_url;
                   }
+                } catch (e) {
+                  console.error("Error fetching media:", e);
                 }
               }
+
+              setMessages((prev) => {
+                const newMessages = [...prev];
+                const lastMessage = newMessages[newMessages.length - 1];
+                if (lastMessage.role === "assistant") {
+                  lastMessage.content = displayContent;
+                  if (imageUrl) {
+                    lastMessage.imageUrl = imageUrl;
+                  }
+                }
+                return newMessages;
+              });
             }
           } catch (e) {
             textBuffer = line + "\n" + textBuffer;
