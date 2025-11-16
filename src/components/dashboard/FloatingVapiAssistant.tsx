@@ -8,10 +8,12 @@ const FloatingVapiAssistant = () => {
   const [isActive, setIsActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
   const vapiRef = useRef<Vapi | null>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
   const toggleLockRef = useRef<boolean>(false);
+  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Initialize Vapi with optimized settings
@@ -20,15 +22,24 @@ const FloatingVapiAssistant = () => {
 
     // Set up event listeners with faster response
     vapi.on("call-start", () => {
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
       setIsLoading(false);
       setIsActive(true);
+      setRetryCount(0);
       toast.success("Assistant activated");
     });
 
     vapi.on("call-end", () => {
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
       setIsActive(false);
       setIsSpeaking(false);
-      toast.info("Assistant deactivated");
+      setIsLoading(false);
     });
 
     vapi.on("speech-start", () => {
@@ -48,12 +59,28 @@ const FloatingVapiAssistant = () => {
 
     vapi.on("error", (error: any) => {
       console.error("Vapi error:", error);
-      toast.error("Assistant connection error. Please verify your Vapi credentials.");
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
       setIsActive(false);
       setIsLoading(false);
+      
+      // Check for specific error types
+      const errorMessage = error?.message || error?.toString() || '';
+      if (errorMessage.includes('microphone') || errorMessage.includes('permission')) {
+        toast.error("Microphone access denied. Please allow microphone permissions.");
+      } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+        toast.error("Network error. Please check your connection and try again.");
+      } else {
+        toast.error("Connection failed. Please try again.");
+      }
     });
 
     return () => {
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+      }
       if (vapiRef.current) {
         vapiRef.current.stop();
       }
@@ -145,29 +172,76 @@ const FloatingVapiAssistant = () => {
     // Lock to prevent rapid toggling
     toggleLockRef.current = true;
 
-    console.log('=== CLICK DEBUG ===');
-    console.log('isActive:', isActive);
-    console.log('isLoading:', isLoading);
-
     try {
       // If active OR loading, stop immediately
       if (isActive || isLoading) {
-        console.log('Stopping assistant...');
+        if (connectionTimeoutRef.current) {
+          clearTimeout(connectionTimeoutRef.current);
+          connectionTimeoutRef.current = null;
+        }
         vapiRef.current.stop();
         setIsActive(false);
         setIsLoading(false);
         setIsSpeaking(false);
         toast.info("Assistant stopped");
       } else {
-        console.log('Starting assistant...');
+        // Check microphone permissions first
+        try {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (permError) {
+          console.error("Microphone permission error:", permError);
+          toast.error("Microphone access required. Please allow microphone permissions.");
+          toggleLockRef.current = false;
+          return;
+        }
+
         setIsLoading(true);
+        
+        // Set connection timeout (15 seconds)
+        connectionTimeoutRef.current = setTimeout(() => {
+          if (isLoading) {
+            console.log('Connection timeout');
+            setIsLoading(false);
+            setIsActive(false);
+            if (vapiRef.current) {
+              vapiRef.current.stop();
+            }
+            
+            // Retry logic
+            if (retryCount < 2) {
+              setRetryCount(prev => prev + 1);
+              toast.error(`Connection timeout. Retrying... (${retryCount + 1}/2)`);
+              setTimeout(() => handleClick(), 1000);
+            } else {
+              toast.error("Connection failed after multiple attempts. Please check your network and try again.");
+              setRetryCount(0);
+            }
+          }
+        }, 15000);
+
         // Start the call
         await vapiRef.current.start("8eb153bb-e605-438c-85e6-bbe3484a64ff");
       }
     } catch (error) {
       console.error("Failed to toggle assistant:", error);
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
       setIsLoading(false);
-      toast.error("Failed to connect. Please try again.");
+      setIsActive(false);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Retry logic for network errors
+      if ((errorMessage.includes('network') || errorMessage.includes('fetch')) && retryCount < 2) {
+        setRetryCount(prev => prev + 1);
+        toast.error(`Connection failed. Retrying... (${retryCount + 1}/2)`);
+        setTimeout(() => handleClick(), 2000);
+      } else {
+        toast.error("Failed to connect. Please try again.");
+        setRetryCount(0);
+      }
     } finally {
       // Unlock after a short delay to prevent double-clicks
       setTimeout(() => {
