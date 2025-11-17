@@ -6,12 +6,14 @@ interface FloatingVapiAssistantProps {
   publicKey?: string;
   assistantId?: string;
   initialPosition?: { x: number; y: number };
+  autoStart?: boolean;
 }
 
 const FloatingVapiAssistant = ({ 
   publicKey = "cb6d31db-2209-4ffa-ac27-794c02fcd8ec",
   assistantId = "8eb153bb-e605-438c-85e6-bbe3484a64ff",
-  initialPosition
+  initialPosition,
+  autoStart = false
 }: FloatingVapiAssistantProps = {}) => {
   const defaultPosition = initialPosition || { x: window.innerWidth - 120, y: window.innerHeight - 120 };
   const [position, setPosition] = useState(defaultPosition);
@@ -103,6 +105,17 @@ const FloatingVapiAssistant = ({
       }
     };
   }, []);
+
+  // Auto-start effect
+  useEffect(() => {
+    if (autoStart && vapiRef.current && !isActive && !isLoading) {
+      // Small delay to ensure Vapi is fully initialized
+      const timer = setTimeout(() => {
+        handleClick();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [autoStart]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     // Ignore mouse events if touch just happened
