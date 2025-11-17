@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import hubBackground from "@/assets/hub-background.jpg";
+import CallHectorUI from "@/components/dashboard/CallHectorUI";
 
 const PublicHub = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -9,6 +10,7 @@ const PublicHub = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hiddenLinks, setHiddenLinks] = useState<string[]>([]);
+  const [showCallDialog, setShowCallDialog] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -171,6 +173,7 @@ const PublicHub = () => {
         <div className="space-y-4 animate-fade-in">
           {allLinks.map((link, index) => {
             const isExternal = link.path.startsWith('http');
+            const isCallHector = link.key === 'call-hector';
             
             const buttonContent = (
               <div className="relative group">
@@ -202,6 +205,18 @@ const PublicHub = () => {
               </div>
             );
 
+            if (isCallHector) {
+              return (
+                <button
+                  key={index}
+                  onClick={() => setShowCallDialog(true)}
+                  className="block w-full"
+                >
+                  {buttonContent}
+                </button>
+              );
+            }
+
             return isExternal ? (
               <a
                 key={index}
@@ -224,6 +239,8 @@ const PublicHub = () => {
           })}
         </div>
       </div>
+
+      {showCallDialog && <CallHectorUI onClose={() => setShowCallDialog(false)} />}
     </div>
   );
 };

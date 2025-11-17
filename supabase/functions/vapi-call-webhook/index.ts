@@ -13,23 +13,42 @@ serve(async (req) => {
 
   try {
     const payload = await req.json();
-    console.log("📞 Received VAPI webhook:", payload);
+    console.log("📞 Received VAPI webhook:", JSON.stringify(payload, null, 2));
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Log the event type
+    const eventType = payload.type || payload.message?.type;
+    console.log("📊 Event type:", eventType);
+
     // Handle call end event
-    if (payload.type === "end-of-call-report" || payload.message?.type === "end-of-call-report") {
+    if (eventType === "end-of-call-report") {
       const data = payload.message || payload;
       
-      const transcript = data.transcript || "";
-      const duration = data.duration || data.call?.duration || 0;
-      const callId = data.call?.id || data.callId || "unknown";
+      // Extract transcript - handle both string and array formats
+      let transcriptText = "";
+      if (typeof data.transcript === "string") {
+        transcriptText = data.transcript;
+      } else if (Array.isArray(data.transcript)) {
+        transcriptText = data.transcript
+          .map((t: any) => `${t.role}: ${t.content}`)
+          .join("\n");
+      } else if (data.messages) {
+        transcriptText = data.messages
+          .map((m: any) => `${m.role}: ${m.content || m.message}`)
+          .join("\n");
+      }
+      
+      const duration = data.duration || data.call?.duration || data.endedAt - data.startedAt || 0;
+      const callId = data.call?.id || data.callId || data.id || "unknown";
+
+      console.log("💾 Saving call data:", { transcriptText, duration, callId });
 
       // Save to call_history
-      await supabase.from("call_history").insert({
+      const { error: historyError } = await supabase.from("call_history").insert({
         type: "incoming",
         number: "Web Call",
         topic: "Call with DREALHECTOR",
@@ -37,18 +56,34 @@ serve(async (req) => {
         timestamp: new Date().toISOString(),
       });
 
+      if (historyError) {
+        console.error("❌ Error saving call history:", historyError);
+      } else {
+        console.log("✅ Call history saved");
+      }
+
       // Save transcript if available
-      if (transcript) {
-        await supabase.from("transcripts").insert({
+      if (transcriptText) {
+        const { error: transcriptError } = await supabase.from("transcripts").insert({
           conversation_id: callId,
-          transcript_text: transcript,
+          transcript_text: transcriptText,
           caller_info: "Web Call",
           timestamp: new Date().toISOString(),
           sales_flagged: false,
         });
+
+        if (transcriptError) {
+          console.error("❌ Error saving transcript:", transcriptError);
+        } else {
+          console.log("✅ Transcript saved");
+        }
+      } else {
+        console.log("⚠️ No transcript available");
       }
 
       console.log("✅ Call logged successfully");
+    } else {
+      console.log("ℹ️ Ignoring event type:", eventType);
     }
 
     return new Response(
