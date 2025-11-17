@@ -135,6 +135,7 @@ export type Database = {
       }
       call_history: {
         Row: {
+          conversation_id: string | null
           duration_minutes: number | null
           id: string
           number: string | null
@@ -143,6 +144,7 @@ export type Database = {
           type: string | null
         }
         Insert: {
+          conversation_id?: string | null
           duration_minutes?: number | null
           id?: string
           number?: string | null
@@ -151,6 +153,7 @@ export type Database = {
           type?: string | null
         }
         Update: {
+          conversation_id?: string | null
           duration_minutes?: number | null
           id?: string
           number?: string | null
