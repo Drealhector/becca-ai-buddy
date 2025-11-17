@@ -15,6 +15,7 @@ const TalkToUs = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [showBecca, setShowBecca] = useState(false);
+  const [beccaTrigger, setBeccaTrigger] = useState(0);
   const successMessageRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -386,7 +387,10 @@ const TalkToUs = () => {
             <div className="mt-4">
               <Button
                 type="button"
-                onClick={() => setShowBecca(true)}
+                onClick={() => {
+                  setShowBecca(true);
+                  setBeccaTrigger(prev => prev + 1);
+                }}
                 className="w-full bg-green-500 text-white hover:bg-green-600 border-0 h-11 font-medium"
               >
                 Talk to Becca
@@ -402,7 +406,7 @@ const TalkToUs = () => {
           publicKey="79d6faa5-06c4-4b59-ade5-7b29c12228c4"
           assistantId="8b841de4-f607-4f25-ab44-43071c2e4002"
           initialPosition={{ x: window.innerWidth / 2 - 40, y: window.innerHeight / 2 - 40 }}
-          autoStart={true}
+          activationTrigger={beccaTrigger}
         />
       )}
     </div>
