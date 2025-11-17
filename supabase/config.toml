@@ -48,5 +48,11 @@ verify_jwt = false
 [functions.create-character]
 verify_jwt = false
 
+[functions.update-call-hector-assistant]
+verify_jwt = false
+
+[functions.vapi-call-webhook]
+verify_jwt = false
+
 [functions.product-chat]
 verify_jwt = false
