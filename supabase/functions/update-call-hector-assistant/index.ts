@@ -50,6 +50,9 @@ You are speaking on behalf of ${businessName}. Maintain a professional yet warm 
 Answer questions clearly and concisely. If you don't know something, be honest about it.`;
 
     const assistantId = '6c411909-067b-4ce3-ad02-10299109dc64';
+    const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/vapi-call-webhook`;
+
+    console.log('Configuring webhook URL:', webhookUrl);
 
     // Update the assistant via VAPI API
     const response = await fetch(`https://api.vapi.ai/assistant/${assistantId}`, {
@@ -68,7 +71,9 @@ Answer questions clearly and concisely. If you don't know something, be honest a
               content: systemPrompt
             }
           ]
-        }
+        },
+        serverUrl: webhookUrl,
+        serverUrlSecret: VAPI_PRIVATE_KEY
       })
     });
 
