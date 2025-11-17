@@ -402,6 +402,7 @@ const TalkToUs = () => {
           publicKey="79d6faa5-06c4-4b59-ade5-7b29c12228c4"
           assistantId="8b841de4-f607-4f25-ab44-43071c2e4002"
           initialPosition={{ x: window.innerWidth / 2 - 40, y: window.innerHeight / 2 - 40 }}
+          autoStart={true}
         />
       )}
     </div>
