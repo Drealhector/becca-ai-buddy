@@ -49,6 +49,15 @@ export const AIPersonalitySection = () => {
 
       if (error) throw error;
 
+      // Update the Call Hector assistant with new personality
+      try {
+        await supabase.functions.invoke("update-call-hector-assistant");
+        console.log("Call Hector assistant updated with new personality");
+      } catch (assistantError) {
+        console.error("Error updating Call Hector assistant:", assistantError);
+        // Don't fail the whole operation if assistant update fails
+      }
+
       toast.success("AI personality updated successfully!");
     } catch (error) {
       console.error("Error saving personality:", error);

@@ -62,9 +62,17 @@ const PublicHub = () => {
       legacyPath: ''
     },
     { 
+      key: 'call-hector',
+      label: 'Call Hector', 
+      path: '/call-hector', 
+      icon: '☎️',
+      image: null,
+      legacyPath: ''
+    },
+    { 
       key: 'whatsapp',
       label: `WhatsApp/${slug}`, 
-      path: customization?.whatsapp_username ? `https://wa.me/${customization.whatsapp_username}` : '#', 
+      path: customization?.whatsapp_username ? `https://wa.me/${customization.whatsapp_username}` : '#',
       icon: null,
       image: 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg',
       legacyPath: slug ? `/whatsapp/${slug}` : ''
