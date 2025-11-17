@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ConversationViewDialog } from "./ConversationViewDialog";
 
 const defaultLinks = [
+  { key: "call-hector", label: "Call Hector", path: "/call-hector" },
   { key: "whatsapp", label: "WhatsApp", path: "/whatsapp/hector" },
   { key: "instagram", label: "Instagram Page", path: "/instagram/hector" },
   { key: "facebook", label: "Facebook Page", path: "/facebook/hector" },
