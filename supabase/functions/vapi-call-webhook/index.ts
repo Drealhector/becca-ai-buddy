@@ -28,21 +28,38 @@ serve(async (req) => {
     if (eventType === "end-of-call-report") {
       const data = payload.message || payload;
       
-      // Extract transcript - handle both string and array formats
+      // Extract transcript from messagesOpenAIFormatted (excluding system messages)
       let transcriptText = "";
-      if (typeof data.transcript === "string") {
-        transcriptText = data.transcript;
-      } else if (Array.isArray(data.transcript)) {
-        transcriptText = data.transcript
-          .map((t: any) => `${t.role}: ${t.content}`)
+      if (data.artifact?.messagesOpenAIFormatted) {
+        transcriptText = data.artifact.messagesOpenAIFormatted
+          .filter((m: any) => m.role !== "system")
+          .map((m: any) => {
+            const role = m.role === "assistant" ? "AI" : "User";
+            return `${role}: ${m.content}`;
+          })
           .join("\n");
-      } else if (data.messages) {
-        transcriptText = data.messages
-          .map((m: any) => `${m.role}: ${m.content || m.message}`)
+      } else if (data.artifact?.messages) {
+        transcriptText = data.artifact.messages
+          .filter((m: any) => m.role !== "system")
+          .map((m: any) => {
+            const role = m.role === "bot" ? "AI" : "User";
+            return `${role}: ${m.message}`;
+          })
           .join("\n");
       }
       
-      const duration = data.duration || data.call?.duration || data.endedAt - data.startedAt || 0;
+      // Calculate duration from message timestamps (in milliseconds, convert to seconds)
+      let duration = 0;
+      if (data.artifact?.messages && data.artifact.messages.length > 0) {
+        const messages = data.artifact.messages.filter((m: any) => m.role !== "system");
+        if (messages.length > 0) {
+          const firstMessageTime = messages[0].time;
+          const lastMessage = messages[messages.length - 1];
+          const lastMessageEndTime = lastMessage.endTime || lastMessage.time;
+          duration = Math.round((lastMessageEndTime - firstMessageTime) / 1000); // Convert to seconds
+        }
+      }
+      
       const callId = data.call?.id || data.callId || data.id || "unknown";
 
       console.log("💾 Saving call data:", { transcriptText, duration, callId });
