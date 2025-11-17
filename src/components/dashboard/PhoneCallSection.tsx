@@ -251,8 +251,18 @@ const PhoneCallSection = () => {
     }
   };
 
-  const handleViewTranscript = (call: any) => {
-    setSelectedCallTranscript(call);
+  const handleViewTranscript = async (call: any) => {
+    // Fetch the transcript for this call
+    const { data: transcript } = await supabase
+      .from("transcripts")
+      .select("*")
+      .eq("conversation_id", call.conversation_id)
+      .single();
+
+    setSelectedCallTranscript({
+      ...call,
+      transcript: transcript?.transcript_text || "No transcript available for this call"
+    });
     setShowTranscriptDialog(true);
   };
 
