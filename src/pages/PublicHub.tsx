@@ -56,18 +56,10 @@ const PublicHub = () => {
       legacyPath: ''
     },
     { 
-      key: 'call',
-      label: 'Call', 
-      path: `/call/${slug}`, 
-      icon: '📞',
-      image: null,
-      legacyPath: ''
-    },
-    { 
       key: 'call-hector',
-      label: 'Call Hector', 
+      label: 'Call', 
       path: '/call-hector', 
-      icon: '☎️',
+      icon: '📞',
       image: null,
       legacyPath: ''
     },
