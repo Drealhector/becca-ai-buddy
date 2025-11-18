@@ -47,17 +47,69 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('web-chat', {
-        body: { 
-          message: userMessage,
-          conversationHistory: messages.map(m => ({ role: m.role, content: m.content }))
-        }
+      const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/web-chat`;
+      const response = await fetch(chatUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: [
+            ...messages.map(m => ({ role: m.role, content: m.content })),
+            { role: 'user', content: userMessage }
+          ]
+        }),
       });
 
-      if (error) throw error;
+      if (!response.ok || !response.body) {
+        throw new Error('Failed to start stream');
+      }
 
-      if (data?.response) {
-        addMessage("assistant", data.response);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+      let hasAddedMessage = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (!line.trim() || line.startsWith(':')) continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content;
+            
+            if (content) {
+              assistantMessage += content;
+              
+              if (!hasAddedMessage) {
+                addMessage("assistant", assistantMessage);
+                hasAddedMessage = true;
+              } else {
+                setMessages(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = {
+                    ...updated[updated.length - 1],
+                    content: assistantMessage
+                  };
+                  return updated;
+                });
+              }
+            }
+          } catch (e) {
+            // Skip invalid JSON
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -138,6 +190,17 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
                 </div>
               </div>
             ))}
+            {isLoading && messages[messages.length - 1]?.role === "user" && (
+              <div className="mb-4 flex justify-start">
+                <div className="bg-slate-600/80 text-white shadow-lg backdrop-blur-sm rounded-2xl px-4 py-3">
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  </div>
+                </div>
+              </div>
+            )}
             <div ref={scrollRef} />
           </ScrollArea>
 
