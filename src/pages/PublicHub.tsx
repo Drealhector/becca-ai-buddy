@@ -185,8 +185,8 @@ const PublicHub = () => {
                   </div>
                   
                   {/* Label */}
-                  <div className="flex-1">
-                    <p className="text-white text-lg font-semibold tracking-wide">
+                  <div className="flex-1 flex items-center">
+                    <p className="text-white text-lg font-semibold tracking-wide text-left">
                       {link.label}
                     </p>
                   </div>
