@@ -19,32 +19,39 @@ serve(async (req) => {
     // Get customization data
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: customData } = await supabase
+    const { data: customData, error: customError } = await supabase
       .from('customizations')
       .select('*')
       .limit(1)
-      .single();
+      .maybeSingle();
+
+    console.log('Customization data:', customData);
+    console.log('Customization error:', customError);
 
     // Build system prompt from customization
-    const systemPrompt = `You are an AI assistant for ${customData?.business_name || 'a business'}.
+    const systemPrompt = `You are Becca, an AI assistant for ${customData?.business_name || 'this business'}.
 
-Business Description: ${customData?.business_description || 'N/A'}
-Industry: ${customData?.business_industry || 'N/A'}
-Target Audience: ${customData?.target_audience || 'N/A'}
-Key Services: ${customData?.key_services || 'N/A'}
-Business Hours: ${customData?.business_hours || 'N/A'}
+${customData?.business_description ? `About the business: ${customData.business_description}` : ''}
+${customData?.business_industry ? `Industry: ${customData.business_industry}` : ''}
+${customData?.target_audience ? `Target Audience: ${customData.target_audience}` : ''}
+${customData?.key_services ? `Services: ${customData.key_services}` : ''}
+${customData?.business_hours ? `Hours: ${customData.business_hours}` : ''}
 
-Personality: ${customData?.assistant_personality || 'Professional and helpful'}
-Tone: ${customData?.tone || 'friendly and professional'}
+PERSONALITY AND TONE:
+${customData?.assistant_personality || 'Be professional and helpful.'}
 
-Special Instructions: ${customData?.special_instructions || 'None'}
+${customData?.tone ? `Always maintain a ${customData.tone} tone in your responses.` : 'Maintain a friendly and professional tone.'}
 
-${customData?.faqs ? `FAQs: ${JSON.stringify(customData.faqs)}` : ''}
+${customData?.special_instructions ? `Special Instructions: ${customData.special_instructions}` : ''}
 
-Always respond in a ${customData?.tone || 'friendly and professional'} manner. Help users with their questions about the business.`;
+${customData?.faqs ? `Frequently Asked Questions:\n${JSON.stringify(customData.faqs, null, 2)}` : ''}
+
+Remember to embody the personality and tone specified above in every response.`;
+
+    console.log('System prompt:', systemPrompt);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
