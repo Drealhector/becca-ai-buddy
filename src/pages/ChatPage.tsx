@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Instagram, Facebook, MessageCircle } from "lucide-react";
-import WebChatWidget from "@/components/chat/WebChatWidget";
+import BeccaChatDialog from "@/components/chat/BeccaChatDialog";
 import { supabase } from "@/integrations/supabase/client";
 
 const ChatPage = () => {
@@ -99,21 +99,7 @@ const ChatPage = () => {
   }
 
   if (selectedChannel === "web") {
-    return (
-      <>
-        <div className="min-h-screen bg-gradient-to-br from-primary via-accent to-primary p-4">
-          <div className="text-center py-20">
-            <h1 className="text-4xl font-bold text-white mb-4">
-              {customization?.business_name || "BECCA"}
-            </h1>
-            <p className="text-white/80 text-lg">
-              {customization?.greeting || "How can I help you today?"}
-            </p>
-          </div>
-        </div>
-        <WebChatWidget customization={customization} onClose={() => setSelectedChannel(null)} />
-      </>
-    );
+    return <BeccaChatDialog onClose={() => setSelectedChannel(null)} />;
   }
 
   return null;
