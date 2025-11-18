@@ -17,12 +17,14 @@ interface BeccaChatDialogProps {
 }
 
 const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Hi! I'm Becca. How can I help you today?", timestamp: new Date() }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchInitialGreeting();
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -31,6 +33,24 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
   const scrollToBottom = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const fetchInitialGreeting = async () => {
+    try {
+      const { data } = await supabase
+        .from("customizations")
+        .select("greeting, assistant_personality")
+        .limit(1)
+        .maybeSingle();
+
+      const greeting = data?.greeting || "Hi! How can I help you today?";
+      addMessage("assistant", greeting);
+    } catch (error) {
+      console.error("Failed to fetch greeting:", error);
+      addMessage("assistant", "Hi! How can I help you today?");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -171,37 +191,45 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
 
           {/* Messages area */}
           <ScrollArea className="flex-1 px-6 py-4">
-            {messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`mb-4 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[75%] rounded-2xl px-4 py-3 ${
-                    msg.role === "user"
-                      ? "bg-white/90 text-slate-900 ml-auto shadow-lg"
-                      : "bg-slate-600/80 text-white shadow-lg backdrop-blur-sm"
-                  }`}
-                >
-                  <p className="text-sm leading-relaxed">{msg.content}</p>
-                  <span className="text-xs opacity-60 mt-1 block">
-                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
+            {isLoading && messages.length === 0 ? (
+              <div className="flex justify-center items-center h-full">
+                <div className="text-white/80 animate-pulse">Loading...</div>
               </div>
-            ))}
-            {isLoading && messages[messages.length - 1]?.role === "user" && (
-              <div className="mb-4 flex justify-start">
-                <div className="bg-slate-600/80 text-white shadow-lg backdrop-blur-sm rounded-2xl px-4 py-3">
-                  <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+            ) : (
+              <>
+                {messages.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    className={`mb-4 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+                        msg.role === "user"
+                          ? "bg-white/90 text-slate-900 ml-auto shadow-lg"
+                          : "bg-slate-600/80 text-white shadow-lg backdrop-blur-sm"
+                      }`}
+                    >
+                      <p className="text-sm leading-relaxed">{msg.content}</p>
+                      <span className="text-xs opacity-60 mt-1 block">
+                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </div>
+                ))}
+                {isLoading && messages[messages.length - 1]?.role === "user" && (
+                  <div className="mb-4 flex justify-start">
+                    <div className="bg-slate-600/80 text-white shadow-lg backdrop-blur-sm rounded-2xl px-4 py-3">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                        <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                        <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={scrollRef} />
+              </>
             )}
-            <div ref={scrollRef} />
           </ScrollArea>
 
           {/* Input area */}

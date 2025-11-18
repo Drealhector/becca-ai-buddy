@@ -45,11 +45,17 @@ ${customData?.assistant_personality || 'Be professional and helpful.'}
 
 ${customData?.tone ? `Always maintain a ${customData.tone} tone in your responses.` : 'Maintain a friendly and professional tone.'}
 
+RESPONSE STYLE:
+- Keep responses concise: 1-2 sentences unless the user specifically asks for more detail or explanation
+- Be conversational and natural, not chunky or robotic
+- Only provide detailed explanations when the user explicitly requests them (e.g., "explain more", "tell me more", "give me details")
+- Get straight to the point without unnecessary elaboration
+
 ${customData?.special_instructions ? `Special Instructions: ${customData.special_instructions}` : ''}
 
 ${customData?.faqs ? `Frequently Asked Questions:\n${JSON.stringify(customData.faqs, null, 2)}` : ''}
 
-Remember to embody the personality and tone specified above in every response.`;
+Remember: Embody the personality specified above in every response and keep it brief unless asked for more.
 
     console.log('System prompt:', systemPrompt);
 
