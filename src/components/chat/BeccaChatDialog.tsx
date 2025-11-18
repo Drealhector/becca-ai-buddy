@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, X } from "lucide-react";
-import Vapi from "@vapi-ai/web";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   role: "user" | "assistant";
@@ -17,22 +17,12 @@ interface BeccaChatDialogProps {
 }
 
 const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    { role: "assistant", content: "Hi! I'm Becca. How can I help you today?", timestamp: new Date() }
+  ]);
   const [inputValue, setInputValue] = useState("");
-  const [isConnecting, setIsConnecting] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const vapiRef = useRef<Vapi | null>(null);
-
-  useEffect(() => {
-    initializeVapi();
-    
-    return () => {
-      if (vapiRef.current && isConnected) {
-        vapiRef.current.stop();
-      }
-    };
-  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -44,77 +34,40 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
     }
   };
 
-  const initializeVapi = async () => {
-    try {
-      const publicKey = 'a73cb300-eae5-4375-9b68-0dda8733474a';
-      const assistantId = '6c411909-067b-4ce3-ad02-10299109dc64';
-      
-      const vapi = new Vapi(publicKey);
-      vapiRef.current = vapi;
-
-      vapi.on("call-start", () => {
-        setIsConnected(true);
-        setIsConnecting(false);
-        addMessage("assistant", "Hi! I'm Becca. How can I help you today?");
-      });
-
-      vapi.on("call-end", () => {
-        setIsConnected(false);
-      });
-
-      vapi.on("message", (message: any) => {
-        if (message.type === "transcript" && message.role === "assistant") {
-          if (message.transcriptType === "final") {
-            addMessage("assistant", message.transcript);
-          }
-        }
-      });
-
-      vapi.on("error", (error: any) => {
-        console.error("Vapi error:", error);
-        setIsConnecting(false);
-        toast.error("Connection failed. Please try again.");
-      });
-
-      // Start the assistant in text mode
-      await vapi.start(assistantId);
-      
-    } catch (error) {
-      console.error("Failed to initialize Vapi:", error);
-      setIsConnecting(false);
-      toast.error("Failed to initialize chat");
-    }
-  };
-
   const addMessage = (role: "user" | "assistant", content: string) => {
     setMessages(prev => [...prev, { role, content, timestamp: new Date() }]);
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !vapiRef.current || !isConnected) return;
+    if (!inputValue.trim() || isLoading) return;
 
     const userMessage = inputValue.trim();
     setInputValue("");
     addMessage("user", userMessage);
+    setIsLoading(true);
 
     try {
-      vapiRef.current.send({
-        type: "add-message",
-        message: {
-          role: "user",
-          content: userMessage,
-        },
+      const { data, error } = await supabase.functions.invoke('web-chat', {
+        body: { 
+          message: userMessage,
+          conversationHistory: messages.map(m => ({ role: m.role, content: m.content }))
+        }
       });
+
+      if (error) throw error;
+
+      if (data?.response) {
+        addMessage("assistant", data.response);
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error("Failed to send message");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleClose = () => {
-    if (vapiRef.current && isConnected) {
-      vapiRef.current.stop();
-    }
     onClose();
   };
 
@@ -166,12 +119,6 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
 
           {/* Messages area */}
           <ScrollArea className="flex-1 px-6 py-4">
-            {isConnecting && (
-              <div className="flex justify-center items-center h-full">
-                <div className="text-white/80 animate-pulse">Connecting to Becca...</div>
-              </div>
-            )}
-            
             {messages.map((msg, idx) => (
               <div
                 key={idx}
@@ -201,13 +148,13 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                placeholder={isConnected ? "Type your message..." : "Connecting..."}
-                disabled={!isConnected || isConnecting}
+                placeholder="Type your message..."
+                disabled={isLoading}
                 className="flex-1 bg-white/90 border-white/30 focus:border-white/50 text-slate-900 placeholder:text-slate-500"
               />
               <Button
                 onClick={handleSendMessage}
-                disabled={!isConnected || !inputValue.trim() || isConnecting}
+                disabled={isLoading || !inputValue.trim()}
                 size="icon"
                 className="bg-white/90 hover:bg-white text-slate-700 shadow-lg"
               >
