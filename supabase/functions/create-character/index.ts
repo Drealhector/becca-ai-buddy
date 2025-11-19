@@ -33,9 +33,10 @@ serve(async (req) => {
       );
 
       try {
+        // Simple search first - just the name
         const { data: searchData, error: searchError } = await supabase.functions.invoke('web-search', {
           body: { 
-            query: `${input.name} ${input.context || ''} biography career communication style personality`,
+            query: `${input.name} ${input.context || ''}`.trim(),
             numResults: 10
           }
         });
@@ -48,7 +49,23 @@ serve(async (req) => {
           ).join('\n---\n');
           console.log(`Found ${searchData.results.length} search results`);
         } else {
-          console.warn("No search results found");
+          console.warn("No search results found, trying broader search...");
+          
+          // Try a second search with just the first part of the name
+          const simpleName = input.name.split(' ')[0];
+          const { data: retryData } = await supabase.functions.invoke('web-search', {
+            body: { 
+              query: simpleName,
+              numResults: 10
+            }
+          });
+          
+          if (retryData?.results && retryData.results.length > 0) {
+            searchResults = retryData.results.map((result: any, index: number) => 
+              `Result ${index + 1}:\nTitle: ${result.title}\nContent: ${result.content}\nURL: ${result.url}\n`
+            ).join('\n---\n');
+            console.log(`Retry found ${retryData.results.length} search results`);
+          }
         }
       } catch (searchErr) {
         console.error("Failed to perform web search:", searchErr);
@@ -84,14 +101,23 @@ CRITICAL RULES:
 
 Use directive format throughout (You are, Use, Keep, etc.). Be specific and actionable. Ensure responses are brief, natural, and avoid hyphens.`;
     } else if (type === "search_human") {
-      if (!searchResults) {
-        return new Response(
-          JSON.stringify({ error: "Unable to find information about this person. Please provide more context or try a different name." }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!searchResults || searchResults.trim().length === 0) {
+        // Fallback to AI's built-in knowledge if no web results
+        systemPrompt = `You are a research analyst. Try to recall any information you know about this person from your training data.
 
-      systemPrompt = `You are a research analyst. Based on the web search results provided, extract and organize detailed information about this person.
+If you have information about them, provide details on:
+- Professional background, current role, company
+- Areas of expertise and specialization
+- Communication style (formal, casual, technical, friendly)
+- Notable achievements or contributions
+- Public personality traits and characteristics
+- Speech patterns, catchphrases, or distinctive language
+
+If you don't have reliable information about this specific person, say: "I couldn't find detailed information about this person. They may have limited online presence or use different names/handles online."`;
+        
+        userPrompt = `Do you have any information about ${input.name}${input.context ? ` (${input.context})` : ''}? Provide whatever details you can recall, or indicate if you don't have reliable information about them.`;
+      } else {
+        systemPrompt = `You are a research analyst. Based on the web search results provided, extract and organize detailed information about this person.
 
 Focus on:
 - Professional background, current role, company
@@ -106,12 +132,13 @@ Focus on:
 - Any distinctive behavioral traits or mannerisms
 
 Provide comprehensive, factual information in clear bullet points. Only include information that is directly supported by the search results.`;
-      
-      userPrompt = `Based on these web search results about ${input.name}${input.context ? ` (${input.context})` : ''}, provide a detailed profile:
+        
+        userPrompt = `Based on these web search results about ${input.name}${input.context ? ` (${input.context})` : ''}, provide a detailed profile:
 
 ${searchResults}
 
 Extract and organize all relevant information about who they are and how they communicate. Be thorough and specific.`;
+      }
     } else if (type === "create_human_character") {
       systemPrompt = `Generate a directive AI personality prompt that captures this person's essence. Use "You are" format with NO introduction. Follow this structure:
 
