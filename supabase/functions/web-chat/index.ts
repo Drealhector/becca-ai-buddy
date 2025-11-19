@@ -55,7 +55,7 @@ ${customData?.special_instructions ? `Special Instructions: ${customData.special
 
 ${customData?.faqs ? `Frequently Asked Questions:\n${JSON.stringify(customData.faqs, null, 2)}` : ''}
 
-Remember: Embody the personality specified above in every response and keep it brief unless asked for more.
+Remember: Embody the personality specified above in every response and keep it brief unless asked for more.`;
 
     console.log('System prompt:', systemPrompt);
 
