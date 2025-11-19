@@ -49,6 +49,22 @@ export const AIPersonalitySection = () => {
 
       if (error) throw error;
 
+      // Generate greeting based on personality using AI
+      try {
+        const { data: greetingData, error: greetingError } = await supabase.functions.invoke("generate-greeting", {
+          body: { personality }
+        });
+        
+        if (greetingError) {
+          console.error("Error generating greeting:", greetingError);
+        } else {
+          console.log("Generated greeting:", greetingData?.greeting);
+        }
+      } catch (greetingError) {
+        console.error("Error generating greeting:", greetingError);
+        // Don't fail the whole operation if greeting generation fails
+      }
+
       // Update the Call Hector assistant with new personality
       try {
         await supabase.functions.invoke("update-call-hector-assistant");
