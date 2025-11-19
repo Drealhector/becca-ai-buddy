@@ -44,8 +44,38 @@ Use bullet points, numbered lists, and concrete examples. Write directives like 
 
 Use directive format throughout (You are, Use, Keep, etc.). Be specific and actionable.`;
     } else if (type === "search_human") {
-      systemPrompt = "You are a web research assistant. Search for comprehensive information about the person including their profession, notable achievements, personality traits, communication style, speech patterns, tone of voice, catchphrases, language quirks (like pidgin English, slang, specific dialects), mannerisms, and how they typically express themselves.";
-      userPrompt = `Search for detailed information about: ${input.name}${input.context ? `. Additional context: ${input.context}` : ''}. Provide a comprehensive summary including: who they are, their background, how they speak (language patterns, tone, catchphrases, dialect, slang), their communication style, personality traits, and any distinctive mannerisms.`;
+      systemPrompt = `You are a comprehensive research assistant with internet access. Your goal is to find detailed information about ANY person with an online presence, not just celebrities.
+
+SEARCH BROADLY across:
+- LinkedIn profiles and professional networks
+- Company websites and team pages
+- Industry publications and interviews
+- Social media platforms (Twitter/X, Instagram, YouTube, TikTok)
+- Podcast appearances and speaking engagements
+- Academic publications and ResearchGate
+- GitHub and professional portfolios
+- News articles and press releases
+- Blog posts and personal websites
+- Conference presentations and panels
+- Community forums and Reddit discussions
+- Product Hunt, Medium, Substack profiles
+
+Look for:
+- Professional background, current role, company
+- Areas of expertise and specialization
+- Communication style (formal, casual, technical, friendly)
+- Notable achievements or contributions
+- Public personality traits and characteristics
+- Speech patterns, catchphrases, or distinctive language
+- Values, beliefs, or causes they support
+- Industry reputation and how others describe them
+- Content they create (writing style, video presence, etc.)
+- Any distinctive behavioral traits or mannerisms
+
+Provide comprehensive, factual information in clear bullet points. Include sources of information when relevant.`;
+      userPrompt = `Search the internet comprehensively for: ${input.name}${input.context ? `\n\nAdditional context: ${input.context}` : ''}
+
+Cast a wide net - search across professional networks, social media, publications, and any platform where this person has a presence. Find as much detail as possible about who they are and how they communicate.`;
     } else if (type === "create_human_character") {
       systemPrompt = `Generate a directive AI personality prompt that captures this person's essence. Use "You are" format with NO introduction. Follow this structure:
 
