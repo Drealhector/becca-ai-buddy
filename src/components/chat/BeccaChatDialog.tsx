@@ -5,7 +5,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import Vapi from "@vapi-ai/web";
 
 interface Message {
   role: "user" | "assistant";
@@ -21,17 +20,10 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [vapi, setVapi] = useState<any>(null);
-  const [isConnected, setIsConnected] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    initializeVapi();
-    return () => {
-      if (vapi) {
-        vapi.stop();
-      }
-    };
+    loadGreeting();
   }, []);
 
   useEffect(() => {
@@ -44,64 +36,20 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
     }
   };
 
-  const initializeVapi = async () => {
+  const loadGreeting = async () => {
     try {
-      // Fetch customization for greeting
+      // Fetch personality/greeting from customizations
       const { data: customData } = await supabase
         .from("customizations")
-        .select("greeting")
+        .select("greeting, assistant_personality")
         .limit(1)
         .maybeSingle();
 
-      // Fetch Vapi configuration
-      const { data: config, error: configError } = await supabase.functions.invoke('get-vapi-config');
-      
-      if (configError || !config?.publicKey || !config?.assistantId) {
-        console.error('Vapi configuration not found:', configError);
-        const greeting = customData?.greeting || "Hi! How can I help you today?";
-        addMessage("assistant", greeting);
-        setIsLoading(false);
-        return;
-      }
-
-      console.log('Initializing Vapi with assistant:', config.assistantId);
-
-      const vapiInstance = new Vapi(config.publicKey);
-      
-      // Set up event listeners
-      vapiInstance.on('call-start', () => {
-        console.log('Vapi call started');
-        setIsConnected(true);
-        setIsLoading(false);
-      });
-
-      vapiInstance.on('call-end', () => {
-        console.log('Vapi call ended');
-        setIsConnected(false);
-      });
-
-      vapiInstance.on('message', (message: any) => {
-        console.log('Vapi message:', message);
-        if (message.type === 'transcript' && message.role === 'assistant' && message.transcriptType === 'final') {
-          addMessage("assistant", message.transcript);
-        }
-      });
-
-      vapiInstance.on('error', (error: any) => {
-        console.error('Vapi error:', error);
-        toast.error('Connection error. Please try again.');
-      });
-
-      // Start the call in text-only mode
-      await vapiInstance.start(config.assistantId);
-
-      setVapi(vapiInstance);
-
-      // Show initial greeting
-      const greeting = customData?.greeting || "Hi! How can I help you today?";
+      const greeting = customData?.greeting || customData?.assistant_personality || "Hi! How can I help you today?";
       addMessage("assistant", greeting);
+      setIsLoading(false);
     } catch (error) {
-      console.error('Error initializing Vapi:', error);
+      console.error('Error loading greeting:', error);
       addMessage("assistant", "Hi! How can I help you today?");
       setIsLoading(false);
     }
@@ -112,29 +60,35 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !vapi || !isConnected) {
-      if (!isConnected) {
-        toast.error("Not connected to assistant. Please wait...");
-      }
-      return;
-    }
+    if (!inputValue.trim()) return;
 
     const userMessage = inputValue.trim();
     setInputValue("");
     addMessage("user", userMessage);
+    setIsLoading(true);
 
     try {
-      // Send text message through Vapi
-      vapi.send({
-        type: "add-message",
-        message: {
-          role: "user",
-          content: userMessage,
-        },
+      // Send message to Vapi through edge function
+      const { data, error } = await supabase.functions.invoke('vapi-text-chat', {
+        body: { 
+          message: userMessage,
+          conversationHistory: messages.map(m => ({
+            role: m.role,
+            content: m.content
+          }))
+        }
       });
+
+      if (error) throw error;
+
+      if (data?.response) {
+        addMessage("assistant", data.response);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -157,7 +111,7 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
             <div>
               <h2 className="text-lg font-semibold text-foreground">Chat Assistant</h2>
               <p className="text-xs text-muted-foreground">
-                {isConnected ? "Connected" : "Connecting..."}
+                Ready to chat
               </p>
             </div>
           </div>
@@ -220,13 +174,13 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={isConnected ? "Type your message..." : "Connecting..."}
-              disabled={!isConnected}
+              placeholder="Type your message..."
+              disabled={isLoading}
               className="flex-1"
             />
             <Button
               onClick={handleSendMessage}
-              disabled={!inputValue.trim() || !isConnected}
+              disabled={!inputValue.trim() || isLoading}
               className="px-6"
             >
               <Send className="h-4 w-4" />

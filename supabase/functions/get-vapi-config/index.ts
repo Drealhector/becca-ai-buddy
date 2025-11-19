@@ -11,12 +11,9 @@ serve(async (req) => {
   }
 
   try {
-    const publicKey = Deno.env.get('VAPI_WEB_PUBLIC_KEY');
-    const assistantId = Deno.env.get('VAPI_WEB_ASSISTANT_ID');
-
-    if (!publicKey || !assistantId) {
-      throw new Error('Vapi configuration not found');
-    }
+    // Use the public key and assistant ID from the Vapi widget config
+    const publicKey = 'a73cb300-eae5-4375-9b68-0dda8733474a';
+    const assistantId = '6c411909-067b-4ce3-ad02-10299109dc64';
 
     return new Response(
       JSON.stringify({ publicKey, assistantId }),
