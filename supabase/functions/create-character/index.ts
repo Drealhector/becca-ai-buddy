@@ -42,11 +42,13 @@ serve(async (req) => {
 
         if (searchError) {
           console.error("Web search error:", searchError);
-        } else if (searchData?.results) {
+        } else if (searchData?.results && searchData.results.length > 0) {
           searchResults = searchData.results.map((result: any, index: number) => 
             `Result ${index + 1}:\nTitle: ${result.title}\nContent: ${result.content}\nURL: ${result.url}\n`
           ).join('\n---\n');
           console.log(`Found ${searchData.results.length} search results`);
+        } else {
+          console.warn("No search results found");
         }
       } catch (searchErr) {
         console.error("Failed to perform web search:", searchErr);

@@ -19,30 +19,36 @@ serve(async (req) => {
 
     console.log(`Searching for: ${query}`);
 
-    // Use SerpAPI for web search
     const SERPAPI_KEY = Deno.env.get("SERPAPI_KEY");
     
     if (!SERPAPI_KEY) {
-      throw new Error("SERPAPI_KEY is not configured");
+      console.error("SERPAPI_KEY is not configured");
+      throw new Error("SERPAPI_KEY is not configured. Please add your SerpAPI key in the secrets.");
     }
 
-    const searchResponse = await fetch(
-      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=${numResults}&api_key=${SERPAPI_KEY}`,
-      {
-        headers: {
-          "Accept": "application/json",
-        },
-      }
-    );
+    const searchUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=${numResults}&api_key=${SERPAPI_KEY}`;
+    console.log(`Making request to SerpAPI...`);
+
+    const searchResponse = await fetch(searchUrl, {
+      headers: {
+        "Accept": "application/json",
+      },
+    });
 
     if (!searchResponse.ok) {
       const errorText = await searchResponse.text();
       console.error("SerpAPI error:", searchResponse.status, errorText);
-      throw new Error("Search API error");
+      throw new Error(`Search API error: ${searchResponse.status} - ${errorText}`);
     }
 
     const searchData = await searchResponse.json();
+    console.log(`SerpAPI response:`, JSON.stringify(searchData).substring(0, 500));
     
+    if (searchData.error) {
+      console.error("SerpAPI returned error:", searchData.error);
+      throw new Error(`SerpAPI error: ${searchData.error}`);
+    }
+
     const results = searchData.organic_results?.map((result: any) => ({
       title: result.title,
       url: result.link,
@@ -51,6 +57,10 @@ serve(async (req) => {
 
     console.log(`Found ${results.length} results`);
 
+    if (results.length === 0) {
+      console.warn("No organic results found in SerpAPI response");
+    }
+
     return new Response(
       JSON.stringify({ results }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -58,7 +68,10 @@ serve(async (req) => {
   } catch (error) {
     console.error("Web search error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : "Unknown error",
+        results: []
+      }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
