@@ -39,21 +39,19 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
   const initializeChat = async () => {
     setIsLoading(true);
     try {
-      // Send an empty initialization message to trigger Vapi's greeting
-      const { data, error } = await supabase.functions.invoke('vapi-text-chat', {
-        body: { 
-          message: "",
-          conversationHistory: []
-        }
-      });
+      // Fetch the greeting/personality from dashboard customizations
+      const { data: customData } = await supabase
+        .from("customizations")
+        .select("greeting, assistant_personality")
+        .limit(1)
+        .maybeSingle();
 
-      if (error) throw error;
-
-      if (data?.response) {
-        addMessage("assistant", data.response);
-      }
+      // Use the greeting or personality as the first message
+      const greetingMessage = customData?.greeting || customData?.assistant_personality || "Hi! How can I help you today?";
+      
+      addMessage("assistant", greetingMessage);
     } catch (error) {
-      console.error("Error initializing chat:", error);
+      console.error("Error loading greeting:", error);
       addMessage("assistant", "Hi! How can I help you today?");
     } finally {
       setIsLoading(false);
