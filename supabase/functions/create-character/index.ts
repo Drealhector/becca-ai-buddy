@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +21,37 @@ serve(async (req) => {
 
     let systemPrompt = "";
     let userPrompt = "";
+    let searchResults = "";
+
+    // If searching for a human, do actual web search first
+    if (type === "search_human") {
+      console.log(`Performing web search for: ${input.name}`);
+      
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      );
+
+      try {
+        const { data: searchData, error: searchError } = await supabase.functions.invoke('web-search', {
+          body: { 
+            query: `${input.name} ${input.context || ''} biography career communication style personality`,
+            numResults: 10
+          }
+        });
+
+        if (searchError) {
+          console.error("Web search error:", searchError);
+        } else if (searchData?.results) {
+          searchResults = searchData.results.map((result: any, index: number) => 
+            `Result ${index + 1}:\nTitle: ${result.title}\nContent: ${result.content}\nURL: ${result.url}\n`
+          ).join('\n---\n');
+          console.log(`Found ${searchData.results.length} search results`);
+        }
+      } catch (searchErr) {
+        console.error("Failed to perform web search:", searchErr);
+      }
+    }
 
     if (type === "generate_new") {
       systemPrompt = `Generate a directive AI personality prompt using "You are" format. Follow this exact structure with NO introduction text:
@@ -50,23 +82,16 @@ CRITICAL RULES:
 
 Use directive format throughout (You are, Use, Keep, etc.). Be specific and actionable. Ensure responses are brief, natural, and avoid hyphens.`;
     } else if (type === "search_human") {
-      systemPrompt = `You are a comprehensive research assistant with internet access. Your goal is to find detailed information about ANY person with an online presence, not just celebrities.
+      if (!searchResults) {
+        return new Response(
+          JSON.stringify({ error: "Unable to find information about this person. Please provide more context or try a different name." }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-SEARCH BROADLY across:
-- LinkedIn profiles and professional networks
-- Company websites and team pages
-- Industry publications and interviews
-- Social media platforms (Twitter/X, Instagram, YouTube, TikTok)
-- Podcast appearances and speaking engagements
-- Academic publications and ResearchGate
-- GitHub and professional portfolios
-- News articles and press releases
-- Blog posts and personal websites
-- Conference presentations and panels
-- Community forums and Reddit discussions
-- Product Hunt, Medium, Substack profiles
+      systemPrompt = `You are a research analyst. Based on the web search results provided, extract and organize detailed information about this person.
 
-Look for:
+Focus on:
 - Professional background, current role, company
 - Areas of expertise and specialization
 - Communication style (formal, casual, technical, friendly)
@@ -78,10 +103,13 @@ Look for:
 - Content they create (writing style, video presence, etc.)
 - Any distinctive behavioral traits or mannerisms
 
-Provide comprehensive, factual information in clear bullet points. Include sources of information when relevant.`;
-      userPrompt = `Search the internet comprehensively for: ${input.name}${input.context ? `\n\nAdditional context: ${input.context}` : ''}
+Provide comprehensive, factual information in clear bullet points. Only include information that is directly supported by the search results.`;
+      
+      userPrompt = `Based on these web search results about ${input.name}${input.context ? ` (${input.context})` : ''}, provide a detailed profile:
 
-Cast a wide net - search across professional networks, social media, publications, and any platform where this person has a presence. Find as much detail as possible about who they are and how they communicate.`;
+${searchResults}
+
+Extract and organize all relevant information about who they are and how they communicate. Be thorough and specific.`;
     } else if (type === "create_human_character") {
       systemPrompt = `Generate a directive AI personality prompt that captures this person's essence. Use "You are" format with NO introduction. Follow this structure:
 
