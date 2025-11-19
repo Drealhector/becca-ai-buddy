@@ -23,7 +23,7 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    loadGreeting();
+    initializeChat();
   }, []);
 
   useEffect(() => {
@@ -36,24 +36,26 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
     }
   };
 
-  const loadGreeting = async () => {
+  const initializeChat = async () => {
+    setIsLoading(true);
     try {
-      // Fetch personality/greeting from customizations
-      const { data: customData } = await supabase
-        .from("customizations")
-        .select("greeting, assistant_personality")
-        .limit(1)
-        .maybeSingle();
+      // Send an empty initialization message to trigger Vapi's greeting
+      const { data, error } = await supabase.functions.invoke('vapi-text-chat', {
+        body: { 
+          message: "",
+          conversationHistory: []
+        }
+      });
 
-      // Extract just the first sentence from greeting or personality
-      const fullGreeting = customData?.greeting || customData?.assistant_personality || "Hi! How can I help you today?";
-      const firstSentence = fullGreeting.split(/[.!?]/)[0] + (fullGreeting.includes('.') || fullGreeting.includes('!') || fullGreeting.includes('?') ? fullGreeting.match(/[.!?]/)?.[0] || '.' : '.');
-      
-      addMessage("assistant", firstSentence);
-      setIsLoading(false);
+      if (error) throw error;
+
+      if (data?.response) {
+        addMessage("assistant", data.response);
+      }
     } catch (error) {
-      console.error('Error loading greeting:', error);
+      console.error("Error initializing chat:", error);
       addMessage("assistant", "Hi! How can I help you today?");
+    } finally {
       setIsLoading(false);
     }
   };
@@ -206,7 +208,7 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
               onKeyPress={handleKeyPress}
               placeholder="Type your message..."
               disabled={isLoading}
-              className="flex-1 bg-gray-800 border-gray-600 text-white placeholder:text-gray-400"
+              className="flex-1 bg-gray-800 border-gray-600 text-black placeholder:text-gray-400"
             />
             <Button
               onClick={handleSendMessage}
