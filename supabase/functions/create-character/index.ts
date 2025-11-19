@@ -23,9 +23,9 @@ serve(async (req) => {
     let userPrompt = "";
     let searchResults = "";
 
-    // If searching for a human, do actual web search first
+    // If searching for a human, do multiple targeted searches for personality
     if (type === "search_human") {
-      console.log(`Performing web search for: ${input.name}`);
+      console.log(`Performing personality-focused web searches for: ${input.name}`);
       
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
@@ -33,39 +33,65 @@ serve(async (req) => {
       );
 
       try {
-        // Simple search first - just the name
-        const { data: searchData, error: searchError } = await supabase.functions.invoke('web-search', {
+        const allResults: any[] = [];
+        
+        // Search 1: Interview and talk content
+        console.log("Search 1: Interviews and talks");
+        const { data: interviewData } = await supabase.functions.invoke('web-search', {
           body: { 
-            query: `${input.name} ${input.context || ''}`.trim(),
-            numResults: 10
+            query: `${input.name} interview talks speaking style quotes`,
+            numResults: 5
           }
         });
+        if (interviewData?.results) allResults.push(...interviewData.results);
 
-        if (searchError) {
-          console.error("Web search error:", searchError);
-        } else if (searchData?.results && searchData.results.length > 0) {
-          searchResults = searchData.results.map((result: any, index: number) => 
+        // Search 2: Blog posts and written content
+        console.log("Search 2: Blog posts and articles");
+        const { data: blogData } = await supabase.functions.invoke('web-search', {
+          body: { 
+            query: `${input.name} blog posts articles writing style personality`,
+            numResults: 5
+          }
+        });
+        if (blogData?.results) allResults.push(...blogData.results);
+
+        // Search 3: Video content and YouTube
+        console.log("Search 3: Video content");
+        const { data: videoData } = await supabase.functions.invoke('web-search', {
+          body: { 
+            query: `${input.name} youtube video podcast communication style`,
+            numResults: 5
+          }
+        });
+        if (videoData?.results) allResults.push(...videoData.results);
+
+        // Search 4: Social media presence
+        console.log("Search 4: Social media");
+        const { data: socialData } = await supabase.functions.invoke('web-search', {
+          body: { 
+            query: `${input.name} twitter linkedin instagram social media personality traits`,
+            numResults: 5
+          }
+        });
+        if (socialData?.results) allResults.push(...socialData.results);
+
+        // Search 5: General personality and characteristics
+        console.log("Search 5: Personality traits");
+        const { data: personalityData } = await supabase.functions.invoke('web-search', {
+          body: { 
+            query: `${input.name} personality characteristics how they talk mannerisms ${input.context || ''}`.trim(),
+            numResults: 5
+          }
+        });
+        if (personalityData?.results) allResults.push(...personalityData.results);
+
+        if (allResults.length > 0) {
+          searchResults = allResults.map((result: any, index: number) => 
             `Result ${index + 1}:\nTitle: ${result.title}\nContent: ${result.content}\nURL: ${result.url}\n`
           ).join('\n---\n');
-          console.log(`Found ${searchData.results.length} search results`);
+          console.log(`Found total of ${allResults.length} personality-focused search results`);
         } else {
-          console.warn("No search results found, trying broader search...");
-          
-          // Try a second search with just the first part of the name
-          const simpleName = input.name.split(' ')[0];
-          const { data: retryData } = await supabase.functions.invoke('web-search', {
-            body: { 
-              query: simpleName,
-              numResults: 10
-            }
-          });
-          
-          if (retryData?.results && retryData.results.length > 0) {
-            searchResults = retryData.results.map((result: any, index: number) => 
-              `Result ${index + 1}:\nTitle: ${result.title}\nContent: ${result.content}\nURL: ${result.url}\n`
-            ).join('\n---\n');
-            console.log(`Retry found ${retryData.results.length} search results`);
-          }
+          console.warn("No personality data found in searches");
         }
       } catch (searchErr) {
         console.error("Failed to perform web search:", searchErr);
@@ -117,29 +143,56 @@ If you don't have reliable information about this specific person, say: "I could
         
         userPrompt = `Do you have any information about ${input.name}${input.context ? ` (${input.context})` : ''}? Provide whatever details you can recall, or indicate if you don't have reliable information about them.`;
       } else {
-        systemPrompt = `You are a research analyst. Based on the web search results provided, extract and organize detailed information about this person.
+        systemPrompt = `You are a personality analyst specializing in extracting authentic communication patterns. Based on the web search results from interviews, blog posts, videos, and social media, create a DEEP personality profile.
 
-Focus on:
-- Professional background, current role, company
-- Areas of expertise and specialization
-- **Tone & Communication Style**: Analyze their exact tone (formal/casual/technical/friendly/professional/conversational/humorous). Provide specific examples of how they speak or write.
-- **Favorite Words & Phrases**: Identify recurring words, catchphrases, signature expressions, and language patterns they frequently use. Quote specific examples.
-- **Speech Patterns**: Document sentence structure preferences, use of questions, rhetorical devices, and distinctive linguistic habits.
-- **Personality Traits**: Deep dive into personality characteristics, emotional expression, attitude, confidence level, empathy, humor style.
-- Notable achievements or contributions
-- Values, beliefs, or causes they support
-- Industry reputation and how others describe them
-- Content they create (writing style, video presence, etc.)
-- Any distinctive behavioral traits or mannerisms
-- How they start/end conversations or interactions
+**PRIMARY FOCUS - Conversational Personality (NOT Professional Jargon):**
 
-Provide comprehensive, factual information in clear bullet points with specific examples and quotes wherever possible. Only include information that is directly supported by the search results.`;
+1. **NATURAL SPEAKING STYLE** (70% of analysis):
+   - How they actually talk in casual conversations, not business speak
+   - Personal catchphrases and expressions they use repeatedly (quote them exactly)
+   - Filler words, interjections, conversational tics (e.g., "you know", "right?", "basically", "actually")
+   - Sentence structure: Do they use short punchy sentences? Long flowing ones? Questions?
+   - Humor style: Sarcastic? Witty? Dad jokes? Self-deprecating?
+   - Emotional expression: How do they show excitement, frustration, empathy?
+
+2. **FAVORITE PERSONAL WORDS & PHRASES** (NOT work vocabulary):
+   - Words/phrases they use in everyday conversation (not technical terms)
+   - Their unique way of expressing common emotions
+   - Signature greetings or sign-offs
+   - Recurring metaphors or analogies from their personal life
+
+3. **PERSONALITY TRAITS**:
+   - Confidence level and how it shows in communication
+   - Energy level (calm/energetic/intense/laid-back)
+   - Empathy and emotional intelligence markers
+   - Attitude toward people (warm/professional/direct/playful)
+
+4. **COMMUNICATION PATTERNS**:
+   - How they start conversations (formal greeting vs casual)
+   - How they engage (ask questions? tell stories? give advice?)
+   - How they handle disagreement or criticism
+   - How they end conversations
+
+5. **Background Context** (20% of analysis):
+   - Brief professional background (only for context)
+   - Values and beliefs that shape their communication
+
+**CRITICAL**: Extract NATURAL conversational personality, not professional vocabulary or industry jargon. Focus on how they'd talk to a friend, not a colleague.
+
+Provide specific quotes and examples from the search results for every trait you identify.`;
         
-        userPrompt = `Based on these web search results about ${input.name}${input.context ? ` (${input.context})` : ''}, provide a detailed profile:
+        userPrompt = `Based on these web search results from interviews, blogs, videos, and social media about ${input.name}${input.context ? ` (${input.context})` : ''}, create a comprehensive PERSONALITY profile:
 
 ${searchResults}
 
-Extract and organize all relevant information about who they are and how they communicate. Be thorough and specific.`;
+Focus on extracting their NATURAL conversational style and personality:
+- How do they actually talk in casual settings?
+- What personal phrases/words do they use repeatedly? (Quote them)
+- What's their humor style and emotional expression?
+- How do they start/engage/end conversations?
+- What makes their communication style unique?
+
+Ignore professional jargon and work vocabulary. Focus on their authentic personality that would show in ANY conversation, regardless of business context.`;
       }
     } else if (type === "create_human_character") {
       systemPrompt = `Generate a directive AI personality prompt that captures this person's essence. Use "You are" format with NO introduction. Follow this structure:
