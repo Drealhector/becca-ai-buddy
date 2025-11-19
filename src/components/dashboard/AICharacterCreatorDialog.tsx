@@ -296,9 +296,12 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
         {step === "human_confirm" && (
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Is this the person you're looking for?</Label>
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm whitespace-pre-wrap">{humanInfo}</p>
+              <Label>Data Scraped Successfully</Label>
+              <div className="p-4 bg-secondary rounded-lg border-2 border-primary">
+                <p className="text-sm font-bold mb-3 text-primary uppercase">
+                  I scraped all available data on this human and prepared it to train my brain with your permission.
+                </p>
+                <p className="text-sm whitespace-pre-wrap lowercase">{humanInfo}</p>
               </div>
             </div>
             <DialogFooter>

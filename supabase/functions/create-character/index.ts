@@ -122,16 +122,18 @@ If you don't have reliable information about this specific person, say: "I could
 Focus on:
 - Professional background, current role, company
 - Areas of expertise and specialization
-- Communication style (formal, casual, technical, friendly)
+- **Tone & Communication Style**: Analyze their exact tone (formal/casual/technical/friendly/professional/conversational/humorous). Provide specific examples of how they speak or write.
+- **Favorite Words & Phrases**: Identify recurring words, catchphrases, signature expressions, and language patterns they frequently use. Quote specific examples.
+- **Speech Patterns**: Document sentence structure preferences, use of questions, rhetorical devices, and distinctive linguistic habits.
+- **Personality Traits**: Deep dive into personality characteristics, emotional expression, attitude, confidence level, empathy, humor style.
 - Notable achievements or contributions
-- Public personality traits and characteristics
-- Speech patterns, catchphrases, or distinctive language
 - Values, beliefs, or causes they support
 - Industry reputation and how others describe them
 - Content they create (writing style, video presence, etc.)
 - Any distinctive behavioral traits or mannerisms
+- How they start/end conversations or interactions
 
-Provide comprehensive, factual information in clear bullet points. Only include information that is directly supported by the search results.`;
+Provide comprehensive, factual information in clear bullet points with specific examples and quotes wherever possible. Only include information that is directly supported by the search results.`;
         
         userPrompt = `Based on these web search results about ${input.name}${input.context ? ` (${input.context})` : ''}, provide a detailed profile:
 
@@ -145,7 +147,9 @@ Extract and organize all relevant information about who they are and how they co
 # Identity & Purpose
 # Voice & Persona
 ## Personality
+## Tone & Communication Style
 ## Speech Characteristics
+## Favorite Words & Phrases
 # Conversation Flow
 ## Introduction
 ## Engagement
@@ -157,13 +161,21 @@ Extract and organize all relevant information about who they are and how they co
 # Knowledge Base
 # Limitations
 
-Capture their exact speech patterns, mannerisms, catchphrases, and dialect using directive commands.
+**CRITICAL**: Deep-dive into their EXACT communication style:
+- Document their precise TONE (formal/casual/technical/friendly/humorous/etc.) with specific examples
+- List their FAVORITE WORDS, catchphrases, signature expressions, and recurring language patterns
+- Capture their SPEECH PATTERNS: sentence structure, question usage, rhetorical style
+- Detail PERSONALITY traits: confidence level, emotional expression, humor style, empathy
+- Include their distinctive mannerisms, conversation starters, and closing phrases
+
+Use directive commands like "You are", "Use phrases like", "Start conversations with", "Your tone is".
 
 CRITICAL RULES:
 - Never use hyphens or dashes in responses to sound natural and human
 - Greetings must be casual with pleasantries first, do not jump to business unless customer initiates
 - Keep all responses to one or two sentences unless customer specifically asks for more explanation
-- Sound conversational and natural, matching this person's authentic style`;
+- Sound conversational and natural, matching this person's authentic style
+- Incorporate their exact favorite words and phrases throughout responses`;
       userPrompt = `Based on: ${input.info}
 
 Create a directive personality prompt capturing their exact essence, speech patterns, and style. Use "You are" format throughout. Ensure responses are brief, natural, and avoid hyphens.`;
