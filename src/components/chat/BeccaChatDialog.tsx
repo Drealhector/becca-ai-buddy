@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import Vapi from "@vapi-ai/web";
 
 interface Message {
   role: "user" | "assistant";
@@ -20,10 +21,17 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [vapi, setVapi] = useState<any>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchInitialGreeting();
+    initializeVapi();
+    return () => {
+      if (vapi) {
+        vapi.stop();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -36,20 +44,65 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
     }
   };
 
-  const fetchInitialGreeting = async () => {
+  const initializeVapi = async () => {
     try {
-      const { data } = await supabase
+      // Fetch customization for greeting
+      const { data: customData } = await supabase
         .from("customizations")
-        .select("greeting, assistant_personality")
+        .select("greeting")
         .limit(1)
         .maybeSingle();
 
-      const greeting = data?.greeting || "Hi! How can I help you today?";
+      // Fetch Vapi configuration
+      const { data: config, error: configError } = await supabase.functions.invoke('get-vapi-config');
+      
+      if (configError || !config?.publicKey || !config?.assistantId) {
+        console.error('Vapi configuration not found:', configError);
+        const greeting = customData?.greeting || "Hi! How can I help you today?";
+        addMessage("assistant", greeting);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Initializing Vapi with assistant:', config.assistantId);
+
+      const vapiInstance = new Vapi(config.publicKey);
+      
+      // Set up event listeners
+      vapiInstance.on('call-start', () => {
+        console.log('Vapi call started');
+        setIsConnected(true);
+        setIsLoading(false);
+      });
+
+      vapiInstance.on('call-end', () => {
+        console.log('Vapi call ended');
+        setIsConnected(false);
+      });
+
+      vapiInstance.on('message', (message: any) => {
+        console.log('Vapi message:', message);
+        if (message.type === 'transcript' && message.role === 'assistant' && message.transcriptType === 'final') {
+          addMessage("assistant", message.transcript);
+        }
+      });
+
+      vapiInstance.on('error', (error: any) => {
+        console.error('Vapi error:', error);
+        toast.error('Connection error. Please try again.');
+      });
+
+      // Start the call in text-only mode
+      await vapiInstance.start(config.assistantId);
+
+      setVapi(vapiInstance);
+
+      // Show initial greeting
+      const greeting = customData?.greeting || "Hi! How can I help you today?";
       addMessage("assistant", greeting);
     } catch (error) {
-      console.error("Failed to fetch greeting:", error);
+      console.error('Error initializing Vapi:', error);
       addMessage("assistant", "Hi! How can I help you today?");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -59,199 +112,125 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || !vapi || !isConnected) {
+      if (!isConnected) {
+        toast.error("Not connected to assistant. Please wait...");
+      }
+      return;
+    }
 
     const userMessage = inputValue.trim();
     setInputValue("");
     addMessage("user", userMessage);
-    setIsLoading(true);
 
     try {
-      const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/web-chat`;
-      const response = await fetch(chatUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      // Send text message through Vapi
+      vapi.send({
+        type: "add-message",
+        message: {
+          role: "user",
+          content: userMessage,
         },
-        body: JSON.stringify({
-          messages: [
-            ...messages.map(m => ({ role: m.role, content: m.content })),
-            { role: 'user', content: userMessage }
-          ]
-        }),
       });
-
-      if (!response.ok || !response.body) {
-        throw new Error('Failed to start stream');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantMessage = '';
-      let hasAddedMessage = false;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (!line.trim() || line.startsWith(':')) continue;
-          if (!line.startsWith('data: ')) continue;
-
-          const data = line.slice(6).trim();
-          if (data === '[DONE]') continue;
-
-          try {
-            const parsed = JSON.parse(data);
-            const content = parsed.choices?.[0]?.delta?.content;
-            
-            if (content) {
-              assistantMessage += content;
-              
-              if (!hasAddedMessage) {
-                addMessage("assistant", assistantMessage);
-                hasAddedMessage = true;
-              } else {
-                setMessages(prev => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = {
-                    ...updated[updated.length - 1],
-                    content: assistantMessage
-                  };
-                  return updated;
-                });
-              }
-            }
-          } catch (e) {
-            // Skip invalid JSON
-          }
-        }
-      }
     } catch (error) {
-      console.error("Failed to send message:", error);
-      toast.error("Failed to send message");
-    } finally {
-      setIsLoading(false);
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message. Please try again.");
     }
   };
 
-  const handleClose = () => {
-    onClose();
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-2xl h-[600px] mx-4 relative">
-        {/* Background pattern with repeated B */}
-        <div className="absolute inset-0 overflow-hidden rounded-2xl">
-          <div 
-            className="absolute inset-0 opacity-5"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50' y='70' font-size='60' font-weight='900' font-family='system-ui' fill='%23ffffff' text-anchor='middle'%3EB%3C/text%3E%3C/svg%3E")`,
-              backgroundRepeat: 'repeat',
-              backgroundSize: '100px 100px'
-            }}
-          />
+      <div className="relative w-full max-w-2xl h-[600px] bg-background rounded-lg shadow-xl flex flex-col border border-border">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border bg-gradient-to-r from-primary/10 to-primary/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+              <span className="text-xl">💬</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Chat Assistant</h2>
+              <p className="text-xs text-muted-foreground">
+                {isConnected ? "Connected" : "Connecting..."}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="hover:bg-destructive/10 hover:text-destructive"
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
 
-        {/* Main content */}
-        <div className="relative h-full flex flex-col rounded-2xl border border-border/20 shadow-2xl overflow-hidden bg-gradient-to-br from-slate-400 via-slate-300 to-slate-400 backdrop-blur-md">
-          {/* Header with Becca branding */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/20 bg-slate-500/30">
-            <h2 className="text-3xl font-bold flex items-baseline">
-              <span style={{
-                fontSize: '2rem',
-                fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                fontWeight: 900,
-                display: 'inline-block',
-                color: '#ffffff',
-                WebkitTextStroke: '1px #2c4a6f',
-                textShadow: `
-                  -2px -2px 0 #5dd5ed,
-                  -4px -4px 0 #5dd5ed,
-                  -6px -6px 0 #70dff0,
-                  0 2px 6px rgba(0,0,0,0.4)
-                `
-              }}>B</span>
-              <span className="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent ml-0.5">ecca</span>
-            </h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              className="text-white hover:bg-white/20 rounded-full"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-
-          {/* Messages area */}
-          <ScrollArea className="flex-1 px-6 py-4">
-            {isLoading && messages.length === 0 ? (
-              <div className="flex justify-center items-center h-full">
-                <div className="text-white/80 animate-pulse">Loading...</div>
-              </div>
-            ) : (
-              <>
-                {messages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`mb-4 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className={`max-w-[75%] rounded-2xl px-4 py-3 ${
-                        msg.role === "user"
-                          ? "bg-white/90 text-slate-900 ml-auto shadow-lg"
-                          : "bg-slate-600/80 text-white shadow-lg backdrop-blur-sm"
-                      }`}
-                    >
-                      <p className="text-sm leading-relaxed">{msg.content}</p>
-                      <span className="text-xs opacity-60 mt-1 block">
-                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {isLoading && messages[messages.length - 1]?.role === "user" && (
-                  <div className="mb-4 flex justify-start">
-                    <div className="bg-slate-600/80 text-white shadow-lg backdrop-blur-sm rounded-2xl px-4 py-3">
-                      <div className="flex gap-1">
-                        <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                        <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                        <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div ref={scrollRef} />
-              </>
-            )}
-          </ScrollArea>
-
-          {/* Input area */}
-          <div className="p-4 border-t border-white/20 bg-slate-500/30">
-            <div className="flex gap-2">
-              <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                placeholder="Type your message..."
-                disabled={isLoading}
-                className="flex-1 bg-white/90 border-white/30 focus:border-white/50 text-slate-900 placeholder:text-slate-500"
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={isLoading || !inputValue.trim()}
-                size="icon"
-                className="bg-white/90 hover:bg-white text-slate-700 shadow-lg"
+        {/* Messages Area */}
+        <ScrollArea className="flex-1 p-4">
+          <div className="space-y-4">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex ${
+                  message.role === "user" ? "justify-end" : "justify-start"
+                }`}
               >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+                <div
+                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    message.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-foreground"
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <span className="text-xs opacity-70 mt-1 block">
+                    {message.timestamp.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-muted rounded-lg px-4 py-2">
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" />
+                    <span className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <span className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce [animation-delay:0.4s]" />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={scrollRef} />
+          </div>
+        </ScrollArea>
+
+        {/* Input Area */}
+        <div className="p-4 border-t border-border bg-background">
+          <div className="flex gap-2">
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={isConnected ? "Type your message..." : "Connecting..."}
+              disabled={!isConnected}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || !isConnected}
+              className="px-6"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
