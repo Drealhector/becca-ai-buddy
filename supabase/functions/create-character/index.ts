@@ -22,7 +22,7 @@ serve(async (req) => {
     let userPrompt = "";
 
     if (type === "generate_new") {
-      systemPrompt = `You are an expert AI personality architect. Create a COMPREHENSIVE, PRODUCTION-READY personality guide following this exact structure:
+      systemPrompt = `Generate a directive AI personality prompt using "You are" format. Follow this exact structure with NO introduction text:
 
 # Identity & Purpose
 # Voice & Persona
@@ -39,24 +39,15 @@ serve(async (req) => {
 # Knowledge Base
 # Limitations
 
-Make every section detailed, specific, and directly usable. Include concrete examples.`;
-      userPrompt = `Create a comprehensive AI personality based on this description: ${input.description}
+Use bullet points, numbered lists, and concrete examples. Write directives like "You are", "Use", "Start with", "Keep responses", etc.`;
+      userPrompt = `Create an AI personality prompt for: ${input.description}
 
-Generate a COMPLETE personality template that includes:
-- Clear identity and purpose
-- Detailed personality traits and speech patterns
-- Full conversation flow from greeting to closing
-- Specific response guidelines with examples
-- Scenario handling approaches
-- Knowledge base of what they know
-- Clear limitations
-
-Make it production-ready and immediately usable.`;
+Use directive format throughout (You are, Use, Keep, etc.). Be specific and actionable.`;
     } else if (type === "search_human") {
       systemPrompt = "You are a web research assistant. Search for comprehensive information about the person including their profession, notable achievements, personality traits, communication style, speech patterns, tone of voice, catchphrases, language quirks (like pidgin English, slang, specific dialects), mannerisms, and how they typically express themselves.";
       userPrompt = `Search for detailed information about: ${input.name}${input.context ? `. Additional context: ${input.context}` : ''}. Provide a comprehensive summary including: who they are, their background, how they speak (language patterns, tone, catchphrases, dialect, slang), their communication style, personality traits, and any distinctive mannerisms.`;
     } else if (type === "create_human_character") {
-      systemPrompt = `You are an expert at creating authentic AI personalities based on real people. Create a COMPREHENSIVE personality guide following this structure:
+      systemPrompt = `Generate a directive AI personality prompt that captures this person's essence. Use "You are" format with NO introduction. Follow this structure:
 
 # Identity & Purpose
 # Voice & Persona
@@ -73,22 +64,12 @@ Make it production-ready and immediately usable.`;
 # Knowledge Base
 # Limitations
 
-Capture their EXACT essence - speech patterns, mannerisms, tone, catchphrases, dialect, everything. Write as if this IS the person.`;
-      userPrompt = `Based on this information: ${input.info}
+Capture their exact speech patterns, mannerisms, catchphrases, and dialect using directive commands.`;
+      userPrompt = `Based on: ${input.info}
 
-Create a COMPREHENSIVE personality guide that captures this person's exact essence including:
-- Their identity, background, and purpose
-- Precise personality traits and demeanor
-- EXACT speech patterns (catchphrases, dialect, slang, tone, rhythm)
-- Complete conversation flow from greeting to closing
-- Detailed response guidelines with examples
-- Scenario handling approaches matching their style
-- Their knowledge base and expertise
-- Clear limitations
-
-Make it authentic and production-ready. Use first-person perspective throughout.`;
+Create a directive personality prompt capturing their exact essence, speech patterns, and style. Use "You are" format throughout.`;
     } else if (type === "refine") {
-      systemPrompt = `You are a business-focused AI personality specialist. Create a COMPREHENSIVE, PRODUCTION-READY personality guide following this structure:
+      systemPrompt = `Generate a directive AI personality prompt tailored to the specific task and business. Use "You are" format with NO introduction. Follow this structure:
 
 # Identity & Purpose
 # Voice & Persona
@@ -101,27 +82,15 @@ Make it authentic and production-ready. Use first-person perspective throughout.
 ## Resolution
 ## Closing
 # Response Guidelines
-# Scenario Handling (specific to the business context)
-# Knowledge Base (specific to the business)
+# Scenario Handling
+# Knowledge Base
 # Limitations
 
-CRITICAL: The ENTIRE personality must be centered around the specific TASK and BUSINESS CONTEXT provided. Every section should be tailored to this exact use case. Make it practical, actionable, and ready to deploy.`;
-      userPrompt = `Create a comprehensive, business-ready AI personality:
-
-${input.basePersonality ? `Base Character Reference (adapt this style):\n${input.basePersonality}\n\n` : ''}SPECIFIC TASK: ${input.task}
-
-BUSINESS CONTEXT: ${input.businessInfo}
-${input.link ? `REFERENCE LINK: ${input.link}\n` : ''}
-Generate a COMPLETE personality template specifically designed for this task and business including:
-- Identity and purpose focused on the task
-- Personality and speech characteristics that fit the business
-- Complete conversation flow optimized for the business context
-- Response guidelines with business-specific examples
-- Scenario handling for situations in THIS business
-- Knowledge base specific to THIS business/industry
-- Clear limitations relevant to the role
-
-Make every detail specific to the task and business. This should be immediately deployable.`;
+CRITICAL: Center EVERYTHING around the task and business context. Make it specific and actionable.`;
+      userPrompt = `${input.basePersonality ? `Base style to adapt:\n${input.basePersonality}\n\n` : ''}Task: ${input.task}
+Business: ${input.businessInfo}
+${input.link ? `Link: ${input.link}\n` : ''}
+Create a directive personality prompt centered on this task and business. Use "You are" format with specific, actionable directives.`;
     }
 
     console.log(`Creating character with type: ${type}`);
