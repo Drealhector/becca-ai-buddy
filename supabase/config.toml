@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.vapi-text-chat]
 verify_jwt = false
+
+[functions.generate-greeting]
+verify_jwt = false
