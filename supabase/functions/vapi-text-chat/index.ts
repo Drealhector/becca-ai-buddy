@@ -48,7 +48,7 @@ serve(async (req) => {
     }
 
     // Call Vapi API for text-based chat
-    const response = await fetch('https://api.vapi.ai/assistant/chat', {
+    const response = await fetch('https://api.vapi.ai/chat', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${VAPI_PRIVATE_KEY}`,
@@ -56,11 +56,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         assistantId: ASSISTANT_ID,
-        messages: [
-          ...(contextPrompt ? [{ role: 'system', content: contextPrompt }] : []),
-          ...(conversationHistory || []),
-          { role: 'user', content: message }
-        ]
+        input: message
       }),
     });
 
@@ -71,9 +67,13 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    console.log('Vapi response:', JSON.stringify(data));
+    
+    // Extract the assistant's response from Vapi's output
+    const assistantResponse = data.output?.[0]?.content || data.message || "I'm here to help!";
     
     return new Response(
-      JSON.stringify({ response: data.message || data.content || "I'm here to help!" }),
+      JSON.stringify({ response: assistantResponse }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
