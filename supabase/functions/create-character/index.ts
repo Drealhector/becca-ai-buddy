@@ -22,79 +22,106 @@ serve(async (req) => {
     let userPrompt = "";
 
     if (type === "generate_new") {
-      systemPrompt = "You are an expert character designer. Create a complete, structured personality guide that can be used directly. Format it with clear sections: ## Identity & Purpose, ## Voice & Persona (with subsections for Personality and Speech Characteristics), ## Response Guidelines, and any other relevant sections for the character type.";
-      userPrompt = `Create a complete personality guide based on this description: ${input.description}
+      systemPrompt = `You are an expert AI personality architect. Create a COMPREHENSIVE, PRODUCTION-READY personality guide following this exact structure:
 
-Format the personality with these sections:
-## Identity & Purpose
-(Define who they are and their main purpose)
+# Identity & Purpose
+# Voice & Persona
+## Personality
+## Speech Characteristics
+# Conversation Flow
+## Introduction
+## Engagement
+## Problem Solving
+## Resolution
+## Closing
+# Response Guidelines
+# Scenario Handling
+# Knowledge Base
+# Limitations
 
-## Voice & Persona
-### Personality
-(Key personality traits and demeanor)
+Make every section detailed, specific, and directly usable. Include concrete examples.`;
+      userPrompt = `Create a comprehensive AI personality based on this description: ${input.description}
 
-### Speech Characteristics
-(How they speak, language style, tone)
+Generate a COMPLETE personality template that includes:
+- Clear identity and purpose
+- Detailed personality traits and speech patterns
+- Full conversation flow from greeting to closing
+- Specific response guidelines with examples
+- Scenario handling approaches
+- Knowledge base of what they know
+- Clear limitations
 
-## Response Guidelines
-(How they should respond in different situations)
-
-Make it detailed, authentic, and ready to use. Start with "You are [name]" in the Identity section.`;
+Make it production-ready and immediately usable.`;
     } else if (type === "search_human") {
       systemPrompt = "You are a web research assistant. Search for comprehensive information about the person including their profession, notable achievements, personality traits, communication style, speech patterns, tone of voice, catchphrases, language quirks (like pidgin English, slang, specific dialects), mannerisms, and how they typically express themselves.";
       userPrompt = `Search for detailed information about: ${input.name}${input.context ? `. Additional context: ${input.context}` : ''}. Provide a comprehensive summary including: who they are, their background, how they speak (language patterns, tone, catchphrases, dialect, slang), their communication style, personality traits, and any distinctive mannerisms.`;
     } else if (type === "create_human_character") {
-      systemPrompt = "You are an expert at creating authentic character personalities based on real people. Create a complete, structured personality guide formatted with clear sections that captures this person's exact essence. Never mention 'AI' or 'assistant' - write as if this IS the person.";
-      userPrompt = `Based on this information about ${input.name}: ${input.info}
+      systemPrompt = `You are an expert at creating authentic AI personalities based on real people. Create a COMPREHENSIVE personality guide following this structure:
 
-Create a complete personality guide with these sections:
+# Identity & Purpose
+# Voice & Persona
+## Personality
+## Speech Characteristics
+# Conversation Flow
+## Introduction
+## Engagement
+## Problem Solving
+## Resolution
+## Closing
+# Response Guidelines
+# Scenario Handling
+# Knowledge Base
+# Limitations
 
-## Identity & Purpose
-Start with "You are ${input.name}" and describe their identity, background, and what they're known for.
+Capture their EXACT essence - speech patterns, mannerisms, tone, catchphrases, dialect, everything. Write as if this IS the person.`;
+      userPrompt = `Based on this information: ${input.info}
 
-## Voice & Persona
-### Personality
-Describe their key personality traits, demeanor, and how they carry themselves.
+Create a COMPREHENSIVE personality guide that captures this person's exact essence including:
+- Their identity, background, and purpose
+- Precise personality traits and demeanor
+- EXACT speech patterns (catchphrases, dialect, slang, tone, rhythm)
+- Complete conversation flow from greeting to closing
+- Detailed response guidelines with examples
+- Scenario handling approaches matching their style
+- Their knowledge base and expertise
+- Clear limitations
 
-### Speech Characteristics
-Detail their EXACT speech patterns including:
-- Specific words/phrases they use frequently
-- Their tone and style (formal/casual, serious/humorous)
-- Any slang, pidgin, dialect, or unique expressions they use
-- Rhythm and pacing of their speech
-- Catchphrases or signature expressions
-
-## Response Guidelines
-Provide guidelines on how they respond in conversations, including:
-- How they greet people
-- How they explain things
-- How they express opinions
-- How they handle disagreements
-- Typical conversational patterns
-
-## Knowledge Base
-List their areas of expertise and what they're known for.
-
-Make it authentic, detailed, and capture their true essence. Use first-person perspective throughout.`;
+Make it authentic and production-ready. Use first-person perspective throughout.`;
     } else if (type === "refine") {
-      systemPrompt = "You are an expert character designer. Take the existing personality and refine it with the business context provided. Maintain all the authentic voice, speech patterns, and personality traits while adding the specific business application details.";
-      userPrompt = `Refine this personality for business use:
+      systemPrompt = `You are a business-focused AI personality specialist. Create a COMPREHENSIVE, PRODUCTION-READY personality guide following this structure:
 
-${input.basePersonality}
+# Identity & Purpose
+# Voice & Persona
+## Personality
+## Speech Characteristics
+# Conversation Flow
+## Introduction
+## Engagement
+## Problem Solving
+## Resolution
+## Closing
+# Response Guidelines
+# Scenario Handling (specific to the business context)
+# Knowledge Base (specific to the business)
+# Limitations
 
-Business Context:
-- Task: ${input.task}
-- Link to share: ${input.link || 'Not provided'}
-- Business information: ${input.businessInfo}
+CRITICAL: The ENTIRE personality must be centered around the specific TASK and BUSINESS CONTEXT provided. Every section should be tailored to this exact use case. Make it practical, actionable, and ready to deploy.`;
+      userPrompt = `Create a comprehensive, business-ready AI personality:
 
-Enhance the personality by:
-1. Keeping ALL existing sections and authentic voice
-2. Adding specific business application details
-3. Including how they handle the specific task mentioned
-4. Maintaining their speech patterns and personality traits
-5. Adding any business-specific response guidelines
+${input.basePersonality ? `Base Character Reference (adapt this style):\n${input.basePersonality}\n\n` : ''}SPECIFIC TASK: ${input.task}
 
-Keep the same format with ## sections and make it ready to use.`;
+BUSINESS CONTEXT: ${input.businessInfo}
+${input.link ? `REFERENCE LINK: ${input.link}\n` : ''}
+Generate a COMPLETE personality template specifically designed for this task and business including:
+- Identity and purpose focused on the task
+- Personality and speech characteristics that fit the business
+- Complete conversation flow optimized for the business context
+- Response guidelines with business-specific examples
+- Scenario handling for situations in THIS business
+- Knowledge base specific to THIS business/industry
+- Clear limitations relevant to the role
+
+Make every detail specific to the task and business. This should be immediately deployable.`;
     }
 
     console.log(`Creating character with type: ${type}`);
