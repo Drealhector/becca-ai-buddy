@@ -39,10 +39,16 @@ serve(async (req) => {
 # Knowledge Base
 # Limitations
 
-Use bullet points, numbered lists, and concrete examples. Write directives like "You are", "Use", "Start with", "Keep responses", etc.`;
+Use bullet points, numbered lists, and concrete examples. Write directives like "You are", "Use", "Start with", "Keep responses", etc.
+
+CRITICAL RULES:
+- Never use hyphens or dashes in responses to sound natural and human
+- Greetings must be casual with pleasantries first, do not jump to business unless customer initiates
+- Keep all responses to one or two sentences unless customer specifically asks for more explanation
+- Sound conversational and natural, not formal or robotic`;
       userPrompt = `Create an AI personality prompt for: ${input.description}
 
-Use directive format throughout (You are, Use, Keep, etc.). Be specific and actionable.`;
+Use directive format throughout (You are, Use, Keep, etc.). Be specific and actionable. Ensure responses are brief, natural, and avoid hyphens.`;
     } else if (type === "search_human") {
       systemPrompt = `You are a comprehensive research assistant with internet access. Your goal is to find detailed information about ANY person with an online presence, not just celebrities.
 
@@ -94,10 +100,16 @@ Cast a wide net - search across professional networks, social media, publication
 # Knowledge Base
 # Limitations
 
-Capture their exact speech patterns, mannerisms, catchphrases, and dialect using directive commands.`;
+Capture their exact speech patterns, mannerisms, catchphrases, and dialect using directive commands.
+
+CRITICAL RULES:
+- Never use hyphens or dashes in responses to sound natural and human
+- Greetings must be casual with pleasantries first, do not jump to business unless customer initiates
+- Keep all responses to one or two sentences unless customer specifically asks for more explanation
+- Sound conversational and natural, matching this person's authentic style`;
       userPrompt = `Based on: ${input.info}
 
-Create a directive personality prompt capturing their exact essence, speech patterns, and style. Use "You are" format throughout.`;
+Create a directive personality prompt capturing their exact essence, speech patterns, and style. Use "You are" format throughout. Ensure responses are brief, natural, and avoid hyphens.`;
     } else if (type === "refine") {
       systemPrompt = `Generate a directive AI personality prompt tailored to the specific task and business. Use "You are" format with NO introduction. Follow this structure:
 
@@ -116,11 +128,17 @@ Create a directive personality prompt capturing their exact essence, speech patt
 # Knowledge Base
 # Limitations
 
-CRITICAL: Center EVERYTHING around the task and business context. Make it specific and actionable.`;
+CRITICAL: Center EVERYTHING around the task and business context. Make it specific and actionable.
+
+CRITICAL RULES:
+- Never use hyphens or dashes in responses to sound natural and human
+- Greetings must be casual with pleasantries first, do not jump to business unless customer initiates
+- Keep all responses to one or two sentences unless customer specifically asks for more explanation
+- Sound conversational and natural, not formal or robotic`;
       userPrompt = `${input.basePersonality ? `Base style to adapt:\n${input.basePersonality}\n\n` : ''}Task: ${input.task}
 Business: ${input.businessInfo}
 ${input.link ? `Link: ${input.link}\n` : ''}
-Create a directive personality prompt centered on this task and business. Use "You are" format with specific, actionable directives.`;
+Create a directive personality prompt centered on this task and business. Use "You are" format with specific, actionable directives. Ensure responses are brief, natural, and avoid hyphens.`;
     }
 
     console.log(`Creating character with type: ${type}`);
