@@ -33,19 +33,27 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    // Build context from customization
-    let contextPrompt = '';
+    // Build context from customization with strong conversational instructions
+    let contextPrompt = `CRITICAL INSTRUCTIONS:
+- Speak naturally like a real person in casual conversation
+- NEVER sound like marketing copy or formal descriptions
+- NEVER use phrases like "specializing in" or "quite an impressive setup"
+- Just chat like you're talking to a friend
+- Keep it brief and natural, 1-2 sentences unless asked for more
+- Never use hyphens (-), use periods or commas instead
+
+`;
+    
     if (customData) {
       if (customData.business_name) {
-        contextPrompt += `Business: ${customData.business_name}\n`;
+        contextPrompt += `Business name: ${customData.business_name}\n`;
       }
       if (customData.assistant_personality) {
-        contextPrompt += `Personality: ${customData.assistant_personality}\n`;
+        contextPrompt += `Your personality: ${customData.assistant_personality}\n`;
       }
       if (customData.faqs) {
-        contextPrompt += `FAQs: ${JSON.stringify(customData.faqs)}\n`;
+        contextPrompt += `FAQs you can reference: ${JSON.stringify(customData.faqs)}\n`;
       }
-      contextPrompt += `CRITICAL: Never use hyphens (-) in your responses. Use periods, commas, or natural breaks instead.\n`;
     }
 
     // Call Vapi API for text-based chat
