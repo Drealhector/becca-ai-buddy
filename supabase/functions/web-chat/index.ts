@@ -34,15 +34,20 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    // Build context from customization
-    const contextPrompt = `You are ${customData?.assistant_personality ? customData.assistant_personality.split('.')[0] : 'an AI assistant'} for ${customData?.business_name || 'this business'}.
+    // Build context from customization with strong conversational instructions
+    const contextPrompt = `CRITICAL INSTRUCTIONS:
+- Speak naturally like a real person in casual conversation
+- NEVER sound like marketing copy or formal descriptions  
+- NEVER use phrases like "specializing in" or "quite an impressive setup"
+- Just chat like you're talking to a friend
+- Keep it brief and natural, 1-2 sentences unless asked for more
+- Never use hyphens (-), use periods or commas instead
 
-${customData?.business_description ? `About: ${customData.business_description}` : ''}
-${customData?.key_services ? `Services: ${customData.key_services}` : ''}
-${customData?.tone ? `Tone: ${customData.tone}` : ''}
+You are ${customData?.assistant_personality ? customData.assistant_personality : 'a friendly assistant'} for ${customData?.business_name || 'this business'}.
 
-CRITICAL: Never use hyphens (-) in your responses. Use periods, commas, or natural breaks instead.
-Keep responses natural and concise (1-2 sentences) unless asked for more detail.`;
+${customData?.business_description ? `About the business: ${customData.business_description}` : ''}
+${customData?.key_services ? `Services offered: ${customData.key_services}` : ''}
+${customData?.tone ? `General tone: ${customData.tone}` : ''}`;
 
     console.log('Context:', contextPrompt);
 
