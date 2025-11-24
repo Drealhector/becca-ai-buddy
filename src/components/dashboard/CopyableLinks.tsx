@@ -126,6 +126,10 @@ const CopyableLinks = () => {
       
       // Store in localStorage so PublicHub can read it
       localStorage.setItem('hiddenLinks', JSON.stringify(newHiddenLinks));
+      
+      // Dispatch a custom event to notify other components
+      window.dispatchEvent(new Event('storage'));
+      
       toast.success(isCurrentlyHidden ? "Link shown on public hub" : "Link hidden from public hub");
       return newHiddenLinks;
     });

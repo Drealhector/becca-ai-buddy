@@ -14,11 +14,23 @@ const PublicHub = () => {
 
   useEffect(() => {
     fetchData();
-    // Load hidden links from localStorage
-    const stored = localStorage.getItem('hiddenLinks');
-    if (stored) {
-      setHiddenLinks(JSON.parse(stored));
-    }
+  }, []);
+
+  useEffect(() => {
+    // Load hidden links from localStorage and listen for changes
+    const loadHiddenLinks = () => {
+      const stored = localStorage.getItem('hiddenLinks');
+      if (stored) {
+        setHiddenLinks(JSON.parse(stored));
+      }
+    };
+    
+    loadHiddenLinks();
+    
+    // Listen for storage changes from other tabs/windows
+    window.addEventListener('storage', loadHiddenLinks);
+    
+    return () => window.removeEventListener('storage', loadHiddenLinks);
   }, []);
 
   const fetchData = async () => {
@@ -180,13 +192,13 @@ const PublicHub = () => {
                         className="w-10 h-10 object-contain rounded"
                       />
                     ) : (
-                      <span className="text-3xl">{link.icon}</span>
+                      <span className="text-3xl leading-none flex items-center justify-center">{link.icon}</span>
                     )}
                   </div>
                   
                   {/* Label */}
-                  <div className="flex-1">
-                    <p className="text-white text-lg font-semibold tracking-wide">
+                  <div className="flex-1 flex items-center">
+                    <p className="text-white text-lg font-semibold tracking-wide leading-none">
                       {link.label}
                     </p>
                   </div>
