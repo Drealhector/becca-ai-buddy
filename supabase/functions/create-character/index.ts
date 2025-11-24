@@ -47,75 +47,76 @@ serve(async (req) => {
       try {
         const allResults: any[] = [];
         
-        // Search 1: How they talk - specific phrases and slang
-        console.log("Search 1: Speech patterns and phrases");
-        const { data: speechData } = await supabase.functions.invoke('web-search', {
-          body: { 
-            query: `${input.name} favorite phrases common sayings slang words catchphrases how they talk`,
-            numResults: 6
-          }
-        });
-        if (speechData?.results) allResults.push(...speechData.results);
+        // Run all searches in PARALLEL for 5-7x faster performance
+        console.log("Running 8 parallel searches...");
+        const searchPromises = [
+          // Search 1: Identity and background
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} biography background profession career who is`,
+              numResults: 5
+            }
+          }),
+          // Search 2: How they talk - specific phrases and slang
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} favorite phrases common sayings slang words catchphrases how they talk`,
+              numResults: 6
+            }
+          }),
+          // Search 3: Interview transcripts and quotes
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} interview transcript quotes exact words verbatim`,
+              numResults: 6
+            }
+          }),
+          // Search 4: Casual conversation style
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} casual conversation informal talking style natural speech`,
+              numResults: 5
+            }
+          }),
+          // Search 5: Video/podcast content
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} youtube podcast video speaking style tone voice`,
+              numResults: 5
+            }
+          }),
+          // Search 6: Social media personality
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} twitter instagram posts personality informal communication`,
+              numResults: 5
+            }
+          }),
+          // Search 7: Interaction style and mannerisms
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} interaction style mannerisms quirks behavior patterns ${input.context || ''}`.trim(),
+              numResults: 5
+            }
+          }),
+          // Search 8: Greetings and sign-offs
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} greeting style hello introduction how they start conversations`,
+              numResults: 4
+            }
+          })
+        ];
 
-        // Search 2: Interview transcripts and quotes
-        console.log("Search 2: Interview transcripts");
-        const { data: interviewData } = await supabase.functions.invoke('web-search', {
-          body: { 
-            query: `${input.name} interview transcript quotes exact words verbatim`,
-            numResults: 6
+        const results = await Promise.all(searchPromises);
+        
+        // Combine all results
+        results.forEach((result, index) => {
+          if (result.data?.results) {
+            allResults.push(...result.data.results);
+            console.log(`Search ${index + 1} completed: ${result.data.results.length} results`);
           }
         });
-        if (interviewData?.results) allResults.push(...interviewData.results);
-
-        // Search 3: Casual conversation style
-        console.log("Search 3: Casual conversation");
-        const { data: casualData } = await supabase.functions.invoke('web-search', {
-          body: { 
-            query: `${input.name} casual conversation informal talking style natural speech`,
-            numResults: 5
-          }
-        });
-        if (casualData?.results) allResults.push(...casualData.results);
-
-        // Search 4: Video/podcast content
-        console.log("Search 4: Video and podcast");
-        const { data: videoData } = await supabase.functions.invoke('web-search', {
-          body: { 
-            query: `${input.name} youtube podcast video speaking style tone voice`,
-            numResults: 5
-          }
-        });
-        if (videoData?.results) allResults.push(...videoData.results);
-
-        // Search 5: Social media personality
-        console.log("Search 5: Social media");
-        const { data: socialData } = await supabase.functions.invoke('web-search', {
-          body: { 
-            query: `${input.name} twitter instagram posts personality informal communication`,
-            numResults: 5
-          }
-        });
-        if (socialData?.results) allResults.push(...socialData.results);
-
-        // Search 6: Interaction style and mannerisms
-        console.log("Search 6: Interaction patterns");
-        const { data: interactionData } = await supabase.functions.invoke('web-search', {
-          body: { 
-            query: `${input.name} interaction style mannerisms quirks behavior patterns ${input.context || ''}`.trim(),
-            numResults: 5
-          }
-        });
-        if (interactionData?.results) allResults.push(...interactionData.results);
-
-        // Search 7: Greetings and sign-offs
-        console.log("Search 7: Greeting styles");
-        const { data: greetingData } = await supabase.functions.invoke('web-search', {
-          body: { 
-            query: `${input.name} greeting style hello introduction how they start conversations`,
-            numResults: 4
-          }
-        });
-        if (greetingData?.results) allResults.push(...greetingData.results);
 
         if (allResults.length > 0) {
           searchResults = allResults.map((result: any, index: number) => 
@@ -178,23 +179,20 @@ If you don't have reliable information about this specific person, say: "I could
         
         userPrompt = `Do you have any information about ${input.name}${input.context ? ` (${input.context})` : ''}? Provide whatever details you can recall, or indicate if you don't have reliable information about them.`;
       } else {
-        systemPrompt = `You are an expert personality analyst creating a CHATBOT CHARACTER for entertainment purposes. This is NOT surveillance, profiling, or privacy invasion.
+        systemPrompt = `You are an expert personality analyst. Extract communication patterns from public sources (interviews, appearances, social media) to create an AI character profile.
 
-**ETHICAL CONTEXT:** 
-- We're analyzing publicly available communication style from interviews, TV appearances, podcasts, and social media
-- This is to create a fun, entertaining chatbot that talks in a similar style
-- We're only extracting communication patterns (word choice, speech style), NOT private information
-- Similar to creating a fictional character inspired by someone's public persona
-
-**TASK:** Create a communication style profile based ONLY on PUBLIC sources.
+**YOUR TASK:** Analyze the search results and create a comprehensive personality profile.
 
 **STRUCTURE YOUR RESPONSE:**
 
-**START WITH PUBLIC IDENTITY:**
-- Name and public role/profession
-- Brief professional context (1-2 sentences only)
+**IDENTITY & BACKGROUND:**
+First, identify who this person is:
+- Full name
+- Primary profession or role
+- Brief background (1-2 sentences)
+- Key accomplishments or what they're known for
 
-**THEN DEEPLY ANALYZE COMMUNICATION PATTERNS:**
+**COMMUNICATION PATTERN ANALYSIS:**
 
 **1. WORD & PHRASE USAGE ANALYSIS (MOST CRITICAL - 50% of analysis)**
 
@@ -246,19 +244,17 @@ e) **Frequency**: very common / common / occasional
 5. Focus on natural conversation, NOT professional vocabulary
 6. Provide at least 15-20 specific expressions with full usage details`;
         
-        userPrompt = `Based on these web search results about ${input.name}${input.context ? ` (${input.context})` : ''}, create a chatbot character profile focused on PUBLIC communication style:
+        userPrompt = `Analyze these web search results about ${input.name}${input.context ? ` (${input.context})` : ''}:
 
 ${searchResults}
 
 ${uploadedDocsContent}
 
-**PURPOSE:** Create an entertaining chatbot character based on this person's PUBLIC communication style from interviews, public appearances, and social media.
+**PROVIDE:**
 
-**START WITH:**
-1. Name and public profession/role
-2. Brief public context (1-2 sentences max)
+1. **IDENTITY:** Who is this person? (name, profession, brief background)
 
-**THEN ANALYZE EVERY WORD/PHRASE YOU FIND:**
+2. **WORD & PHRASE ANALYSIS:** For each recurring expression found:
 
 For each expression, slang, or recurring word, provide:
 - **Exact quote** from search results
@@ -290,30 +286,25 @@ For each expression, slang, or recurring word, provide:
 - This is for entertainment purposes, analyzing PUBLIC communication only`;
       }
     } else if (type === "create_human_character") {
-      systemPrompt = `You are an expert personality architect creating a communication style profile inspired by someone's PUBLIC persona. This is for entertainment, NOT profiling.
+      systemPrompt = `You are an expert personality architect. Generate a complete directive AI personality prompt.
 
-**ETHICAL CONTEXT:**
-- Creating a communication style based on PUBLIC communication patterns
-- Analyzing only publicly available interviews, appearances, and social media
-- For entertainment purposes, similar to creating a fictional character
-- NOT for surveillance, privacy invasion, or impersonation
-
-Generate a comprehensive directive AI personality prompt using "You are" format with NO introduction text.
+Generate output using "You are" format with NO introduction text.
 
 **MANDATORY STRUCTURE:**
 
 # Identity & Purpose
-**START HERE WITH PUBLIC IDENTITY:**
-You embody [Name]'s natural communication style as seen in interviews, public appearances, and social media.
-[Name] is known as [Role/Profession].
 
-Your purpose is to communicate in [Name]'s recognizable style, using their authentic speech patterns, expressions, and conversational approach.
+You are [Full Name].
+You are a [Profession/Role].
+[1-2 sentences about background and what you're known for]
+
+Your purpose is to communicate naturally using your authentic speech patterns and conversational style.
 
 # Voice & Persona
 
 ## Core Personality Traits
-**Based on PUBLIC persona and observable communication:**
-- **Public Energy:** [outgoing/reserved/balanced - with examples from interviews]
+Describe your natural personality:
+- **Energy:** [outgoing/reserved/balanced - with examples from real interactions]
 - **Baseline Mood:** [cheerful/serious/calm/energetic - with context]
 - **Confidence Level:** [assertive/humble/balanced - with examples]
 - **Humor Style:** [witty/playful/sarcastic/warm - with examples]
@@ -537,20 +528,22 @@ You maintain this person's authentic personality while:
 6. Make directives ACTIONABLE: "Use phrases like X" not "Speaks casually"
 7. Preserve their AUTHENTIC voice across all contexts`;
 
-      userPrompt = `Based on this comprehensive personality research data:
+      userPrompt = `Use this personality research data:
 
 ${input.info}
 
 ${uploadedDocsContent}
 
-**YOUR TASK:**
-Create a complete directive personality prompt following the structure above. 
+**CREATE A COMPLETE DIRECTIVE PERSONALITY PROMPT:**
 
 **CRITICAL REQUIREMENTS:**
 
-1. **START WITH PUBLIC IDENTITY:** Extract name, public role/profession, and brief background
+1. **IDENTITY:** Begin with direct identity statements:
+   - You are [Full Name].
+   - You are a [Profession/Role].
+   - [Brief background and expertise]
 
-2. **EXTRACT WORD USAGE WITH CONTEXT:** For EVERY recurring expression found in the data:
+2. **EXTRACT WORD USAGE WITH CONTEXT:** For EVERY recurring expression:
    - Quote it exactly
    - Identify its type: greeting / follow-up / reaction / transition / emphasis / filler
    - Explain WHEN it's used (start of convo, when excited, when agreeing, etc.)
