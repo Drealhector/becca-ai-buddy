@@ -143,56 +143,108 @@ If you don't have reliable information about this specific person, say: "I could
         
         userPrompt = `Do you have any information about ${input.name}${input.context ? ` (${input.context})` : ''}? Provide whatever details you can recall, or indicate if you don't have reliable information about them.`;
       } else {
-        systemPrompt = `You are a personality analyst specializing in extracting authentic communication patterns. Based on the web search results from interviews, blog posts, videos, and social media, create a DEEP personality profile.
+        systemPrompt = `You are an expert personality analyst. Based on web search results from interviews, blogs, videos, and social media, create a COMPREHENSIVE personality profile.
 
-**PRIMARY FOCUS - Conversational Personality (NOT Professional Jargon):**
+**STRUCTURE YOUR RESPONSE:**
 
-1. **NATURAL SPEAKING STYLE** (70% of analysis):
-   - How they actually talk in casual conversations, not business speak
-   - Personal catchphrases and expressions they use repeatedly (quote them exactly)
-   - Filler words, interjections, conversational tics (e.g., "you know", "right?", "basically", "actually")
-   - Sentence structure: Do they use short punchy sentences? Long flowing ones? Questions?
-   - Humor style: Sarcastic? Witty? Dad jokes? Self-deprecating?
-   - Emotional expression: How do they show excitement, frustration, empathy?
+**START WITH REAL IDENTITY:**
+- Full name, current role, company/organization
+- Age (if available), location, background
+- Brief professional context (1-2 sentences only)
 
-2. **FAVORITE PERSONAL WORDS & PHRASES** (NOT work vocabulary):
-   - Words/phrases they use in everyday conversation (not technical terms)
-   - Their unique way of expressing common emotions
-   - Signature greetings or sign-offs
-   - Recurring metaphors or analogies from their personal life
+**THEN ANALYZE THESE DIMENSIONS IN DETAIL:**
 
-3. **PERSONALITY TRAITS**:
-   - Confidence level and how it shows in communication
-   - Energy level (calm/energetic/intense/laid-back)
-   - Empathy and emotional intelligence markers
-   - Attitude toward people (warm/professional/direct/playful)
+**1. COMMUNICATION STYLE (40% of analysis)**
+   a) **Tone & Voice Quality:**
+      - Emotional coloring: warm, cold, sarcastic, excited, calm
+      - Pitch, cadence, speed patterns
+      - Volume and intensity variations
+   
+   b) **Speech Patterns & Rhythm:**
+      - Sentence construction: short vs long, formal vs informal
+      - Pauses, filler words ("uh", "you know", "like", "so", "basically", "actually")
+      - Stutters, smooth flow, or emphasis patterns
+      - Use of repetition for effect
+   
+   c) **Favorite Words & Signature Phrases (CRITICAL):**
+      - Personal expressions they use repeatedly (QUOTE THEM EXACTLY)
+      - Cultural/regional slang or dialect
+      - Signature greetings or sign-offs
+      - Recurring metaphors or analogies
+      - **EXCLUDE work jargon** - focus on conversational vocabulary
+   
+   d) **Word Choice & Vocabulary:**
+      - Complexity level: casual, technical, poetic
+      - Preference for certain synonyms
+      - Cultural or regional language nuances
 
-4. **COMMUNICATION PATTERNS**:
-   - How they start conversations (formal greeting vs casual)
-   - How they engage (ask questions? tell stories? give advice?)
+**2. EMOTIONAL EXPRESSION (15% of analysis)**
+   - Baseline mood/affect: cheerful, serious, calm, anxious, energetic
+   - Emotional reactivity: how strongly they react
+   - Empathy & social sensitivity: how they respond to others' emotions
+   - How they express excitement, frustration, joy, concern
+
+**3. COGNITIVE & THOUGHT STYLE (10% of analysis)**
+   - Decision-making patterns: analytical vs intuitive, fast vs reflective
+   - Problem-solving approach: step-by-step, experimental, improvisational
+   - Worldview: optimistic, pessimistic, skeptical, idealistic
+   - Values and beliefs influencing responses
+
+**4. HABITS & BEHAVIORAL PATTERNS (10% of analysis)**
+   - Routine behaviors in communication
+   - Idiosyncrasies/quirks (e.g., always starting with "So...")
+   - Response timing: quick, thoughtful, hesitant
+   - Unique ways of expressing or reacting
+
+**5. SOCIAL STYLE & INTERACTION (10% of analysis)**
+   - Extroversion/introversion in conversations
+   - Assertiveness and confidence level
+   - Humor style: witty, sarcastic, playful, self-deprecating
+   - How they engage: ask questions, tell stories, give advice
    - How they handle disagreement or criticism
-   - How they end conversations
 
-5. **Background Context** (20% of analysis):
-   - Brief professional background (only for context)
-   - Values and beliefs that shape their communication
+**6. PERSONALITY TRAITS (10% of analysis)**
+   - Openness: curious, imaginative, creative
+   - Conscientiousness: organized, dependable
+   - Extraversion: sociable, energetic, assertive
+   - Agreeableness: friendly, cooperative, empathetic
+   - Emotional stability: calm vs reactive
 
-**CRITICAL**: Extract NATURAL conversational personality, not professional vocabulary or industry jargon. Focus on how they'd talk to a friend, not a colleague.
+**7. CULTURAL & CONTEXTUAL NUANCE (5% of analysis)**
+   - Regional accent, dialect, or slang
+   - Cultural references and social norms
+   - Context-appropriate humor or politeness
 
-Provide specific quotes and examples from the search results for every trait you identify.`;
+**CRITICAL RULES:**
+- Extract quotes and specific examples for EVERY trait
+- Focus on NATURAL conversational personality, NOT professional vocabulary
+- Emphasize how they talk to friends, not colleagues
+- Capture their authentic voice across all contexts (personal, casual, informal)
+- Identify patterns across multiple sources (interviews, videos, social media)`;
         
         userPrompt = `Based on these web search results from interviews, blogs, videos, and social media about ${input.name}${input.context ? ` (${input.context})` : ''}, create a comprehensive PERSONALITY profile:
 
 ${searchResults}
 
-Focus on extracting their NATURAL conversational style and personality:
-- How do they actually talk in casual settings?
-- What personal phrases/words do they use repeatedly? (Quote them)
-- What's their humor style and emotional expression?
-- How do they start/engage/end conversations?
-- What makes their communication style unique?
+**START YOUR RESPONSE WITH:**
+1. Person's full real name, current role, company
+2. Age (if available), location, background
+3. Brief professional context (1-2 sentences maximum)
 
-Ignore professional jargon and work vocabulary. Focus on their authentic personality that would show in ANY conversation, regardless of business context.`;
+**THEN PROVIDE DETAILED ANALYSIS OF:**
+- Communication style: tone, speech patterns, favorite words/phrases (quote them exactly)
+- Emotional expression: baseline mood, reactivity, empathy
+- Cognitive & thought style: decision-making, problem-solving, worldview
+- Habits & behavioral patterns: quirks, timing, unique expressions
+- Social style: extroversion, assertiveness, humor, engagement patterns
+- Personality traits: openness, conscientiousness, emotional stability
+- Cultural nuances: regional language, slang, references
+
+**CRITICAL:**
+- Quote exact phrases and words they use repeatedly
+- Focus on NATURAL conversational personality, NOT work vocabulary
+- Capture how they talk in casual settings, not business contexts
+- Extract authentic personality applicable to ANY conversation scenario`;
       }
     } else if (type === "create_human_character") {
       systemPrompt = `Generate a directive AI personality prompt that captures this person's essence. Use "You are" format with NO introduction. Follow this structure:
