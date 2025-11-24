@@ -234,6 +234,7 @@ const WebChat = ({ slug, customization }: WebChatProps) => {
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
             placeholder="Type your message..."
             disabled={loading}
+            className="bg-white/10 text-white placeholder:text-gray-400"
           />
           <Button
             onClick={handleSend}

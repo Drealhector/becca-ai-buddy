@@ -41,6 +41,7 @@ ${customData?.business_description ? `About: ${customData.business_description}`
 ${customData?.key_services ? `Services: ${customData.key_services}` : ''}
 ${customData?.tone ? `Tone: ${customData.tone}` : ''}
 
+CRITICAL: Never use hyphens (-) in your responses. Use periods, commas, or natural breaks instead.
 Keep responses natural and concise (1-2 sentences) unless asked for more detail.`;
 
     console.log('Context:', contextPrompt);

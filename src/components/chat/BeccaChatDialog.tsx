@@ -206,7 +206,7 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
               onKeyPress={handleKeyPress}
               placeholder="Type your message..."
               disabled={isLoading}
-              className="flex-1 bg-gray-800 border-gray-600 text-black placeholder:text-gray-400"
+              className="flex-1 bg-white/10 border-gray-600 text-white placeholder:text-gray-400"
             />
             <Button
               onClick={handleSendMessage}
