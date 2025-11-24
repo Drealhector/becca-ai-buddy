@@ -43,9 +43,18 @@ const Dashboard = () => {
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Calculate offset for sticky header
+      const headerOffset = 80;
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+      
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
+      
       // Delay closing nav to ensure scroll completes
-      setTimeout(() => setShowNav(false), 100);
+      setTimeout(() => setShowNav(false), 500);
     }
   };
 

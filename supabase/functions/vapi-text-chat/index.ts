@@ -45,6 +45,7 @@ serve(async (req) => {
       if (customData.faqs) {
         contextPrompt += `FAQs: ${JSON.stringify(customData.faqs)}\n`;
       }
+      contextPrompt += `CRITICAL: Never use hyphens (-) in your responses. Use periods, commas, or natural breaks instead.\n`;
     }
 
     // Call Vapi API for text-based chat

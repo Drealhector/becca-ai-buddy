@@ -33,6 +33,7 @@ serve(async (req) => {
     const systemPrompt = `You are BECCA, an AI assistant for ${businessName}. 
 Your tone is ${tone}. 
 ${faqs.length > 0 ? `Here are some FAQs you should know:\n${JSON.stringify(faqs, null, 2)}` : ""}
+CRITICAL: Never use hyphens (-) in your responses. Use periods, commas, or natural breaks instead.
 Be helpful and answer questions about the business.`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
