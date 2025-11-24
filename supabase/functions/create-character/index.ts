@@ -22,6 +22,18 @@ serve(async (req) => {
     let systemPrompt = "";
     let userPrompt = "";
     let searchResults = "";
+    let uploadedDocsContent = "";
+
+    // Parse uploaded documents if provided
+    if (input.uploadedFiles && input.uploadedFiles.length > 0) {
+      console.log(`Processing ${input.uploadedFiles.length} uploaded files`);
+      uploadedDocsContent = "\n\n**UPLOADED DOCUMENTS:**\n\n";
+      
+      for (let i = 0; i < input.uploadedFiles.length; i++) {
+        const fileContent = input.uploadedFiles[i];
+        uploadedDocsContent += `Document ${i + 1}:\n${fileContent}\n\n---\n\n`;
+      }
+    }
 
     // If searching for a human, do multiple targeted searches for personality
     if (type === "search_human") {
@@ -35,55 +47,75 @@ serve(async (req) => {
       try {
         const allResults: any[] = [];
         
-        // Search 1: Interview and talk content
-        console.log("Search 1: Interviews and talks");
+        // Search 1: How they talk - specific phrases and slang
+        console.log("Search 1: Speech patterns and phrases");
+        const { data: speechData } = await supabase.functions.invoke('web-search', {
+          body: { 
+            query: `${input.name} favorite phrases common sayings slang words catchphrases how they talk`,
+            numResults: 6
+          }
+        });
+        if (speechData?.results) allResults.push(...speechData.results);
+
+        // Search 2: Interview transcripts and quotes
+        console.log("Search 2: Interview transcripts");
         const { data: interviewData } = await supabase.functions.invoke('web-search', {
           body: { 
-            query: `${input.name} interview talks speaking style quotes`,
-            numResults: 5
+            query: `${input.name} interview transcript quotes exact words verbatim`,
+            numResults: 6
           }
         });
         if (interviewData?.results) allResults.push(...interviewData.results);
 
-        // Search 2: Blog posts and written content
-        console.log("Search 2: Blog posts and articles");
-        const { data: blogData } = await supabase.functions.invoke('web-search', {
+        // Search 3: Casual conversation style
+        console.log("Search 3: Casual conversation");
+        const { data: casualData } = await supabase.functions.invoke('web-search', {
           body: { 
-            query: `${input.name} blog posts articles writing style personality`,
+            query: `${input.name} casual conversation informal talking style natural speech`,
             numResults: 5
           }
         });
-        if (blogData?.results) allResults.push(...blogData.results);
+        if (casualData?.results) allResults.push(...casualData.results);
 
-        // Search 3: Video content and YouTube
-        console.log("Search 3: Video content");
+        // Search 4: Video/podcast content
+        console.log("Search 4: Video and podcast");
         const { data: videoData } = await supabase.functions.invoke('web-search', {
           body: { 
-            query: `${input.name} youtube video podcast communication style`,
+            query: `${input.name} youtube podcast video speaking style tone voice`,
             numResults: 5
           }
         });
         if (videoData?.results) allResults.push(...videoData.results);
 
-        // Search 4: Social media presence
-        console.log("Search 4: Social media");
+        // Search 5: Social media personality
+        console.log("Search 5: Social media");
         const { data: socialData } = await supabase.functions.invoke('web-search', {
           body: { 
-            query: `${input.name} twitter linkedin instagram social media personality traits`,
+            query: `${input.name} twitter instagram posts personality informal communication`,
             numResults: 5
           }
         });
         if (socialData?.results) allResults.push(...socialData.results);
 
-        // Search 5: General personality and characteristics
-        console.log("Search 5: Personality traits");
-        const { data: personalityData } = await supabase.functions.invoke('web-search', {
+        // Search 6: Interaction style and mannerisms
+        console.log("Search 6: Interaction patterns");
+        const { data: interactionData } = await supabase.functions.invoke('web-search', {
           body: { 
-            query: `${input.name} personality characteristics how they talk mannerisms ${input.context || ''}`.trim(),
+            query: `${input.name} interaction style mannerisms quirks behavior patterns ${input.context || ''}`.trim(),
             numResults: 5
           }
         });
-        if (personalityData?.results) allResults.push(...personalityData.results);
+        if (interactionData?.results) allResults.push(...interactionData.results);
+
+        // Search 7: Greetings and sign-offs
+        console.log("Search 7: Greeting styles");
+        const { data: greetingData } = await supabase.functions.invoke('web-search', {
+          body: { 
+            query: `${input.name} greeting style hello introduction how they start conversations`,
+            numResults: 4
+          }
+        });
+        if (greetingData?.results) allResults.push(...greetingData.results);
 
         if (allResults.length > 0) {
           searchResults = allResults.map((result: any, index: number) => 
@@ -122,10 +154,13 @@ CRITICAL RULES:
 - Never use hyphens or dashes in responses to sound natural and human
 - Greetings must be casual with pleasantries first, do not jump to business unless customer initiates
 - Keep all responses to one or two sentences unless customer specifically asks for more explanation
-- Sound conversational and natural, not formal or robotic`;
+- Sound conversational and natural, not formal or robotic
+- Generate 8-10 VARIED greeting examples that sound natural and different from each other`;
       userPrompt = `Create an AI personality prompt for: ${input.description}
 
-Use directive format throughout (You are, Use, Keep, etc.). Be specific and actionable. Ensure responses are brief, natural, and avoid hyphens.`;
+${uploadedDocsContent}
+
+Use directive format throughout (You are, Use, Keep, etc.). Be specific and actionable. Ensure responses are brief, natural, and avoid hyphens. Generate 8-10 varied greeting examples.`;
     } else if (type === "search_human") {
       if (!searchResults || searchResults.trim().length === 0) {
         // Fallback to AI's built-in knowledge if no web results
@@ -220,11 +255,15 @@ If you don't have reliable information about this specific person, say: "I could
 - Focus on NATURAL conversational personality, NOT professional vocabulary
 - Emphasize how they talk to friends, not colleagues
 - Capture their authentic voice across all contexts (personal, casual, informal)
-- Identify patterns across multiple sources (interviews, videos, social media)`;
+- Identify patterns across multiple sources (interviews, videos, social media)
+- Pay special attention to SLANG, CATCHPHRASES, and COMMON WORDS they use repeatedly
+- Note their GREETING STYLES and how they start/end conversations`;
         
         userPrompt = `Based on these web search results from interviews, blogs, videos, and social media about ${input.name}${input.context ? ` (${input.context})` : ''}, create a comprehensive PERSONALITY profile:
 
 ${searchResults}
+
+${uploadedDocsContent}
 
 **START YOUR RESPONSE WITH:**
 1. Person's full real name, current role, company
@@ -233,6 +272,8 @@ ${searchResults}
 
 **THEN PROVIDE DETAILED ANALYSIS OF:**
 - Communication style: tone, speech patterns, favorite words/phrases (quote them exactly)
+- **SLANG & COMMON EXPRESSIONS:** List at least 10-15 phrases/words they use frequently
+- **GREETING PATTERNS:** How they typically start conversations (give 5-7 examples)
 - Emotional expression: baseline mood, reactivity, empathy
 - Cognitive & thought style: decision-making, problem-solving, worldview
 - Habits & behavioral patterns: quirks, timing, unique expressions
@@ -244,7 +285,8 @@ ${searchResults}
 - Quote exact phrases and words they use repeatedly
 - Focus on NATURAL conversational personality, NOT work vocabulary
 - Capture how they talk in casual settings, not business contexts
-- Extract authentic personality applicable to ANY conversation scenario`;
+- Extract authentic personality applicable to ANY conversation scenario
+- Prioritize HOW they talk over WHAT they talk about`;
       }
     } else if (type === "create_human_character") {
       systemPrompt = `You are an expert AI personality architect. Generate a comprehensive directive AI personality prompt that captures this person's complete essence. Use "You are" format with NO introduction text.
@@ -349,11 +391,24 @@ Examples:
 
 # Conversation Flow
 
-## Introduction
+## Introduction & Greeting Examples
 [Specific directive on how to greet based on this person's actual style]
+
+**Greeting Style:**
 - Start with: [exact greeting style]
-- Use phrases like: [list specific opening phrases]
 - Tone should be: [specific tone description]
+
+**8-10 VARIED Greeting Examples (use these randomly, never repeat the same one twice in a row):**
+1. [First natural greeting example]
+2. [Second natural greeting example - different style]
+3. [Third natural greeting example - different tone]
+4. [Fourth natural greeting example - different approach]
+5. [Fifth natural greeting example - different energy]
+6. [Sixth natural greeting example - different mood]
+7. [Seventh natural greeting example - different context]
+8. [Eighth natural greeting example - different vibe]
+9. [Ninth natural greeting example - optional]
+10. [Tenth natural greeting example - optional]
 
 ## Engagement
 [How this person maintains conversation]
@@ -449,6 +504,8 @@ You maintain this person's authentic personality while:
 
 ${input.info}
 
+${uploadedDocsContent}
+
 **YOUR TASK:**
 Create a complete directive personality prompt following the structure above. 
 
@@ -462,6 +519,7 @@ Create a complete directive personality prompt following the structure above.
 7. **INCLUDE BEHAVIORAL QUIRKS:** Note idiosyncrasies, habits, and distinctive patterns
 8. **SPECIFY SOCIAL STYLE:** Describe how they interact, engage, and handle different scenarios
 9. **ADD CULTURAL CONTEXT:** Include regional language, slang, and cultural references
+10. **GENERATE 8-10 VARIED GREETINGS:** Create diverse greeting examples that sound natural and reflect their style
 
 **FOCUS ON NATURAL CONVERSATION:**
 - Prioritize how they talk in casual, personal settings
@@ -495,11 +553,15 @@ CRITICAL RULES:
 - Never use hyphens or dashes in responses to sound natural and human
 - Greetings must be casual with pleasantries first, do not jump to business unless customer initiates
 - Keep all responses to one or two sentences unless customer specifically asks for more explanation
-- Sound conversational and natural, not formal or robotic`;
+- Sound conversational and natural, not formal or robotic
+- Generate 8-10 VARIED greeting examples that sound natural and different from each other`;
       userPrompt = `${input.basePersonality ? `Base style to adapt:\n${input.basePersonality}\n\n` : ''}Task: ${input.task}
 Business: ${input.businessInfo}
 ${input.link ? `Link: ${input.link}\n` : ''}
-Create a directive personality prompt centered on this task and business. Use "You are" format with specific, actionable directives. Ensure responses are brief, natural, and avoid hyphens.`;
+
+${uploadedDocsContent}
+
+Create a directive personality prompt centered on this task and business. Use "You are" format with specific, actionable directives. Ensure responses are brief, natural, and avoid hyphens. Generate 8-10 varied greeting examples.`;
     }
 
     console.log(`Creating character with type: ${type}`);

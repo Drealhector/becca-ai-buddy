@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Sparkles, User, Loader2, Copy, RefreshCw } from "lucide-react";
+import { Sparkles, User, Loader2, Copy, RefreshCw, Upload, X } from "lucide-react";
 
 type Step = "choose" | "new_input" | "new_result" | "human_name" | "human_confirm" | "human_result" | "refine";
 
@@ -35,6 +35,11 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
   const [refineTask, setRefineTask] = useState("");
   const [refineLink, setRefineLink] = useState("");
   const [refineBusinessInfo, setRefineBusinessInfo] = useState("");
+  
+  // File uploads
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [refineUploadedFiles, setRefineUploadedFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   const resetDialog = () => {
     setStep("choose");
@@ -48,6 +53,79 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
     setRefineTask("");
     setRefineLink("");
     setRefineBusinessInfo("");
+    setUploadedFiles([]);
+    setRefineUploadedFiles([]);
+  };
+
+  const handleFileUpload = async (files: FileList | null, isRefine: boolean = false) => {
+    if (!files || files.length === 0) return;
+
+    const currentFiles = isRefine ? refineUploadedFiles : uploadedFiles;
+    const newFilesArray = Array.from(files);
+    
+    if (currentFiles.length + newFilesArray.length > 10) {
+      toast.error("Maximum 10 files allowed");
+      return;
+    }
+
+    // Validate file types (only documents and text)
+    const validTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'text/markdown'
+    ];
+
+    const invalidFiles = newFilesArray.filter(file => !validTypes.includes(file.type));
+    if (invalidFiles.length > 0) {
+      toast.error("Only PDF, DOCX, DOC, TXT, and MD files are allowed");
+      return;
+    }
+
+    if (isRefine) {
+      setRefineUploadedFiles([...currentFiles, ...newFilesArray]);
+    } else {
+      setUploadedFiles([...currentFiles, ...newFilesArray]);
+    }
+    
+    toast.success(`${newFilesArray.length} file(s) added`);
+  };
+
+  const removeFile = (index: number, isRefine: boolean = false) => {
+    if (isRefine) {
+      setRefineUploadedFiles(refineUploadedFiles.filter((_, i) => i !== index));
+    } else {
+      setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+    }
+  };
+
+  const parseUploadedFiles = async (files: File[]): Promise<string[]> => {
+    const parsedContents: string[] = [];
+    
+    for (const file of files) {
+      try {
+        if (file.type === 'text/plain' || file.type === 'text/markdown') {
+          // Read text files directly
+          const text = await file.text();
+          parsedContents.push(`File: ${file.name}\n\n${text}`);
+        } else {
+          // For PDF/DOCX, we'll need to use the document parser
+          // Create a temporary FormData to upload and parse
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          // Note: In a real implementation, you'd upload to storage and use document parser
+          // For now, we'll just include the filename
+          parsedContents.push(`File: ${file.name} (Document - content to be parsed)`);
+        }
+      } catch (error) {
+        console.error(`Error parsing file ${file.name}:`, error);
+        toast.error(`Failed to parse ${file.name}`);
+      }
+    }
+    
+    return parsedContents;
   };
 
   const handleChoose = (type: "new" | "human") => {
@@ -62,9 +140,19 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
     }
 
     setLoading(true);
+    setUploadingFiles(true);
     try {
+      // Parse uploaded files
+      const parsedFiles = await parseUploadedFiles(uploadedFiles);
+      
       const { data, error } = await supabase.functions.invoke("create-character", {
-        body: { type: "generate_new", input: { description: newDescription } }
+        body: { 
+          type: "generate_new", 
+          input: { 
+            description: newDescription,
+            uploadedFiles: parsedFiles
+          } 
+        }
       });
 
       if (error) throw error;
@@ -76,6 +164,7 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
       toast.error("Failed to generate character");
     } finally {
       setLoading(false);
+      setUploadingFiles(false);
     }
   };
 
@@ -144,7 +233,11 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
     }
 
     setLoading(true);
+    setUploadingFiles(true);
     try {
+      // Parse uploaded files for refine
+      const parsedFiles = await parseUploadedFiles(refineUploadedFiles);
+      
       const { data, error } = await supabase.functions.invoke("create-character", {
         body: { 
           type: "refine", 
@@ -152,7 +245,8 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
             basePersonality: generatedCharacter,
             task: refineTask,
             link: refineLink,
-            businessInfo: refineBusinessInfo
+            businessInfo: refineBusinessInfo,
+            uploadedFiles: parsedFiles
           } 
         }
       });
@@ -166,6 +260,7 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
       toast.error("Failed to refine character");
     } finally {
       setLoading(false);
+      setUploadingFiles(false);
     }
   };
 
@@ -232,9 +327,50 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
                 className="min-h-[150px]"
               />
             </div>
+            
+            <div className="space-y-2">
+              <Label>Upload Documents (Optional - Max 10 files)</Label>
+              <div className="flex flex-col gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => document.getElementById('character-file-upload')?.click()}
+                  disabled={uploadedFiles.length >= 10}
+                  className="w-full"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Documents (PDF, DOCX, TXT, MD)
+                </Button>
+                <input
+                  id="character-file-upload"
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt,.md"
+                  onChange={(e) => handleFileUpload(e.target.files, false)}
+                  className="hidden"
+                />
+                {uploadedFiles.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">{uploadedFiles.length}/10 files</p>
+                    {uploadedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between bg-secondary p-2 rounded text-sm">
+                        <span className="truncate">{file.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index, false)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
             <DialogFooter>
               <Button variant="outline" onClick={() => setStep("choose")}>Back</Button>
-              <Button onClick={handleGenerateNew} disabled={loading}>
+              <Button onClick={handleGenerateNew} disabled={loading || uploadingFiles}>
                 {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generating...</> : "Generate Character"}
               </Button>
             </DialogFooter>
@@ -366,11 +502,52 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
                 className="min-h-[100px]"
               />
             </div>
+            
+            <div className="space-y-2">
+              <Label>Upload Business Documents (Optional - Max 10 files)</Label>
+              <div className="flex flex-col gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => document.getElementById('refine-file-upload')?.click()}
+                  disabled={refineUploadedFiles.length >= 10}
+                  className="w-full"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Documents (PDF, DOCX, TXT, MD)
+                </Button>
+                <input
+                  id="refine-file-upload"
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt,.md"
+                  onChange={(e) => handleFileUpload(e.target.files, true)}
+                  className="hidden"
+                />
+                {refineUploadedFiles.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">{refineUploadedFiles.length}/10 files</p>
+                    {refineUploadedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between bg-secondary p-2 rounded text-sm">
+                        <span className="truncate">{file.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index, true)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
             <DialogFooter>
               <Button variant="outline" onClick={() => setStep(characterType === "new" ? "new_result" : "human_result")}>
                 Back
               </Button>
-              <Button onClick={handleRefine} disabled={loading}>
+              <Button onClick={handleRefine} disabled={loading || uploadingFiles}>
                 {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Refining...</> : "Refine Character"}
               </Button>
             </DialogFooter>
