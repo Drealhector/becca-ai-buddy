@@ -48,58 +48,65 @@ serve(async (req) => {
         const allResults: any[] = [];
         
         // Run all searches in PARALLEL for 5-7x faster performance
-        console.log("Running 8 parallel searches...");
+        console.log("Running 9 parallel searches...");
         const searchPromises = [
-          // Search 1: Identity and background
+          // Search 1: Biographical data (Wikipedia, bio sites)
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} biography background profession career who is`,
-              numResults: 5
+              query: `${input.name} wikipedia biography age education background personal life career achievements`,
+              numResults: 6
             }
           }),
-          // Search 2: How they talk - specific phrases and slang
+          // Search 2: Professional identity
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} profession career current role company position`,
+              numResults: 4
+            }
+          }),
+          // Search 3: How they talk - specific phrases and slang
           supabase.functions.invoke('web-search', {
             body: { 
               query: `${input.name} favorite phrases common sayings slang words catchphrases how they talk`,
               numResults: 6
             }
           }),
-          // Search 3: Interview transcripts and quotes
+          // Search 4: Interview transcripts and quotes
           supabase.functions.invoke('web-search', {
             body: { 
               query: `${input.name} interview transcript quotes exact words verbatim`,
               numResults: 6
             }
           }),
-          // Search 4: Casual conversation style
+          // Search 5: Casual conversation style
           supabase.functions.invoke('web-search', {
             body: { 
               query: `${input.name} casual conversation informal talking style natural speech`,
               numResults: 5
             }
           }),
-          // Search 5: Video/podcast content
+          // Search 6: Video/podcast content
           supabase.functions.invoke('web-search', {
             body: { 
               query: `${input.name} youtube podcast video speaking style tone voice`,
               numResults: 5
             }
           }),
-          // Search 6: Social media personality
+          // Search 7: Social media personality
           supabase.functions.invoke('web-search', {
             body: { 
               query: `${input.name} twitter instagram posts personality informal communication`,
               numResults: 5
             }
           }),
-          // Search 7: Interaction style and mannerisms
+          // Search 8: Interaction style and mannerisms
           supabase.functions.invoke('web-search', {
             body: { 
               query: `${input.name} interaction style mannerisms quirks behavior patterns ${input.context || ''}`.trim(),
               numResults: 5
             }
           }),
-          // Search 8: Greetings and sign-offs
+          // Search 9: Greetings and sign-offs
           supabase.functions.invoke('web-search', {
             body: { 
               query: `${input.name} greeting style hello introduction how they start conversations`,
@@ -186,11 +193,17 @@ If you don't have reliable information about this specific person, say: "I could
 **STRUCTURE YOUR RESPONSE:**
 
 **IDENTITY & BACKGROUND:**
-First, identify who this person is:
-- Full name
-- Primary profession or role
-- Brief background (1-2 sentences)
-- Key accomplishments or what they're known for
+Use Wikipedia, biographical sites, and credible sources to identify:
+- Full legal name
+- Date of birth and age (if publicly available)
+- Primary profession or current role
+- Educational background (if available)
+- Career highlights and major accomplishments
+- What they're most known for
+- Personal background (nationality, residence if public)
+- Key life events or milestones
+
+**CRITICAL:** Start with concrete biographical facts from reliable sources (Wikipedia, news articles, official bios). This forms the foundation of who this person actually is.
 
 **COMMUNICATION PATTERN ANALYSIS:**
 
@@ -294,9 +307,13 @@ Generate output using "You are" format with NO introduction text.
 
 # Identity & Purpose
 
-You are [Full Name].
-You are a [Profession/Role].
-[1-2 sentences about background and what you're known for]
+You are [Full Legal Name].
+Born [Date/Year if known], you are [Age] years old [or age range if exact age not public].
+You are a [Primary Profession/Role].
+[Educational background if known - e.g., "Graduated from X University with degree in Y"].
+[Major career accomplishments - 1-2 key achievements or milestones].
+[What you're most known for - public recognition].
+[Personal background if public - nationality, current location if relevant].
 
 Your purpose is to communicate naturally using your authentic speech patterns and conversational style.
 
@@ -538,10 +555,16 @@ ${uploadedDocsContent}
 
 **CRITICAL REQUIREMENTS:**
 
-1. **IDENTITY:** Begin with direct identity statements:
-   - You are [Full Name].
-   - You are a [Profession/Role].
-   - [Brief background and expertise]
+1. **IDENTITY:** Begin with complete biographical identity:
+   - You are [Full Legal Name].
+   - Born [Date/Year], you are [Age] years old.
+   - You are a [Primary Profession/Current Role].
+   - [Educational background from the data]
+   - [Major career accomplishments - 2-3 key achievements]
+   - [What you're most known for publicly]
+   - [Personal background - nationality, location if mentioned]
+   
+   **Use Wikipedia and biographical sources for factual identity information.**
 
 2. **EXTRACT WORD USAGE WITH CONTEXT:** For EVERY recurring expression:
    - Quote it exactly
