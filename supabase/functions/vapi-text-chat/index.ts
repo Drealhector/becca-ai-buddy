@@ -12,13 +12,9 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    console.log('Received request body:', JSON.stringify(body));
-    
-    const { messages, conversationId } = body;
+    const { messages, conversationId } = await req.json();
     
     if (!messages || !Array.isArray(messages)) {
-      console.error('Invalid messages:', messages);
       throw new Error('Messages array is required');
     }
     
@@ -28,10 +24,6 @@ serve(async (req) => {
     if (!VAPI_PRIVATE_KEY || !VAPI_ASSISTANT_ID) {
       throw new Error('VAPI credentials not configured');
     }
-
-    console.log('Processing Vapi text chat for conversation:', conversationId);
-    console.log('Message count:', messages.length);
-    console.log('Using Vapi assistant:', VAPI_ASSISTANT_ID);
 
     // Get the latest user message
     const latestUserMessage = messages[messages.length - 1];
@@ -62,12 +54,9 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('Vapi chat response:', JSON.stringify(data));
     
     // Extract response from Vapi's output array
     const responseText = data.output?.[0]?.content || data.message || "I'm here to help!";
-    
-    console.log('Assistant response:', responseText.substring(0, 100) + '...');
     
     // Return streaming response in SSE format for frontend compatibility
     const encoder = new TextEncoder();
