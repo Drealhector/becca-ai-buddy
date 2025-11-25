@@ -41,18 +41,38 @@ const BusinessAuth = () => {
         return;
       }
 
-      // Sign into Supabase with the business credentials
+      // Try to sign in with business credentials
       const businessEmail = `${businessKey.trim()}@becca.business`;
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: businessEmail,
         password: businessKey.trim(),
       });
 
-      if (authError) {
-        console.error("Supabase auth error:", authError);
+      // If user doesn't exist, create account
+      if (authError && authError.message.includes("Invalid")) {
+        console.log("Creating new account for business key");
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: businessEmail,
+          password: businessKey.trim(),
+        });
+
+        if (signUpError) {
+          console.error("Signup error:", signUpError);
+          toast({
+            title: "Setup Error",
+            description: "Could not set up your account. Please contact support.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
+        authData = signUpData;
+      } else if (authError) {
+        console.error("Auth error:", authError);
         toast({
           title: "Authentication Error",
-          description: "Could not authenticate with database.",
+          description: authError.message,
           variant: "destructive",
         });
         setLoading(false);
