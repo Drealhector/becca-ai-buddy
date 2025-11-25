@@ -10,7 +10,6 @@ import ChannelToggles from "@/components/dashboard/ChannelToggles";
 import ConversationsSection from "@/components/dashboard/ConversationsSection";
 import CopyableLinks from "@/components/dashboard/CopyableLinks";
 import PhoneCallSection from "@/components/dashboard/PhoneCallSection";
-import TranscriptsSection from "@/components/dashboard/TranscriptsSection";
 import LogoCustomization from "@/components/dashboard/LogoCustomization";
 import VoiceManagementSection from "@/components/dashboard/VoiceManagementSection";
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
@@ -291,9 +290,8 @@ const Dashboard = () => {
         </div>
 
         {/* Phone Call Section */}
-        <div id="phone-calls" className="space-y-6">
+        <div id="phone-calls">
           <PhoneCallSection />
-          <TranscriptsSection />
         </div>
       </main>
 
