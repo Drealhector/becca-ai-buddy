@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, Send, Bot, User } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   role: "user" | "assistant";
@@ -24,7 +23,6 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,28 +31,8 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
     }
   }, [messages]);
 
-  useEffect(() => {
-    createConversation();
-  }, []);
-
-  const createConversation = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("conversations")
-        .insert({ platform: "web" })
-        .select()
-        .single();
-
-      if (error) throw error;
-      setConversationId(data.id);
-      console.log("Created web chat conversation:", data.id);
-    } catch (error) {
-      console.error("Error creating conversation:", error);
-    }
-  };
-
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !conversationId) return;
+    if (!input.trim() || isLoading) return;
 
     const userMessage: Message = { role: "user", content: input };
     setMessages((prev) => [...prev, userMessage]);
@@ -62,40 +40,19 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
     setIsLoading(true);
 
     try {
-      // Save user message to database
-      const { error: userMsgError } = await supabase.from("messages").insert({
-        conversation_id: conversationId,
-        role: "user",
-        content: userMessage.content,
-        platform: "web",
-      });
-
-      if (userMsgError) {
-        console.error("Error saving user message:", userMsgError);
-      }
-
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vapi-text-chat`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/web-chat`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ 
-            messages: [...messages, userMessage],
-            conversationId
-          }),
+          body: JSON.stringify({ messages: [...messages, userMessage] }),
         }
       );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
-        throw new Error(`API returned ${response.status}: ${errorText}`);
-      }
-      
-      if (!response.body) throw new Error("No response body");
+      if (!response.ok || !response.body) throw new Error("Stream failed");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -131,30 +88,12 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
           }
         }
       }
-
-      // Save AI message to database
-      if (assistantContent && conversationId) {
-        const { error: aiMsgError } = await supabase.from("messages").insert({
-          conversation_id: conversationId,
-          role: "ai",
-          content: assistantContent,
-          platform: "web",
-        });
-
-        if (aiMsgError) {
-          console.error("Error saving AI message:", aiMsgError);
-        }
-      }
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages((prev) => {
-        // Remove the empty assistant message if it exists
-        const filtered = prev.filter(m => m.content !== "");
-        return [
-          ...filtered,
-          { role: "assistant", content: "Sorry, message sending failed. Please try again." },
-        ];
-      });
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Sorry, I encountered an error. Please try again." },
+      ]);
     } finally {
       setIsLoading(false);
     }

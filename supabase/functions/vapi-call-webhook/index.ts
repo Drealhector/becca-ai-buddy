@@ -68,7 +68,7 @@ serve(async (req) => {
       const { error: historyError } = await supabase.from("call_history").insert({
         type: "incoming",
         number: "Web Call",
-        topic: "Call for DREALHECTOR",
+        topic: "Call with DREALHECTOR",
         duration_minutes: Math.ceil(duration / 60),
         timestamp: new Date().toISOString(),
         conversation_id: callId,

@@ -20,7 +20,6 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,16 +39,6 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
   const initializeChat = async () => {
     setIsLoading(true);
     try {
-      // Create conversation
-      const { data: conversation, error: convError } = await supabase
-        .from("conversations")
-        .insert({ platform: "web" })
-        .select()
-        .single();
-
-      if (convError) throw convError;
-      setConversationId(conversation.id);
-
       // Fetch the greeting/personality from dashboard customizations
       const { data: customData } = await supabase
         .from("customizations")
@@ -74,7 +63,7 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !conversationId) return;
+    if (!inputValue.trim()) return;
 
     const userMessage = inputValue.trim();
     setInputValue("");
@@ -82,84 +71,21 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
     setIsLoading(true);
 
     try {
-      // Save user message to database
-      await supabase.from("messages").insert({
-        conversation_id: conversationId,
-        role: "user",
-        content: userMessage,
-        platform: "web",
+      // Send message to Vapi through edge function
+      const { data, error } = await supabase.functions.invoke('vapi-text-chat', {
+        body: { 
+          message: userMessage,
+          conversationHistory: messages.map(m => ({
+            role: m.role,
+            content: m.content
+          }))
+        }
       });
 
-      // Prepare messages array for Vapi
-      const messageHistory = messages.map(m => ({
-        role: m.role,
-        content: m.content
-      }));
-      messageHistory.push({ role: "user", content: userMessage });
+      if (error) throw error;
 
-      // Send message to Vapi through edge function
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vapi-text-chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ 
-            messages: messageHistory,
-            conversationId
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
-        throw new Error(`Failed to send message`);
-      }
-
-      if (!response.body) throw new Error("No response body");
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantContent = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") break;
-
-          try {
-            const parsed = JSON.parse(data);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              assistantContent += content;
-            }
-          } catch (e) {
-            // Ignore parse errors
-          }
-        }
-      }
-
-      // Add the complete assistant response
-      if (assistantContent) {
-        addMessage("assistant", assistantContent);
-        
-        // Save AI message to database
-        await supabase.from("messages").insert({
-          conversation_id: conversationId,
-          role: "ai",
-          content: assistantContent,
-          platform: "web",
-        });
+      if (data?.response) {
+        addMessage("assistant", data.response);
       }
     } catch (error) {
       console.error("Error sending message:", error);

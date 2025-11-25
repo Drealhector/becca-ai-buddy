@@ -12,58 +12,51 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    console.log('Received body:', body);
+    const { message, conversationHistory } = await req.json();
     
-    const { messages, conversationId } = body;
+    const VAPI_PRIVATE_KEY = Deno.env.get('VAPI_PRIVATE_KEY');
+    const ASSISTANT_ID = '6c411909-067b-4ce3-ad02-10299109dc64';
     
-    if (!messages || !Array.isArray(messages)) {
-      console.error('Invalid messages received:', messages);
-      return new Response(
-        JSON.stringify({ error: 'Messages array is required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-    
-    if (messages.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Messages array cannot be empty' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-    
-    const VAPI_PRIVATE_KEY = Deno.env.get('VAPI_WEB_PRIVATE_KEY');
-    const VAPI_ASSISTANT_ID = Deno.env.get('VAPI_WEB_ASSISTANT_ID');
-    
-    if (!VAPI_PRIVATE_KEY || !VAPI_ASSISTANT_ID) {
-      console.error('Missing VAPI credentials');
-      return new Response(
-        JSON.stringify({ error: 'VAPI credentials not configured' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
+    if (!VAPI_PRIVATE_KEY) {
+      throw new Error('VAPI_PRIVATE_KEY not configured');
     }
 
-    console.log('Processing chat with', messages.length, 'messages for conversation:', conversationId);
+    // Get customization data for context
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
 
-    // Get the latest user message
-    const latestUserMessage = messages[messages.length - 1];
+    const { data: customData } = await supabase
+      .from("customizations")
+      .select("business_name, assistant_personality, greeting, faqs")
+      .limit(1)
+      .maybeSingle();
+
+    // Build context from customization with strong conversational instructions
+    let contextPrompt = `CRITICAL INSTRUCTIONS:
+- Speak naturally like a real person in casual conversation
+- NEVER sound like marketing copy or formal descriptions
+- NEVER use phrases like "specializing in" or "quite an impressive setup"
+- Just chat like you're talking to a friend
+- Keep it brief and natural, 1-2 sentences unless asked for more
+- Never use hyphens (-), use periods or commas instead
+
+`;
     
-    if (!latestUserMessage || latestUserMessage.role !== 'user') {
-      throw new Error('No user message found');
+    if (customData) {
+      if (customData.business_name) {
+        contextPrompt += `Business name: ${customData.business_name}\n`;
+      }
+      if (customData.assistant_personality) {
+        contextPrompt += `Your personality: ${customData.assistant_personality}\n`;
+      }
+      if (customData.faqs) {
+        contextPrompt += `FAQs you can reference: ${JSON.stringify(customData.faqs)}\n`;
+      }
     }
 
-    console.log('User input:', latestUserMessage.content);
-
-    // Call Vapi's chat endpoint for text-based chat
+    // Call Vapi API for text-based chat
     const response = await fetch('https://api.vapi.ai/chat', {
       method: 'POST',
       headers: {
@@ -71,40 +64,30 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        assistantId: VAPI_ASSISTANT_ID,
-        input: latestUserMessage.content
+        assistantId: ASSISTANT_ID,
+        input: message
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Vapi API error:', response.status, errorText);
-      throw new Error(`Vapi API error: ${response.status} - ${errorText}`);
+      throw new Error(`Vapi API error: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('Vapi response:', JSON.stringify(data));
     
-    // Extract response from Vapi's output array
-    const responseText = data.output?.[0]?.content || data.message || "I'm here to help!";
+    // Extract the assistant's response from Vapi's output
+    const assistantResponse = data.output?.[0]?.content || data.message || "I'm here to help!";
     
-    // Return streaming response in SSE format for frontend compatibility
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      start(controller) {
-        const sseData = `data: ${JSON.stringify({
-          choices: [{
-            delta: { content: responseText }
-          }]
-        })}\n\n`;
-        controller.enqueue(encoder.encode(sseData));
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        controller.close();
+    return new Response(
+      JSON.stringify({ response: assistantResponse }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
       }
-    });
-
-    return new Response(stream, {
-      headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
-    });
+    );
   } catch (error) {
     console.error('Error in vapi-text-chat:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
