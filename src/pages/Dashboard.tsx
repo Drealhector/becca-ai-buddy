@@ -39,8 +39,11 @@ const Dashboard = () => {
     const businessKey = sessionStorage.getItem("becca_business_key");
 
     if (businessName && businessKey) {
-      // User is logged in with business key
-      setLoading(false);
+      // User is logged in with business key - create a pseudo-user
+      if (mounted) {
+        setUser({ id: businessKey, email: `${businessName}@business` } as User);
+        setLoading(false);
+      }
       return;
     }
 
