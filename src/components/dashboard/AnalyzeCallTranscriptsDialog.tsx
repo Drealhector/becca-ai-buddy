@@ -42,8 +42,9 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
   const [transcriptCount, setTranscriptCount] = useState(0);
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [customQuestion, setCustomQuestion] = useState("");
-  const [analysis, setAnalysis] = useState<string>("");
+  const [analysis, setAnalysis] = useState<any>(null);
   const [isAsking, setIsAsking] = useState(false);
+  const [expandedTopics, setExpandedTopics] = useState<Set<number>>(new Set());
 
   const handleCallTypeToggle = (typeId: string) => {
     setSelectedCallTypes(prev =>
@@ -149,7 +150,8 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
     }
 
     setIsAsking(true);
-    setAnalysis("");
+    setAnalysis(null);
+    setExpandedTopics(new Set());
 
     try {
       const { data, error } = await supabase.functions.invoke("analyze-conversations", {
@@ -157,7 +159,8 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
           messages: transcripts.map(t => ({
             content: t.transcript_text,
             timestamp: t.timestamp,
-            role: "transcript"
+            role: "transcript",
+            platform: "Phone Call"
           })), 
           question 
         },
@@ -197,7 +200,20 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
     setTranscripts([]);
     setTranscriptCount(0);
     setCustomQuestion("");
-    setAnalysis("");
+    setAnalysis(null);
+    setExpandedTopics(new Set());
+  };
+
+  const toggleTopic = (index: number) => {
+    setExpandedTopics(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
   };
 
   return (
@@ -398,11 +414,84 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
 
                 {/* Analysis Result */}
                 {analysis && (
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     <Label className="text-base font-semibold">Analysis Result</Label>
-                    <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap">
-                      {analysis}
+                    
+                    {/* Summary */}
+                    <div className="bg-primary/10 p-4 rounded-lg">
+                      <p className="text-sm font-medium mb-2">Summary</p>
+                      <p className="text-sm">{analysis.summary || "No summary available"}</p>
+                      {analysis.conversationCount > 0 && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Analyzed {analysis.conversationCount} call transcript{analysis.conversationCount !== 1 ? 's' : ''}
+                        </p>
+                      )}
                     </div>
+
+                    {/* Topics */}
+                    {analysis.topics && analysis.topics.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium">Key Topics</p>
+                        {analysis.topics.map((topic: any, idx: number) => (
+                          <div key={idx} className="border rounded-lg overflow-hidden">
+                            <div className="p-4 bg-muted/50">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <p className="font-medium">{topic.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Mentioned in {topic.count} call{topic.count !== 1 ? 's' : ''}
+                                  </p>
+                                </div>
+                                {topic.mentions && topic.mentions.length > 0 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => toggleTopic(idx)}
+                                  >
+                                    {expandedTopics.has(idx) ? "Hide Details" : "View Details"}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {expandedTopics.has(idx) && topic.mentions && (
+                              <div className="p-4 space-y-3 bg-background">
+                                {topic.mentions.map((mention: any, mIdx: number) => (
+                                  <div key={mIdx} className="border-l-2 border-primary pl-3 space-y-1">
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <span>{mention.platform || "Phone Call"}</span>
+                                      <span>•</span>
+                                      <span>{new Date(mention.timestamp).toLocaleString()}</span>
+                                      {mention.sender && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{mention.sender}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                    <p className="text-sm">{mention.snippet}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Insights */}
+                    {analysis.insights && analysis.insights.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Key Insights</p>
+                        <ul className="space-y-2">
+                          {analysis.insights.map((insight: string, idx: number) => (
+                            <li key={idx} className="text-sm bg-muted/30 p-3 rounded-lg">
+                              {insight}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
