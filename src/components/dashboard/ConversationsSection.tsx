@@ -35,11 +35,10 @@ const ConversationsSection = () => {
   const fetchConversations = async () => {
     try {
       if (selectedPlatform === "all") {
-        // Fetch all conversations across all platforms (exclude web if needed)
+        // Fetch all conversations across all platforms
         const { data: allConvos } = await supabase
           .from("conversations")
           .select("*")
-          .neq("platform", "web") // Exclude web chat
           .order("start_time", { ascending: false })
           .limit(20);
 
