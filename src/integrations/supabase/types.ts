@@ -18,7 +18,6 @@ export type Database = {
         Row: {
           agent_id: string
           assistant_id: string
-          business_id: string | null
           created_at: string | null
           id: string
           product_id: string | null
@@ -28,7 +27,6 @@ export type Database = {
         Insert: {
           agent_id: string
           assistant_id: string
-          business_id?: string | null
           created_at?: string | null
           id?: string
           product_id?: string | null
@@ -38,7 +36,6 @@ export type Database = {
         Update: {
           agent_id?: string
           assistant_id?: string
-          business_id?: string | null
           created_at?: string | null
           id?: string
           product_id?: string | null
@@ -46,13 +43,6 @@ export type Database = {
           web_url?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "ai_agents_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "ai_agents_product_id_fkey"
             columns: ["product_id"]
@@ -145,7 +135,6 @@ export type Database = {
       }
       call_history: {
         Row: {
-          business_id: string | null
           conversation_id: string | null
           duration_minutes: number | null
           id: string
@@ -155,7 +144,6 @@ export type Database = {
           type: string | null
         }
         Insert: {
-          business_id?: string | null
           conversation_id?: string | null
           duration_minutes?: number | null
           id?: string
@@ -165,7 +153,6 @@ export type Database = {
           type?: string | null
         }
         Update: {
-          business_id?: string | null
           conversation_id?: string | null
           duration_minutes?: number | null
           id?: string
@@ -174,19 +161,10 @@ export type Database = {
           topic?: string | null
           type?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "call_history_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       connections: {
         Row: {
-          business_id: string | null
           created_at: string | null
           facebook_n8n_webhook_url: string | null
           id: string
@@ -200,7 +178,6 @@ export type Database = {
           whatsapp_n8n_webhook_url: string | null
         }
         Insert: {
-          business_id?: string | null
           created_at?: string | null
           facebook_n8n_webhook_url?: string | null
           id?: string
@@ -214,7 +191,6 @@ export type Database = {
           whatsapp_n8n_webhook_url?: string | null
         }
         Update: {
-          business_id?: string | null
           created_at?: string | null
           facebook_n8n_webhook_url?: string | null
           id?: string
@@ -227,19 +203,10 @@ export type Database = {
           vapi_widget_code?: string | null
           whatsapp_n8n_webhook_url?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "connections_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       conversations: {
         Row: {
-          business_id: string | null
           end_time: string | null
           id: string
           platform: string | null
@@ -247,7 +214,6 @@ export type Database = {
           summary: string | null
         }
         Insert: {
-          business_id?: string | null
           end_time?: string | null
           id?: string
           platform?: string | null
@@ -255,27 +221,17 @@ export type Database = {
           summary?: string | null
         }
         Update: {
-          business_id?: string | null
           end_time?: string | null
           id?: string
           platform?: string | null
           start_time?: string | null
           summary?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "conversations_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       customer_interactions: {
         Row: {
           assistant_id: string
-          business_id: string | null
           call_id: string
           duration: number | null
           id: string
@@ -286,7 +242,6 @@ export type Database = {
         }
         Insert: {
           assistant_id: string
-          business_id?: string | null
           call_id: string
           duration?: number | null
           id?: string
@@ -297,7 +252,6 @@ export type Database = {
         }
         Update: {
           assistant_id?: string
-          business_id?: string | null
           call_id?: string
           duration?: number | null
           id?: string
@@ -307,13 +261,6 @@ export type Database = {
           transcript?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "customer_interactions_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "customer_interactions_product_id_fkey"
             columns: ["product_id"]
@@ -329,7 +276,6 @@ export type Database = {
           background_image_url: string | null
           business_description: string | null
           business_hours: string | null
-          business_id: string | null
           business_industry: string | null
           business_name: string | null
           chat_logo_url: string | null
@@ -357,7 +303,6 @@ export type Database = {
           background_image_url?: string | null
           business_description?: string | null
           business_hours?: string | null
-          business_id?: string | null
           business_industry?: string | null
           business_name?: string | null
           chat_logo_url?: string | null
@@ -385,7 +330,6 @@ export type Database = {
           background_image_url?: string | null
           business_description?: string | null
           business_hours?: string | null
-          business_id?: string | null
           business_industry?: string | null
           business_name?: string | null
           chat_logo_url?: string | null
@@ -408,19 +352,10 @@ export type Database = {
           voices?: Json | null
           whatsapp_username?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "customizations_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       messages: {
         Row: {
-          business_id: string | null
           content: string | null
           conversation_id: string | null
           id: string
@@ -430,7 +365,6 @@ export type Database = {
           timestamp: string | null
         }
         Insert: {
-          business_id?: string | null
           content?: string | null
           conversation_id?: string | null
           id?: string
@@ -440,7 +374,6 @@ export type Database = {
           timestamp?: string | null
         }
         Update: {
-          business_id?: string | null
           content?: string | null
           conversation_id?: string | null
           id?: string
@@ -450,13 +383,6 @@ export type Database = {
           timestamp?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "messages_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -469,7 +395,6 @@ export type Database = {
       product_media: {
         Row: {
           assistant_id: string
-          business_id: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -480,7 +405,6 @@ export type Database = {
         }
         Insert: {
           assistant_id: string
-          business_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -491,7 +415,6 @@ export type Database = {
         }
         Update: {
           assistant_id?: string
-          business_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -501,13 +424,6 @@ export type Database = {
           product_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "product_media_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "product_media_product_id_fkey"
             columns: ["product_id"]
@@ -519,7 +435,6 @@ export type Database = {
       }
       products: {
         Row: {
-          business_id: string | null
           category: string | null
           created_at: string
           currency: string | null
@@ -535,7 +450,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          business_id?: string | null
           category?: string | null
           created_at?: string
           currency?: string | null
@@ -551,7 +465,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          business_id?: string | null
           category?: string | null
           created_at?: string
           currency?: string | null
@@ -566,20 +479,11 @@ export type Database = {
           stock?: number | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "products_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       sales: {
         Row: {
           amount: number | null
-          business_id: string | null
           conversation_id: string | null
           description: string | null
           id: string
@@ -587,7 +491,6 @@ export type Database = {
         }
         Insert: {
           amount?: number | null
-          business_id?: string | null
           conversation_id?: string | null
           description?: string | null
           id?: string
@@ -595,20 +498,12 @@ export type Database = {
         }
         Update: {
           amount?: number | null
-          business_id?: string | null
           conversation_id?: string | null
           description?: string | null
           id?: string
           timestamp?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "sales_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "sales_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -620,7 +515,6 @@ export type Database = {
       }
       toggles: {
         Row: {
-          business_id: string | null
           created_at: string | null
           facebook_on: boolean | null
           id: string
@@ -631,7 +525,6 @@ export type Database = {
           whatsapp_on: boolean | null
         }
         Insert: {
-          business_id?: string | null
           created_at?: string | null
           facebook_on?: boolean | null
           id?: string
@@ -642,7 +535,6 @@ export type Database = {
           whatsapp_on?: boolean | null
         }
         Update: {
-          business_id?: string | null
           created_at?: string | null
           facebook_on?: boolean | null
           id?: string
@@ -652,19 +544,10 @@ export type Database = {
           updated_at?: string | null
           whatsapp_on?: boolean | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "toggles_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       transcripts: {
         Row: {
-          business_id: string | null
           caller_info: string | null
           conversation_id: string | null
           id: string
@@ -673,7 +556,6 @@ export type Database = {
           transcript_text: string | null
         }
         Insert: {
-          business_id?: string | null
           caller_info?: string | null
           conversation_id?: string | null
           id?: string
@@ -682,7 +564,6 @@ export type Database = {
           transcript_text?: string | null
         }
         Update: {
-          business_id?: string | null
           caller_info?: string | null
           conversation_id?: string | null
           id?: string
@@ -690,15 +571,7 @@ export type Database = {
           timestamp?: string | null
           transcript_text?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "transcripts_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_onboarding: {
         Row: {
@@ -740,7 +613,6 @@ export type Database = {
       }
       wallet: {
         Row: {
-          business_id: string | null
           created_at: string | null
           history: Json | null
           id: string
@@ -748,7 +620,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          business_id?: string | null
           created_at?: string | null
           history?: Json | null
           id?: string
@@ -756,22 +627,13 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          business_id?: string | null
           created_at?: string | null
           history?: Json | null
           id?: string
           total?: number | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "wallet_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       whatsapp_messages: {
         Row: {
@@ -802,7 +664,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_user_business_id: { Args: never; Returns: string }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

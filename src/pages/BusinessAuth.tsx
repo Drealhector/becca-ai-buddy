@@ -23,7 +23,7 @@ const BusinessAuth = () => {
       // Verify business name and key
       const { data: keyData, error: keyError } = await supabase
         .from("business_keys")
-        .select("business_name, is_active, business_key")
+        .select("business_name, is_active")
         .eq("business_name", businessName.trim())
         .eq("business_key", businessKey.trim())
         .eq("is_active", true)
@@ -41,50 +41,7 @@ const BusinessAuth = () => {
         return;
       }
 
-      // Create a unique email for this business
-      const businessEmail = `${businessKey.toLowerCase().replace(/[^a-z0-9]/g, '')}@becca.business`;
-      const businessPassword = businessKey; // Use business key as password
-
-      // Try to sign in first
-      let authResult = await supabase.auth.signInWithPassword({
-        email: businessEmail,
-        password: businessPassword,
-      });
-
-      // If sign in fails, create new account
-      if (authResult.error) {
-        console.log("Sign in failed, creating new account");
-        authResult = await supabase.auth.signUp({
-          email: businessEmail,
-          password: businessPassword,
-        });
-
-        if (authResult.error) {
-          throw authResult.error;
-        }
-      }
-
-      if (!authResult.data.user) {
-        throw new Error("Failed to authenticate");
-      }
-
-      // Store business_key in user_onboarding table
-      const { error: onboardingError } = await supabase
-        .from("user_onboarding")
-        .upsert({
-          user_id: authResult.data.user.id,
-          business_key: keyData.business_key,
-          onboarding_completed: true,
-          completed_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id'
-        });
-
-      if (onboardingError) {
-        console.error("Error updating onboarding:", onboardingError);
-      }
-
-      // Store business info in session storage for quick access
+      // Store business info in session storage
       sessionStorage.setItem("becca_business_name", keyData.business_name);
       sessionStorage.setItem("becca_business_key", businessKey);
 

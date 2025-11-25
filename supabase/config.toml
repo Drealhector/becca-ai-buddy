@@ -71,6 +71,3 @@ verify_jwt = false
 
 [functions.analyze-conversations]
 verify_jwt = false
-
-[functions.analyze-calls]
-verify_jwt = false

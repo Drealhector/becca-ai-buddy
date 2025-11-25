@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Brain, MessageSquare } from "lucide-react";
+import { Brain } from "lucide-react";
 import { AnalyzeConversationsDialog } from "./AnalyzeConversationsDialog";
 
 const ConversationsSection = () => {
@@ -112,10 +112,9 @@ const ConversationsSection = () => {
             variant="outline"
             size="sm"
             onClick={() => setAnalyzeDialogOpen(true)}
-            className="gap-1"
+            className="gap-2"
           >
             <Brain className="h-4 w-4" />
-            <MessageSquare className="h-4 w-4" />
             Analyze
           </Button>
         </div>
