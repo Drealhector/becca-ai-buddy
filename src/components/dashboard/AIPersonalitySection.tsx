@@ -99,15 +99,19 @@ export const AIPersonalitySection = () => {
         className="min-h-[120px] mb-4"
       />
       <div className="flex gap-2">
-        <Button onClick={handleSave} disabled={loading}>
+        <Button 
+          onClick={handleSave} 
+          disabled={loading}
+          className="h-8 px-3 text-xs sm:h-10 sm:px-4 sm:text-sm"
+        >
           {loading ? "Saving..." : "Save Personality"}
         </Button>
         <Button 
           variant="outline" 
           onClick={() => setShowCreatorDialog(true)}
-          className="gap-2"
+          className="h-8 px-3 text-xs gap-1 sm:h-10 sm:px-4 sm:text-sm sm:gap-2"
         >
-          <Sparkles className="h-4 w-4" />
+          <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
           Create Character
         </Button>
       </div>
