@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Brain, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { AnalyzeCallsDialog } from "./AnalyzeCallsDialog";
 
 const TranscriptsSection = () => {
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchTranscripts();
@@ -73,7 +77,20 @@ const TranscriptsSection = () => {
 
   return (
     <Card className="p-6">
-      <h3 className="text-lg font-semibold mb-4">Call Transcripts</h3>
+      <CardHeader className="px-0 pt-0">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Call Transcripts</h3>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={() => setAnalyzeDialogOpen(true)}
+          >
+            <Brain className="h-4 w-4 mr-1" />
+            <Phone className="h-4 w-4 mr-2" />
+            Analyze
+          </Button>
+        </div>
+      </CardHeader>
       <div className="space-y-4 max-h-96 overflow-y-auto">
         {transcripts.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
@@ -141,6 +158,11 @@ const TranscriptsSection = () => {
           ))
         )}
       </div>
+
+      <AnalyzeCallsDialog
+        open={analyzeDialogOpen}
+        onOpenChange={setAnalyzeDialogOpen}
+      />
     </Card>
   );
 };
