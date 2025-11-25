@@ -31,13 +31,32 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // No auth required - use demo user
-    setUser({ id: "demo-user" } as User);
+    checkUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+      if (!session?.user) {
+        navigate("/auth");
+      }
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, [navigate]);
+
+  const checkUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setUser(user);
     setLoading(false);
-  }, []);
+    if (!user) {
+      navigate("/auth");
+    }
+  };
 
   const handleSignOut = async () => {
-    navigate("/");
+    await supabase.auth.signOut();
+    navigate("/auth");
   };
 
   const scrollToSection = (id: string) => {
