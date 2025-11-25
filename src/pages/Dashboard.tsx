@@ -15,6 +15,9 @@ import VoiceManagementSection from "@/components/dashboard/VoiceManagementSectio
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
 import { PhoneConnectionDialog } from "@/components/dashboard/PhoneConnectionDialog";
 import FloatingVapiAssistant from "@/components/dashboard/FloatingVapiAssistant";
+import ConnectionStatus from "@/components/dashboard/ConnectionStatus";
+import TranscriptsSection from "@/components/dashboard/TranscriptsSection";
+import WalletSection from "@/components/dashboard/WalletSection";
 import { Menu, LogOut, Phone, Link as LinkIcon, Settings, MessageSquare, Mic, Trash2 } from "lucide-react";
 
 
@@ -108,7 +111,10 @@ const Dashboard = () => {
   const sections = [
     { id: "master-switch", label: "Master Switch", icon: Settings },
     { id: "channels", label: "Channels", icon: MessageSquare },
+    { id: "connections", label: "Webhooks & Integrations", icon: LinkIcon },
     { id: "conversations", label: "Conversations", icon: MessageSquare },
+    { id: "transcripts", label: "Call Transcripts", icon: MessageSquare },
+    { id: "wallet", label: "Sales & Wallet", icon: Settings },
     { id: "logo-voice", label: "Logo & Voice", icon: Mic },
     { id: "ai-personality", label: "AI Personality", icon: MessageSquare },
     { id: "links", label: "Shareable Links", icon: LinkIcon },
@@ -301,10 +307,24 @@ const Dashboard = () => {
           <ChannelToggles />
         </div>
 
+        {/* Webhooks & Integrations */}
+        <div id="connections">
+          <ConnectionStatus />
+        </div>
 
         {/* Conversations */}
         <div id="conversations">
           <ConversationsSection />
+        </div>
+
+        {/* Call Transcripts */}
+        <div id="transcripts">
+          <TranscriptsSection />
+        </div>
+
+        {/* Wallet */}
+        <div id="wallet">
+          <WalletSection />
         </div>
 
         {/* Logo & Voice Management */}
