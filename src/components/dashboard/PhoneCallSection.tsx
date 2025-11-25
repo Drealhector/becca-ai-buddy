@@ -485,7 +485,9 @@ const PhoneCallSection = () => {
                   )}
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{call.number}</span>
+                      <span className="font-medium text-sm">
+                        {call.number || "Unknown caller"}
+                      </span>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -496,7 +498,7 @@ const PhoneCallSection = () => {
                       </Button>
                     </div>
                     <Badge variant="secondary">
-                      {call.duration_minutes || 0} min
+                      {call.duration_minutes ? `${call.duration_minutes.toFixed(1)} min` : "0 min"}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -545,7 +547,7 @@ const PhoneCallSection = () => {
                   )}
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{call.number}</span>
+                      <span className="font-medium text-sm">{call.number || "Customer"}</span>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -556,7 +558,7 @@ const PhoneCallSection = () => {
                       </Button>
                     </div>
                     <Badge variant="secondary">
-                      {call.duration_minutes || 0} min
+                      {call.duration_minutes ? `${call.duration_minutes.toFixed(1)} min` : "0 min"}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -576,7 +578,9 @@ const PhoneCallSection = () => {
       <Dialog open={showTranscriptDialog} onOpenChange={setShowTranscriptDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Call Transcript - {selectedCallTranscript?.number}</DialogTitle>
+            <DialogTitle>
+              Call Transcript - {selectedCallTranscript?.number || "Customer"}
+            </DialogTitle>
           </DialogHeader>
           <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-4">
