@@ -45,6 +45,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
   const [analysis, setAnalysis] = useState<any>(null);
   const [isAsking, setIsAsking] = useState(false);
   const [expandedTopics, setExpandedTopics] = useState<Set<number>>(new Set());
+  const [questionsExpanded, setQuestionsExpanded] = useState(true);
 
   const handleCallTypeToggle = (typeId: string) => {
     setSelectedCallTypes(prev =>
@@ -179,6 +180,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
 
   const handleTemplateQuestion = (question: string) => {
     setCustomQuestion(question);
+    setQuestionsExpanded(false);
     askQuestion(question);
   };
 
@@ -202,6 +204,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
     setCustomQuestion("");
     setAnalysis(null);
     setExpandedTopics(new Set());
+    setQuestionsExpanded(true);
   };
 
   const toggleTopic = (index: number) => {
@@ -231,7 +234,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
-          <div className="space-y-6">
+          <div className="space-y-4">
             {!analysisReady ? (
               <>
                 {/* Call Type Selection */}
@@ -355,112 +358,62 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
             ) : (
               <>
                 {/* Analysis Ready State */}
-                <div className="bg-primary/10 p-4 rounded-lg text-center space-y-2">
+                <div className="bg-primary/10 p-3 rounded-lg text-center space-y-2">
                   <div className="flex items-center justify-center gap-2">
-                    <Brain className="h-12 w-12 text-primary" />
-                    <Phone className="h-12 w-12 text-primary" />
+                    <Brain className="h-10 w-10 text-primary" />
+                    <Phone className="h-10 w-10 text-primary" />
                   </div>
-                  <h3 className="text-lg font-bold">THE BRAIN IS READY FOR ANALYSIS</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Analyzing {transcriptCount} call transcript(s) from {selectedCallTypes.join(", ")} calls
+                  <h3 className="text-base font-bold">THE BRAIN IS READY FOR ANALYSIS</h3>
+                  <p className="text-xs text-muted-foreground">
+                    {transcriptCount} call transcript(s) from {selectedCallTypes.join(", ")} calls
                   </p>
                   <Button variant="outline" size="sm" onClick={resetDialog}>
                     Start New Analysis
                   </Button>
                 </div>
 
-                {/* Question Templates */}
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold">Popular Questions</Label>
-                  <div className="grid gap-2">
-                    {questionTemplates.map((question, idx) => (
-                      <Button
-                        key={idx}
-                        variant="outline"
-                        className="justify-start text-left h-auto py-3"
-                        onClick={() => handleTemplateQuestion(question)}
-                        disabled={isAsking}
-                      >
-                        {question}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Custom Question */}
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold">Ask Your Own Question</Label>
-                  <Textarea
-                    placeholder="Type your custom question here..."
-                    value={customQuestion}
-                    onChange={(e) => setCustomQuestion(e.target.value)}
-                    rows={3}
-                  />
-                  <Button
-                    onClick={handleCustomQuestion}
-                    disabled={isAsking || !customQuestion.trim()}
-                    className="w-full"
-                  >
-                    {isAsking ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      "Get Answer"
-                    )}
-                  </Button>
-                </div>
-
-                {/* Analysis Result */}
+                {/* Analysis Result - Appears above questions/input */}
                 {analysis && (
-                  <div className="space-y-4">
-                    <Label className="text-base font-semibold">Analysis Result</Label>
-                    
-                    {/* Summary */}
-                    <div className="bg-primary/10 p-4 rounded-lg">
-                      <p className="text-sm font-medium mb-2">Summary</p>
+                  <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
+                    {/* Summary with conversational follow-up */}
+                    <div className="space-y-2">
                       <p className="text-sm">{analysis.summary || "No summary available"}</p>
                       {analysis.conversationCount > 0 && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Analyzed {analysis.conversationCount} call transcript{analysis.conversationCount !== 1 ? 's' : ''}
+                        <p className="text-xs text-muted-foreground">
+                          Based on {analysis.conversationCount} call transcript{analysis.conversationCount !== 1 ? 's' : ''}
                         </p>
                       )}
                     </div>
 
-                    {/* Topics */}
+                    {/* Topics with conversational prompt */}
                     {analysis.topics && analysis.topics.length > 0 && (
-                      <div className="space-y-3">
-                        <p className="text-sm font-medium">Key Topics</p>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Key Topics Found:</p>
                         {analysis.topics.map((topic: any, idx: number) => (
-                          <div key={idx} className="border rounded-lg overflow-hidden">
-                            <div className="p-4 bg-muted/50">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="font-medium">{topic.name}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Mentioned in {topic.count} call{topic.count !== 1 ? 's' : ''}
-                                  </p>
-                                </div>
-                                {topic.mentions && topic.mentions.length > 0 && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => toggleTopic(idx)}
-                                  >
-                                    {expandedTopics.has(idx) ? "Hide Details" : "View Details"}
-                                  </Button>
-                                )}
+                          <div key={idx} className="space-y-2">
+                            <div className="flex items-center justify-between bg-background p-2 rounded">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">{topic.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Mentioned in {topic.count} call{topic.count !== 1 ? 's' : ''}
+                                </p>
                               </div>
+                              {topic.mentions && topic.mentions.length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleTopic(idx)}
+                                >
+                                  {expandedTopics.has(idx) ? "Hide" : "See where & when"}
+                                </Button>
+                              )}
                             </div>
                             
                             {expandedTopics.has(idx) && topic.mentions && (
-                              <div className="p-4 space-y-3 bg-background">
+                              <div className="pl-4 space-y-2">
                                 {topic.mentions.map((mention: any, mIdx: number) => (
-                                  <div key={mIdx} className="border-l-2 border-primary pl-3 space-y-1">
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                      <span>{mention.platform || "Phone Call"}</span>
-                                      <span>•</span>
+                                  <div key={mIdx} className="border-l-2 border-primary pl-3 py-1 bg-background rounded-r">
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                                       <span>{new Date(mention.timestamp).toLocaleString()}</span>
                                       {mention.sender && (
                                         <>
@@ -469,7 +422,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                                         </>
                                       )}
                                     </div>
-                                    <p className="text-sm">{mention.snippet}</p>
+                                    <p className="text-xs">{mention.snippet}</p>
                                   </div>
                                 ))}
                               </div>
@@ -482,18 +435,93 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                     {/* Insights */}
                     {analysis.insights && analysis.insights.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Key Insights</p>
-                        <ul className="space-y-2">
+                        <p className="text-sm font-medium">Key Insights:</p>
+                        <ul className="space-y-1">
                           {analysis.insights.map((insight: string, idx: number) => (
-                            <li key={idx} className="text-sm bg-muted/30 p-3 rounded-lg">
-                              {insight}
+                            <li key={idx} className="text-xs bg-background p-2 rounded">
+                              • {insight}
                             </li>
                           ))}
                         </ul>
                       </div>
                     )}
+
+                    <p className="text-xs text-muted-foreground italic mt-3">
+                      Have other questions? Use the question templates below or type your own.
+                    </p>
                   </div>
                 )}
+
+                {/* Questions and Input Section */}
+                <div className={cn("flex gap-3", analysis && !questionsExpanded && "items-start")}>
+                  {/* Question Templates - Collapsible */}
+                  <div className={cn(
+                    "transition-all duration-200",
+                    questionsExpanded ? "flex-1" : (analysis ? "w-[45%]" : "w-auto")
+                  )}>
+                    {questionsExpanded ? (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-semibold">Popular Questions</Label>
+                        <div className="grid gap-2">
+                          {questionTemplates.map((question, idx) => (
+                            <Button
+                              key={idx}
+                              variant="outline"
+                              className="justify-start text-left h-auto py-2 text-xs"
+                              onClick={() => handleTemplateQuestion(question)}
+                              disabled={isAsking}
+                            >
+                              {question}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => setQuestionsExpanded(true)}
+                        className="h-full min-h-[120px]"
+                      >
+                        <div className="text-center">
+                          <p className="text-sm font-semibold mb-1">Questions</p>
+                          <p className="text-xs text-muted-foreground">{questionTemplates.length} templates</p>
+                        </div>
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Custom Question Input */}
+                  {(questionsExpanded || analysis) && (
+                    <div className={cn(
+                      "space-y-2 transition-all duration-200",
+                      questionsExpanded || !analysis ? "flex-1" : "flex-1"
+                    )}>
+                      <Label className="text-sm font-semibold">Ask Your Own Question</Label>
+                      <Textarea
+                        placeholder="Type your custom question here..."
+                        value={customQuestion}
+                        onChange={(e) => setCustomQuestion(e.target.value)}
+                        rows={3}
+                        className="resize-none"
+                      />
+                      <Button
+                        onClick={handleCustomQuestion}
+                        disabled={isAsking || !customQuestion.trim()}
+                        className="w-full"
+                        size="sm"
+                      >
+                        {isAsking ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          "Get Answer"
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
