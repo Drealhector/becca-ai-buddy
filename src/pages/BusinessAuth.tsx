@@ -41,6 +41,24 @@ const BusinessAuth = () => {
         return;
       }
 
+      // Sign into Supabase with the business credentials
+      const businessEmail = `${businessKey.trim()}@becca.business`;
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: businessEmail,
+        password: businessKey.trim(),
+      });
+
+      if (authError) {
+        console.error("Supabase auth error:", authError);
+        toast({
+          title: "Authentication Error",
+          description: "Could not authenticate with database.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       // Store business info in session storage
       sessionStorage.setItem("becca_business_name", keyData.business_name);
       sessionStorage.setItem("becca_business_key", businessKey);
