@@ -738,38 +738,6 @@ export type Database = {
           },
         ]
       }
-      user_roles: {
-        Row: {
-          business_id: string
-          created_at: string | null
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          business_id: string
-          created_at?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          business_id?: string
-          created_at?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_roles_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "business_keys"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       wallet: {
         Row: {
           business_id: string | null
@@ -835,19 +803,9 @@ export type Database = {
     }
     Functions: {
       get_user_business_id: { Args: never; Returns: string }
-      get_user_business_ids: {
-        Args: { _user_id: string }
-        Returns: {
-          business_id: string
-        }[]
-      }
-      user_has_business_access: {
-        Args: { _business_id: string; _user_id: string }
-        Returns: boolean
-      }
     }
     Enums: {
-      app_role: "admin" | "user"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -974,8 +932,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      app_role: ["admin", "user"],
-    },
+    Enums: {},
   },
 } as const

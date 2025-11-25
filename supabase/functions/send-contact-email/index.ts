@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -9,14 +8,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const contactFormSchema = z.object({
-  fullName: z.string().trim().min(1, "Name is required").max(100, "Name too long"),
-  email: z.string().email("Invalid email").max(255, "Email too long"),
-  phoneNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number"),
-  role: z.string().min(1, "Role is required").max(100, "Role too long"),
-  callVolume: z.string().min(1, "Call volume is required").max(50, "Invalid call volume"),
-  customFunction: z.string().trim().min(1, "Custom function is required").max(2000, "Custom function too long"),
-});
+interface ContactFormData {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  role: string;
+  callVolume: string;
+  customFunction: string;
+}
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -25,22 +24,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const rawData = await req.json();
-    
-    // Validate input
-    const validationResult = contactFormSchema.safeParse(rawData);
-    if (!validationResult.success) {
-      console.error("Validation error:", validationResult.error);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Invalid input: " + validationResult.error.errors[0].message 
-        }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    const formData = validationResult.data;
+    const formData: ContactFormData = await req.json();
 
     const emailContent = `
 New BECCA Inquiry

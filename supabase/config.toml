@@ -1,7 +1,7 @@
 project_id = "rexjtzpuywmytxomlpwg"
 
 [functions.chat]
-verify_jwt = true
+verify_jwt = false
 
 [functions.get-personality]
 verify_jwt = false
@@ -10,7 +10,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.get-customizations]
-verify_jwt = true
+verify_jwt = false
 
 [functions.n8n-webhook]
 verify_jwt = false
@@ -19,25 +19,25 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.fetch-vapi-voices]
-verify_jwt = true
+verify_jwt = false
 
 [functions.web-chat]
 verify_jwt = false
 
 [functions.start-vapi-call]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-logo]
-verify_jwt = true
+verify_jwt = false
 
 [functions.create-product-agent]
-verify_jwt = true
+verify_jwt = false
 
 [functions.upload-product-media]
-verify_jwt = true
+verify_jwt = false
 
 [functions.delete-product-agent]
-verify_jwt = true
+verify_jwt = false
 
 [functions.log-interaction]
 verify_jwt = false
@@ -46,10 +46,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.create-character]
-verify_jwt = true
+verify_jwt = false
 
 [functions.update-call-hector-assistant]
-verify_jwt = true
+verify_jwt = false
 
 [functions.vapi-call-webhook]
 verify_jwt = false
@@ -58,19 +58,16 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.get-vapi-config]
-verify_jwt = true
+verify_jwt = false
 
 [functions.vapi-text-chat]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-greeting]
-verify_jwt = true
+verify_jwt = false
 
 [functions.web-search]
-verify_jwt = true
+verify_jwt = false
 
 [functions.analyze-conversations]
-verify_jwt = true
-
-[functions.send-contact-email]
 verify_jwt = false
