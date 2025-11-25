@@ -105,22 +105,21 @@ const ConversationsSection = () => {
 
   return (
     <>
-      <Card className="p-4 md:p-6">
-        <div className="flex items-center justify-between mb-3 md:mb-4">
-          <h3 className="text-base md:text-lg font-semibold">Conversations</h3>
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Conversations</h3>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setAnalyzeDialogOpen(true)}
-            className="gap-1 md:gap-2 h-9 px-3 text-xs md:text-sm touch-manipulation"
+            className="gap-2"
           >
-            <Brain className="h-3.5 w-3.5 md:h-4 md:w-4" />
-            <span className="hidden sm:inline">Analyze</span>
-            <span className="sm:hidden">AI</span>
+            <Brain className="h-4 w-4" />
+            Analyze
           </Button>
         </div>
       <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-        <SelectTrigger className="w-full mb-3 md:mb-4 h-10 text-sm md:text-base">
+        <SelectTrigger className="w-full mb-4">
           <SelectValue placeholder="Select platform" />
         </SelectTrigger>
         <SelectContent>

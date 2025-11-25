@@ -213,41 +213,39 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
       onOpenChange(open);
       if (!open) resetDialog();
     }}>
-      <DialogContent className="max-w-4xl max-h-[90vh] w-[calc(100vw-2rem)] md:w-full">
+      <DialogContent className="max-w-4xl max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base md:text-lg">
-            <Brain className="h-4 w-4 md:h-5 md:w-5" />
+          <DialogTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5" />
             Analyze Conversations
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-8rem)] pr-2 md:pr-4">
-          <div className="space-y-4 md:space-y-6">
+        <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
+          <div className="space-y-6">
             {!analysisReady ? (
               <>
                 {/* Platform Selection */}
-                <div className="space-y-2 md:space-y-3">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm md:text-base font-semibold">Select Platforms</Label>
+                    <Label className="text-base font-semibold">Select Platforms</Label>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleSelectAll}
-                      className="h-8 text-xs md:text-sm"
                     >
                       {selectedPlatforms.length === platforms.length ? "Deselect All" : "Select All"}
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 md:gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     {platforms.map((platform) => (
-                      <div key={platform.id} className="flex items-center space-x-2 touch-manipulation">
+                      <div key={platform.id} className="flex items-center space-x-2">
                         <Checkbox
                           id={platform.id}
                           checked={selectedPlatforms.includes(platform.id)}
                           onCheckedChange={() => handlePlatformToggle(platform.id)}
-                          className="h-5 w-5 md:h-4 md:w-4"
                         />
-                        <Label htmlFor={platform.id} className="cursor-pointer text-sm md:text-base">
+                        <Label htmlFor={platform.id} className="cursor-pointer">
                           {platform.label}
                         </Label>
                       </div>
@@ -256,18 +254,18 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
                 </div>
 
                 {/* Time Selection */}
-                <div className="space-y-2 md:space-y-3">
-                  <Label className="text-sm md:text-base font-semibold">Select Time Window (Max 24 hours)</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">Select Time Window (Max 24 hours)</Label>
+                  <div className="grid grid-cols-2 gap-4">
                     {/* Start DateTime */}
                     <div className="space-y-2">
-                      <Label className="text-sm md:text-base">Start</Label>
+                      <Label>Start</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full justify-start text-left font-normal h-10 md:h-auto text-sm md:text-base touch-manipulation",
+                              "w-full justify-start text-left font-normal",
                               !startDate && "text-muted-foreground"
                             )}
                           >
@@ -289,19 +287,19 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
                         type="time"
                         value={startTime}
                         onChange={(e) => setStartTime(e.target.value)}
-                        className="w-full px-3 py-2.5 md:py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-base md:text-sm touch-manipulation"
+                        className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                       />
                     </div>
 
                     {/* End DateTime */}
                     <div className="space-y-2">
-                      <Label className="text-sm md:text-base">End</Label>
+                      <Label>End</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full justify-start text-left font-normal h-10 md:h-auto text-sm md:text-base touch-manipulation",
+                              "w-full justify-start text-left font-normal",
                               !endDate && "text-muted-foreground"
                             )}
                           >
@@ -323,7 +321,7 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
                         type="time"
                         value={endTime}
                         onChange={(e) => setEndTime(e.target.value)}
-                        className="w-full px-3 py-2.5 md:py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-base md:text-sm touch-manipulation"
+                        className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                       />
                     </div>
                   </div>
@@ -332,42 +330,42 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
                 <Button
                   onClick={fetchMessages}
                   disabled={isFetchingData}
-                  className="w-full touch-manipulation h-11 md:h-10"
+                  className="w-full"
                   size="lg"
                 >
                   {isFetchingData ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span className="text-sm md:text-base">Fetching Messages...</span>
+                      Fetching Messages...
                     </>
                   ) : (
-                    <span className="text-sm md:text-base">Analyze Conversations</span>
+                    "Analyze Conversations"
                   )}
                 </Button>
               </>
             ) : (
               <>
                 {/* Analysis Ready State */}
-                <div className="bg-primary/10 p-3 md:p-4 rounded-lg text-center space-y-2">
-                  <Brain className="h-10 w-10 md:h-12 md:w-12 mx-auto text-primary" />
-                  <h3 className="text-base md:text-lg font-bold">THE BRAIN IS READY FOR ANALYSIS</h3>
-                  <p className="text-xs md:text-sm text-muted-foreground">
+                <div className="bg-primary/10 p-4 rounded-lg text-center space-y-2">
+                  <Brain className="h-12 w-12 mx-auto text-primary" />
+                  <h3 className="text-lg font-bold">THE BRAIN IS READY FOR ANALYSIS</h3>
+                  <p className="text-sm text-muted-foreground">
                     Analyzing {messageCount} messages from {selectedPlatforms.length} platform(s)
                   </p>
-                  <Button variant="outline" size="sm" onClick={resetDialog} className="h-9 text-xs md:text-sm touch-manipulation">
+                  <Button variant="outline" size="sm" onClick={resetDialog}>
                     Start New Analysis
                   </Button>
                 </div>
 
                 {/* Question Templates */}
-                <div className="space-y-2 md:space-y-3">
-                  <Label className="text-sm md:text-base font-semibold">Popular Questions</Label>
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">Popular Questions</Label>
                   <div className="grid gap-2">
                     {questionTemplates.map((question, idx) => (
                       <Button
                         key={idx}
                         variant="outline"
-                        className="justify-start text-left h-auto py-3 md:py-3 text-sm md:text-base touch-manipulation"
+                        className="justify-start text-left h-auto py-3"
                         onClick={() => handleTemplateQuestion(question)}
                         disabled={isAsking}
                       >
@@ -378,19 +376,18 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
                 </div>
 
                 {/* Custom Question */}
-                <div className="space-y-2 md:space-y-3">
-                  <Label className="text-sm md:text-base font-semibold">Ask Your Own Question</Label>
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">Ask Your Own Question</Label>
                   <Textarea
                     placeholder="Type your custom question here..."
                     value={customQuestion}
                     onChange={(e) => setCustomQuestion(e.target.value)}
                     rows={3}
-                    className="text-sm md:text-base touch-manipulation"
                   />
                   <Button
                     onClick={handleCustomQuestion}
                     disabled={isAsking || !customQuestion.trim()}
-                    className="w-full h-11 md:h-10 text-sm md:text-base touch-manipulation"
+                    className="w-full"
                   >
                     {isAsking ? (
                       <>
@@ -406,8 +403,8 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
                 {/* Analysis Result */}
                 {analysis && (
                   <div className="space-y-2">
-                    <Label className="text-sm md:text-base font-semibold">Analysis Result</Label>
-                    <div className="bg-muted p-3 md:p-4 rounded-lg whitespace-pre-wrap text-sm md:text-base">
+                    <Label className="text-base font-semibold">Analysis Result</Label>
+                    <div className="bg-muted p-4 rounded-lg whitespace-pre-wrap">
                       {analysis}
                     </div>
                   </div>
