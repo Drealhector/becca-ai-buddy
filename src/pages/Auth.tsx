@@ -15,17 +15,20 @@ const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
 
   useEffect(() => {
-    // Only check session on mount, don't auto-redirect
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check if already logged in
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       }
-    });
+    };
+    
+    checkSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       }
     });
     
@@ -52,13 +55,10 @@ const Auth = () => {
         if (error) throw error;
         toast.success("Account created! Please check your email.");
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        if (data.session) {
-          toast.success("Login successful!");
-          // Direct navigation after successful login
-          navigate("/dashboard");
-        }
+        toast.success("Login successful!");
+        // Let onAuthStateChange handle navigation
       }
     } catch (error: any) {
       toast.error(error.message || "Authentication failed");
