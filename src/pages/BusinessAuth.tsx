@@ -41,45 +41,7 @@ const BusinessAuth = () => {
         return;
       }
 
-      // Try to sign in with business credentials
-      const businessEmail = `${businessKey.trim()}@becca.business`;
-      let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: businessEmail,
-        password: businessKey.trim(),
-      });
-
-      // If user doesn't exist, create account
-      if (authError && authError.message.includes("Invalid")) {
-        console.log("Creating new account for business key");
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: businessEmail,
-          password: businessKey.trim(),
-        });
-
-        if (signUpError) {
-          console.error("Signup error:", signUpError);
-          toast({
-            title: "Setup Error",
-            description: "Could not set up your account. Please contact support.",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-
-        authData = signUpData;
-      } else if (authError) {
-        console.error("Auth error:", authError);
-        toast({
-          title: "Authentication Error",
-          description: authError.message,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Store business info in session storage
+      // Store business info in session storage (no Supabase auth needed)
       sessionStorage.setItem("becca_business_name", keyData.business_name);
       sessionStorage.setItem("becca_business_key", businessKey);
 
