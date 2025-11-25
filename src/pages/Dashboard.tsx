@@ -34,26 +34,33 @@ const Dashboard = () => {
   useEffect(() => {
     let mounted = true;
 
-    // Set up auth state listener FIRST
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
-        setSession(session);
-        setUser(session?.user || null);
-        // Only redirect to auth if explicitly signed out
-        if (_event === 'SIGNED_OUT') {
-          navigate("/auth");
-        }
-      }
-    });
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check for existing session first
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (mounted) {
         setSession(session);
         setUser(session?.user || null);
         setLoading(false);
-        // Only redirect if no session after initial check
-        if (!session?.user) {
+        
+        // Only redirect if definitely no session
+        if (!session) {
+          navigate("/auth");
+        }
+      }
+    };
+
+    checkSession();
+
+    // Set up auth state listener
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        setSession(session);
+        setUser(session?.user || null);
+        setLoading(false);
+        
+        // Handle sign out
+        if (_event === 'SIGNED_OUT') {
           navigate("/auth");
         }
       }
