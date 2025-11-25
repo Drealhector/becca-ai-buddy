@@ -6,9 +6,13 @@ const Welcome = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const name = sessionStorage.getItem("becca_business_name");
-    if (!name) {
-      navigate("/auth");
+    // Check if user has business session
+    const businessName = sessionStorage.getItem("becca_business_name");
+    const businessKey = sessionStorage.getItem("becca_business_key");
+    
+    if (!businessName || !businessKey) {
+      // No business session, redirect to business auth
+      navigate("/");
       return;
     }
   }, [navigate]);

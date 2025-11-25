@@ -34,7 +34,17 @@ const Dashboard = () => {
   useEffect(() => {
     let mounted = true;
 
-    // Check for existing session first
+    // Check for business key session FIRST (priority over email auth)
+    const businessName = sessionStorage.getItem("becca_business_name");
+    const businessKey = sessionStorage.getItem("becca_business_key");
+
+    if (businessName && businessKey) {
+      // User is logged in with business key
+      setLoading(false);
+      return;
+    }
+
+    // If no business key, check for Supabase auth session
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -43,9 +53,9 @@ const Dashboard = () => {
         setUser(session?.user || null);
         setLoading(false);
         
-        // Only redirect if definitely no session
-        if (!session) {
-          navigate("/auth");
+        // Only redirect if definitely no session of any kind
+        if (!session && !businessName && !businessKey) {
+          navigate("/");
         }
       }
     };
@@ -61,7 +71,10 @@ const Dashboard = () => {
         
         // Handle sign out
         if (_event === 'SIGNED_OUT') {
-          navigate("/auth");
+          // Clear business session too
+          sessionStorage.removeItem("becca_business_name");
+          sessionStorage.removeItem("becca_business_key");
+          navigate("/");
         }
       }
     });
@@ -73,8 +86,14 @@ const Dashboard = () => {
   }, [navigate]);
 
   const handleSignOut = async () => {
+    // Clear business session
+    sessionStorage.removeItem("becca_business_name");
+    sessionStorage.removeItem("becca_business_key");
+    
+    // Also sign out from Supabase if logged in that way
     await supabase.auth.signOut();
-    navigate("/auth");
+    
+    navigate("/");
   };
 
   const scrollToSection = (id: string) => {
