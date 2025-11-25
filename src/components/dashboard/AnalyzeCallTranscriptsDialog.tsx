@@ -180,15 +180,24 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
 
   const handleTemplateQuestion = (question: string) => {
     setCustomQuestion(question);
-    setQuestionsExpanded(false);
     askQuestion(question);
   };
 
   const handleCustomQuestion = () => {
     if (!customQuestion.trim()) {
-      toast.error("Please enter a question");
+      toast.error("Please enter a question or response");
       return;
     }
+    
+    // Check if user is responding to a "see where and when" prompt
+    const response = customQuestion.toLowerCase();
+    if ((response.includes("yes") || response.includes("show") || response.includes("see")) && analysis?.topics) {
+      // Expand all topics
+      setExpandedTopics(new Set(analysis.topics.map((_: any, idx: number) => idx)));
+      setCustomQuestion("");
+      return;
+    }
+    
     askQuestion(customQuestion);
   };
 
@@ -372,10 +381,9 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                   </Button>
                 </div>
 
-                {/* Analysis Result - Appears above questions/input */}
+                {/* Analysis Result - Conversational */}
                 {analysis && (
                   <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
-                    {/* Summary with conversational follow-up */}
                     <div className="space-y-2">
                       <p className="text-sm">{analysis.summary || "No summary available"}</p>
                       {analysis.conversationCount > 0 && (
@@ -385,34 +393,22 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                       )}
                     </div>
 
-                    {/* Topics with conversational prompt */}
                     {analysis.topics && analysis.topics.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Key Topics Found:</p>
+                        <p className="text-sm">
+                          I found {analysis.topics.length} key topic{analysis.topics.length !== 1 ? 's' : ''} discussed across the calls:
+                        </p>
                         {analysis.topics.map((topic: any, idx: number) => (
-                          <div key={idx} className="space-y-2">
-                            <div className="flex items-center justify-between bg-background p-2 rounded">
-                              <div className="flex-1">
-                                <p className="text-sm font-medium">{topic.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Mentioned in {topic.count} call{topic.count !== 1 ? 's' : ''}
-                                </p>
-                              </div>
-                              {topic.mentions && topic.mentions.length > 0 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => toggleTopic(idx)}
-                                >
-                                  {expandedTopics.has(idx) ? "Hide" : "See where & when"}
-                                </Button>
-                              )}
-                            </div>
+                          <div key={idx} className="bg-background p-2 rounded">
+                            <p className="text-sm">
+                              <span className="font-medium">{topic.name}</span> was mentioned in {topic.count} call{topic.count !== 1 ? 's' : ''}.
+                              {!expandedTopics.has(idx) && " Would you like to see where and when this was discussed?"}
+                            </p>
                             
                             {expandedTopics.has(idx) && topic.mentions && (
-                              <div className="pl-4 space-y-2">
+                              <div className="mt-2 pl-4 space-y-2">
                                 {topic.mentions.map((mention: any, mIdx: number) => (
-                                  <div key={mIdx} className="border-l-2 border-primary pl-3 py-1 bg-background rounded-r">
+                                  <div key={mIdx} className="border-l-2 border-primary pl-3 py-1 bg-muted/30 rounded-r">
                                     <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                                       <span>{new Date(mention.timestamp).toLocaleString()}</span>
                                       {mention.sender && (
@@ -432,10 +428,9 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                       </div>
                     )}
 
-                    {/* Insights */}
                     {analysis.insights && analysis.insights.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Key Insights:</p>
+                        <p className="text-sm">Here are some key insights I noticed:</p>
                         <ul className="space-y-1">
                           {analysis.insights.map((insight: string, idx: number) => (
                             <li key={idx} className="text-xs bg-background p-2 rounded">
@@ -447,21 +442,30 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                     )}
 
                     <p className="text-xs text-muted-foreground italic mt-3">
-                      Have other questions? Use the question templates below or type your own.
+                      You can ask me more questions using the templates or type your own below.
                     </p>
                   </div>
                 )}
 
                 {/* Questions and Input Section */}
                 <div className={cn("flex gap-3", analysis && !questionsExpanded && "items-start")}>
-                  {/* Question Templates - Collapsible */}
+                  {/* Question Templates - Collapsible with manual control */}
                   <div className={cn(
                     "transition-all duration-200",
                     questionsExpanded ? "flex-1" : (analysis ? "w-[45%]" : "w-auto")
                   )}>
                     {questionsExpanded ? (
                       <div className="space-y-2">
-                        <Label className="text-sm font-semibold">Popular Questions</Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-semibold">Popular Questions</Label>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setQuestionsExpanded(false)}
+                          >
+                            Minimize
+                          </Button>
+                        </div>
                         <div className="grid gap-2">
                           {questionTemplates.map((question, idx) => (
                             <Button
@@ -498,7 +502,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                     )}>
                       <Label className="text-sm font-semibold">Ask Your Own Question</Label>
                       <Textarea
-                        placeholder="Type your custom question here..."
+                        placeholder="Type your response or question here..."
                         value={customQuestion}
                         onChange={(e) => setCustomQuestion(e.target.value)}
                         rows={3}
@@ -516,7 +520,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                             Analyzing...
                           </>
                         ) : (
-                          "Get Answer"
+                          "Send"
                         )}
                       </Button>
                     </div>
