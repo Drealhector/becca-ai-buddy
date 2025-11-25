@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Brain } from "lucide-react";
+import { AnalyzeConversationsDialog } from "./AnalyzeConversationsDialog";
 
 const ConversationsSection = () => {
   const [conversations, setConversations] = useState<any[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
+  const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchConversations();
@@ -100,10 +104,20 @@ const ConversationsSection = () => {
   };
 
   return (
-    <Card className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Conversations</h3>
-      </div>
+    <>
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Conversations</h3>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAnalyzeDialogOpen(true)}
+            className="gap-2"
+          >
+            <Brain className="h-4 w-4" />
+            Analyze
+          </Button>
+        </div>
       <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
         <SelectTrigger className="w-full mb-4">
           <SelectValue placeholder="Select platform" />
@@ -171,6 +185,12 @@ const ConversationsSection = () => {
         )}
       </div>
     </Card>
+
+    <AnalyzeConversationsDialog
+      open={analyzeDialogOpen}
+      onOpenChange={setAnalyzeDialogOpen}
+    />
+    </>
   );
 };
 

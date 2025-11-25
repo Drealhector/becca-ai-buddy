@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.web-search]
 verify_jwt = false
+
+[functions.analyze-conversations]
+verify_jwt = false
