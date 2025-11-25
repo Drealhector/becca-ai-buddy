@@ -54,21 +54,12 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !conversationId) {
-      console.log('Cannot send - input:', input, 'loading:', isLoading, 'conversationId:', conversationId);
-      return;
-    }
+    if (!input.trim() || isLoading || !conversationId) return;
 
     const userMessage: Message = { role: "user", content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
-
-    console.log('Sending message to Vapi text chat:', {
-      conversationId,
-      messageCount: messages.length + 1,
-      userMessage: userMessage.content
-    });
 
     try {
       // Save user message to database
@@ -81,20 +72,7 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
 
       if (userMsgError) {
         console.error("Error saving user message:", userMsgError);
-      } else {
-        console.log('User message saved to database');
       }
-
-      const requestBody = {
-        messages: [...messages, userMessage],
-        conversationId
-      };
-
-      console.log('Calling vapi-text-chat with:', {
-        url: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vapi-text-chat`,
-        messageCount: requestBody.messages.length,
-        conversationId: requestBody.conversationId
-      });
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vapi-text-chat`,
@@ -104,11 +82,12 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify({ 
+            messages: [...messages, userMessage],
+            conversationId
+          }),
         }
       );
-
-      console.log('Response status:', response.status);
 
       if (!response.ok || !response.body) throw new Error("Stream failed");
 
