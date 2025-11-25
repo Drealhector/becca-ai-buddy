@@ -11,57 +11,43 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, question } = await req.json();
+    const { conversations, question } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    if (!messages || messages.length === 0) {
+    if (!conversations || conversations.length === 0) {
       return new Response(
-        JSON.stringify({ error: "No messages provided" }),
+        JSON.stringify({ error: "No conversations provided" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Format messages for AI analysis
-    const formattedMessages = messages
-      .map((msg: any) => {
-        const timestamp = msg.timestamp ? new Date(msg.timestamp).toLocaleString() : "Unknown time";
-        const sender = msg.sender_name || msg.role || "Unknown";
-        const platform = msg.platform || msg.conversation_platform || "Unknown";
-        return `[${timestamp}] [${platform}] ${sender}: ${msg.content}`;
-      })
-      .join("\n");
+    // Format conversations for AI analysis
+    let formattedData = "";
+    conversations.forEach((conv: any) => {
+      const platform = conv.platform || "Unknown";
+      const startTime = conv.start_time ? new Date(conv.start_time).toLocaleString() : "Unknown";
+      formattedData += `\n\n[Conversation on ${platform} at ${startTime}]\n`;
+      
+      if (conv.messages && conv.messages.length > 0) {
+        conv.messages.forEach((msg: any) => {
+          const sender = msg.sender_name || msg.role || "User";
+          const timestamp = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : "";
+          formattedData += `[${timestamp}] ${sender}: ${msg.content}\n`;
+        });
+      }
+    });
 
-    const systemPrompt = `You are an AI assistant analyzing customer conversations from multiple platforms (WhatsApp, Instagram, Facebook, Telegram, Web Chat).
+    const systemPrompt = `You are a helpful AI assistant analyzing customer conversations. 
+When answering questions, be conversational and friendly.
+Focus on providing clear, actionable insights.
+If the user asks a follow-up question, build on the previous context.`;
 
-CRITICAL: You MUST return a structured JSON response with the following format:
-{
-  "summary": "A clear summary of the analysis (2-3 sentences)",
-  "conversationCount": number,
-  "topics": [
-    {
-      "name": "Topic name",
-      "count": number of conversations mentioning this,
-      "mentions": [
-        {
-          "timestamp": "ISO timestamp",
-          "platform": "platform name",
-          "snippet": "brief quote or context",
-          "sender": "sender name"
-        }
-      ]
-    }
-  ],
-  "insights": ["insight 1", "insight 2"]
-}
-
-IMPORTANT: Even with limited data, always provide a summary and at least 1-2 topics. Be specific with counts and references.
-
-Conversation data format:
-[Timestamp] [Platform] Sender: Message content`;
+    const userPrompt = question || "Please provide an overall summary of these conversations";
+    const fullPrompt = `${userPrompt}\n\nHere's the conversation data:\n${formattedData}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -73,12 +59,8 @@ Conversation data format:
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { 
-            role: "user", 
-            content: `Here are the conversations to analyze:\n\n${formattedMessages}\n\nQuestion: ${question}\n\nReturn ONLY valid JSON matching the specified format.` 
-          },
+          { role: "user", content: fullPrompt }
         ],
-        response_format: { type: "json_object" }
       }),
     });
 
@@ -104,23 +86,10 @@ Conversation data format:
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "{}";
-    
-    let analysis;
-    try {
-      analysis = JSON.parse(content);
-    } catch (e) {
-      console.error("Failed to parse AI response:", content);
-      analysis = {
-        summary: content,
-        conversationCount: messages.length,
-        topics: [],
-        insights: []
-      };
-    }
+    const content = data.choices?.[0]?.message?.content || "I couldn't analyze the conversations.";
 
     return new Response(
-      JSON.stringify({ analysis }),
+      JSON.stringify({ summary: content }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
