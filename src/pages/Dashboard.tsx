@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { User } from "@supabase/supabase-js";
+import { User, Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import { Menu, LogOut, Phone, Link as LinkIcon, Settings, MessageSquare, Mic, Tr
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [showNav, setShowNav] = useState(false);
   const [showConnectNumber, setShowConnectNumber] = useState(false);
@@ -31,10 +32,20 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkUser();
-
+    // Set up auth state listener FIRST
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
       setUser(session?.user || null);
+      if (!session?.user) {
+        navigate("/auth");
+      }
+    });
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user || null);
+      setLoading(false);
       if (!session?.user) {
         navigate("/auth");
       }
@@ -44,15 +55,6 @@ const Dashboard = () => {
       authListener?.subscription.unsubscribe();
     };
   }, [navigate]);
-
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
-    setLoading(false);
-    if (!user) {
-      navigate("/auth");
-    }
-  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

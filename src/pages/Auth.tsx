@@ -17,21 +17,18 @@ const Auth = () => {
   useEffect(() => {
     checkExistingSession();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) checkOnboarding(session.user.id);
+      if (session) {
+        navigate("/dashboard");
+      }
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const checkExistingSession = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (session) await checkOnboarding(session.user.id);
-  };
-
-  const checkOnboarding = async (userId: string) => {
-    try {
-      const { data } = await supabase.from("user_onboarding").select("*").eq("user_id", userId).single();
-      navigate(data?.onboarding_completed ? "/dashboard" : "/onboarding");
-    } catch { navigate("/onboarding"); }
+    if (session) {
+      navigate("/dashboard");
+    }
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
