@@ -179,7 +179,6 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
   };
 
   const handleTemplateQuestion = (question: string) => {
-    setCustomQuestion(question);
     askQuestion(question);
   };
 
@@ -494,37 +493,34 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                     )}
                   </div>
 
-                  {/* Custom Question Input */}
-                  {(questionsExpanded || analysis) && (
-                    <div className={cn(
-                      "space-y-2 transition-all duration-200",
-                      questionsExpanded || !analysis ? "flex-1" : "flex-1"
-                    )}>
-                      <Label className="text-sm font-semibold">Ask Your Own Question</Label>
-                      <Textarea
-                        placeholder="Type your response or question here..."
-                        value={customQuestion}
-                        onChange={(e) => setCustomQuestion(e.target.value)}
-                        rows={3}
-                        className="resize-none"
-                      />
-                      <Button
-                        onClick={handleCustomQuestion}
-                        disabled={isAsking || !customQuestion.trim()}
-                        className="w-full"
-                        size="sm"
-                      >
-                        {isAsking ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Analyzing...
-                          </>
-                        ) : (
-                          "Send"
-                        )}
-                      </Button>
-                    </div>
-                  )}
+                  {/* Custom Question Input - Always visible */}
+                  <div className={cn(
+                    "space-y-2 transition-all duration-200 flex-1"
+                  )}>
+                    <Label className="text-sm font-semibold">Ask Your Own Question</Label>
+                    <Textarea
+                      placeholder="Type your response or question here..."
+                      value={customQuestion}
+                      onChange={(e) => setCustomQuestion(e.target.value)}
+                      rows={3}
+                      className="resize-none"
+                    />
+                    <Button
+                      onClick={handleCustomQuestion}
+                      disabled={isAsking || !customQuestion.trim()}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isAsking ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Analyzing...
+                        </>
+                      ) : (
+                        "Send"
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
