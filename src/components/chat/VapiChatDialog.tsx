@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, X, Loader2 } from "lucide-react";
 import Vapi from "@vapi-ai/web";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   role: "user" | "assistant";
@@ -23,6 +24,7 @@ const VapiChatDialog: React.FC<VapiChatDialogProps> = ({ open, onOpenChange }) =
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const vapiRef = useRef<Vapi | null>(null);
 
@@ -52,14 +54,38 @@ const VapiChatDialog: React.FC<VapiChatDialogProps> = ({ open, onOpenChange }) =
     try {
       setIsConnecting(true);
       
+      // Create conversation in database
+      const { data: conversation, error: convError } = await supabase
+        .from("conversations")
+        .insert({ platform: "web" })
+        .select()
+        .single();
+
+      if (convError) {
+        console.error("Error creating conversation:", convError);
+      } else {
+        setConversationId(conversation.id);
+      }
+      
       const vapi = new Vapi("208b6005-0953-425b-a478-2748d49d484c");
       vapiRef.current = vapi;
 
       // Set up event listeners
-      vapi.on("call-start", () => {
+      vapi.on("call-start", async () => {
         setIsConnected(true);
         setIsConnecting(false);
-        addMessage("assistant", "Hi! How can I help you today?");
+        const greeting = "Hi! How can I help you today?";
+        addMessage("assistant", greeting);
+        
+        // Save greeting to database
+        if (conversation?.id) {
+          await supabase.from("messages").insert({
+            conversation_id: conversation.id,
+            role: "assistant",
+            content: greeting,
+            platform: "web",
+          });
+        }
       });
 
       vapi.on("call-end", () => {
@@ -74,14 +100,34 @@ const VapiChatDialog: React.FC<VapiChatDialogProps> = ({ open, onOpenChange }) =
         setIsSpeaking(false);
       });
 
-      vapi.on("message", (message: any) => {
+      vapi.on("message", async (message: any) => {
         if (message.type === "transcript" && message.role === "assistant") {
           if (message.transcriptType === "final") {
             addMessage("assistant", message.transcript);
+            
+            // Save assistant message to database
+            if (conversationId) {
+              await supabase.from("messages").insert({
+                conversation_id: conversationId,
+                role: "assistant",
+                content: message.transcript,
+                platform: "web",
+              });
+            }
           }
         } else if (message.type === "transcript" && message.role === "user") {
           if (message.transcriptType === "final") {
             addMessage("user", message.transcript);
+            
+            // Save user message to database
+            if (conversationId) {
+              await supabase.from("messages").insert({
+                conversation_id: conversationId,
+                role: "user",
+                content: message.transcript,
+                platform: "web",
+              });
+            }
           }
         }
       });
@@ -132,6 +178,7 @@ const VapiChatDialog: React.FC<VapiChatDialogProps> = ({ open, onOpenChange }) =
     setMessages([]);
     setIsConnected(false);
     setIsConnecting(false);
+    setConversationId(null);
     onOpenChange(false);
   };
 
