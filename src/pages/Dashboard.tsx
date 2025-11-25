@@ -15,6 +15,7 @@ import VoiceManagementSection from "@/components/dashboard/VoiceManagementSectio
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
 import { PhoneConnectionDialog } from "@/components/dashboard/PhoneConnectionDialog";
 import FloatingVapiAssistant from "@/components/dashboard/FloatingVapiAssistant";
+import ConnectionStatus from "@/components/dashboard/ConnectionStatus";
 import { Menu, LogOut, Phone, Link as LinkIcon, Settings, MessageSquare, Mic, Trash2 } from "lucide-react";
 
 
@@ -301,6 +302,10 @@ const Dashboard = () => {
           <ChannelToggles />
         </div>
 
+        {/* Webhook Integrations */}
+        <div id="webhooks">
+          <ConnectionStatus />
+        </div>
 
         {/* Conversations */}
         <div id="conversations">
