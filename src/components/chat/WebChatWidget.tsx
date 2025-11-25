@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, Send, Bot, User } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   role: "user" | "assistant";
@@ -23,6 +24,7 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,8 +33,28 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
     }
   }, [messages]);
 
+  useEffect(() => {
+    createConversation();
+  }, []);
+
+  const createConversation = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("conversations")
+        .insert({ platform: "web" })
+        .select()
+        .single();
+
+      if (error) throw error;
+      setConversationId(data.id);
+      console.log("Created web chat conversation:", data.id);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+    }
+  };
+
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !conversationId) return;
 
     const userMessage: Message = { role: "user", content: input };
     setMessages((prev) => [...prev, userMessage]);
@@ -40,15 +62,30 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
     setIsLoading(true);
 
     try {
+      // Save user message to database
+      const { error: userMsgError } = await supabase.from("messages").insert({
+        conversation_id: conversationId,
+        role: "user",
+        content: userMessage.content,
+        platform: "web",
+      });
+
+      if (userMsgError) {
+        console.error("Error saving user message:", userMsgError);
+      }
+
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/web-chat`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vapi-text-chat`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ messages: [...messages, userMessage] }),
+          body: JSON.stringify({ 
+            messages: [...messages, userMessage],
+            conversationId
+          }),
         }
       );
 
@@ -86,6 +123,20 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
           } catch (e) {
             // Ignore parse errors
           }
+        }
+      }
+
+      // Save AI message to database
+      if (assistantContent && conversationId) {
+        const { error: aiMsgError } = await supabase.from("messages").insert({
+          conversation_id: conversationId,
+          role: "ai",
+          content: assistantContent,
+          platform: "web",
+        });
+
+        if (aiMsgError) {
+          console.error("Error saving AI message:", aiMsgError);
         }
       }
     } catch (error) {
