@@ -12,14 +12,15 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationHistory } = await req.json();
+    const { messages, conversationId } = await req.json();
     
-    const VAPI_PRIVATE_KEY = Deno.env.get('VAPI_PRIVATE_KEY');
-    const ASSISTANT_ID = '6c411909-067b-4ce3-ad02-10299109dc64';
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
-    if (!VAPI_PRIVATE_KEY) {
-      throw new Error('VAPI_PRIVATE_KEY not configured');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY not configured');
     }
+
+    console.log('Processing text chat with', messages.length, 'messages for conversation:', conversationId);
 
     // Get customization data for context
     const supabase = createClient(
@@ -29,65 +30,69 @@ serve(async (req) => {
 
     const { data: customData } = await supabase
       .from("customizations")
-      .select("business_name, assistant_personality, greeting, faqs")
+      .select("business_name, assistant_personality, greeting, faqs, business_description, key_services, tone")
       .limit(1)
       .maybeSingle();
 
-    // Build context from customization with strong conversational instructions
-    let contextPrompt = `CRITICAL INSTRUCTIONS:
-- Speak naturally like a real person in casual conversation
-- NEVER sound like marketing copy or formal descriptions
-- NEVER use phrases like "specializing in" or "quite an impressive setup"
-- Just chat like you're talking to a friend
-- Keep it brief and natural, 1-2 sentences unless asked for more
-- Never use hyphens (-), use periods or commas instead
+    // Build context from customization - matching the phone assistant's personality
+    let systemPrompt = `You are ${customData?.assistant_personality || 'a helpful assistant'} for ${customData?.business_name || 'this business'}.
 
-`;
-    
-    if (customData) {
-      if (customData.business_name) {
-        contextPrompt += `Business name: ${customData.business_name}\n`;
-      }
-      if (customData.assistant_personality) {
-        contextPrompt += `Your personality: ${customData.assistant_personality}\n`;
-      }
-      if (customData.faqs) {
-        contextPrompt += `FAQs you can reference: ${JSON.stringify(customData.faqs)}\n`;
-      }
-    }
+${customData?.business_description ? `About: ${customData.business_description}` : ''}
+${customData?.key_services ? `Services: ${customData.key_services}` : ''}
+${customData?.tone ? `Tone: ${customData.tone}` : ''}
+${customData?.faqs ? `FAQs: ${JSON.stringify(customData.faqs)}` : ''}
 
-    // Call Vapi API for text-based chat
-    const response = await fetch('https://api.vapi.ai/chat', {
+Keep responses conversational, natural and helpful. Match the personality and style of the phone assistant.`;
+
+    console.log('Using assistant context for conversation:', conversationId);
+
+    // Format messages for Lovable AI
+    const formattedMessages = messages.map((m: any) => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.content
+    }));
+
+    // Call Lovable AI Gateway with streaming
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${VAPI_PRIVATE_KEY}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        assistantId: ASSISTANT_ID,
-        input: message
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...formattedMessages
+        ],
+        stream: true
       }),
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limits exceeded, please try again later." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Payment required, please add funds to your Lovable AI workspace." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const errorText = await response.text();
-      console.error('Vapi API error:', response.status, errorText);
-      throw new Error(`Vapi API error: ${response.status}`);
+      console.error('AI gateway error:', response.status, errorText);
+      throw new Error(`AI gateway error: ${response.status}`);
     }
 
-    const data = await response.json();
-    console.log('Vapi response:', JSON.stringify(data));
-    
-    // Extract the assistant's response from Vapi's output
-    const assistantResponse = data.output?.[0]?.content || data.message || "I'm here to help!";
-    
-    return new Response(
-      JSON.stringify({ response: assistantResponse }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
+    console.log('Streaming AI response for conversation:', conversationId);
+
+    // Return the streaming response directly
+    return new Response(response.body, {
+      headers: { ...corsHeaders, 'Content-Type': 'text/event-stream' },
+    });
   } catch (error) {
     console.error('Error in vapi-text-chat:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
