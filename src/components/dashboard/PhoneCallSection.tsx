@@ -4,11 +4,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, FileText, Clock } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, FileText, Clock, Brain } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AnalyzeCallTranscriptsDialog } from "./AnalyzeCallTranscriptsDialog";
 
 const PhoneCallSection = () => {
   const [callHistory, setCallHistory] = useState<any[]>([]);
@@ -29,6 +30,7 @@ const PhoneCallSection = () => {
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
   const [showTranscriptDialog, setShowTranscriptDialog] = useState(false);
   const [selectedCallTranscript, setSelectedCallTranscript] = useState<any>(null);
+  const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchCallHistory();
@@ -307,22 +309,37 @@ const PhoneCallSection = () => {
           </div>
           <h3 className="text-lg font-semibold">Phone Calls</h3>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <div className="flex flex-col gap-2 w-full sm:w-auto">
+          {/* Analyze Button - Full width */}
           <Button
-            onClick={() => setShowMakeCall(!showMakeCall)}
-            className="bg-green-600 hover:bg-green-700 text-white gap-2 w-full sm:w-auto"
-          >
-            <Phone className="w-4 h-4" />
-            Make a Call
-          </Button>
-          <Button
-            onClick={() => setShowScheduleCall(!showScheduleCall)}
+            onClick={() => setAnalyzeDialogOpen(true)}
             variant="outline"
-            className="gap-2 w-full sm:w-auto"
+            className="gap-2 w-full"
           >
-            <Clock className="w-4 h-4" />
-            Schedule Calls
+            <Brain className="w-4 h-4" />
+            <Phone className="w-4 h-4" />
+            Analyze
           </Button>
+          {/* Make Call and Schedule Calls - Side by side, smaller */}
+          <div className="flex gap-2 w-full">
+            <Button
+              onClick={() => setShowMakeCall(!showMakeCall)}
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white gap-1 flex-1"
+            >
+              <Phone className="w-3 h-3" />
+              Make Call
+            </Button>
+            <Button
+              onClick={() => setShowScheduleCall(!showScheduleCall)}
+              size="sm"
+              variant="outline"
+              className="gap-1 flex-1"
+            >
+              <Clock className="w-3 h-3" />
+              Schedule
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -586,6 +603,11 @@ const PhoneCallSection = () => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      <AnalyzeCallTranscriptsDialog
+        open={analyzeDialogOpen}
+        onOpenChange={setAnalyzeDialogOpen}
+      />
     </Card>
   );
 };
