@@ -6,6 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Mail } from "lucide-react";
+import { z } from "zod";
+
+const authSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -37,13 +43,12 @@ const Auth = () => {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error("Please enter email and password");
-      return;
-    }
-
     setLoading(true);
+
     try {
+      // Validate input
+      authSchema.parse({ email, password });
+
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({ 
           email, 
@@ -52,16 +57,38 @@ const Auth = () => {
             emailRedirectTo: `${window.location.origin}/dashboard`
           }
         });
-        if (error) throw error;
-        toast.success("Account created! Please check your email.");
+        
+        if (error) {
+          if (error.message.includes("already registered")) {
+            toast.error("This email is already registered. Please sign in.");
+          } else {
+            toast.error(error.message);
+          }
+          return;
+        }
+        
+        toast.success("Account created! You can now sign in.");
+        setIsSignUp(false);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        
+        if (error) {
+          if (error.message.includes("Invalid login credentials")) {
+            toast.error("Invalid email or password");
+          } else {
+            toast.error(error.message);
+          }
+          return;
+        }
+        
         toast.success("Login successful!");
-        // Let onAuthStateChange handle navigation
       }
-    } catch (error: any) {
-      toast.error(error.message || "Authentication failed");
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        toast.error("An error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

@@ -34,36 +34,59 @@ const Dashboard = () => {
   useEffect(() => {
     let mounted = true;
 
-    // Check for business key session
-    const businessName = sessionStorage.getItem("becca_business_name");
-    const businessKey = sessionStorage.getItem("becca_business_key");
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        if (mounted) {
+          setLoading(false);
+          navigate("/auth");
+        }
+        return;
+      }
 
-    if (businessName && businessKey) {
-      // User is logged in with business key - create a pseudo-user
+      // Get user's business from user_roles
+      const { data: roles, error } = await supabase
+        .from("user_roles")
+        .select("business_id, business_keys!inner(business_name)")
+        .eq("user_id", session.user.id)
+        .single();
+
+      if (error || !roles) {
+        toast.error("No business access found. Contact your administrator.");
+        await supabase.auth.signOut();
+        if (mounted) {
+          navigate("/auth");
+        }
+        return;
+      }
+
       if (mounted) {
-        setUser({ id: businessKey, email: `${businessName}@business` } as User);
+        setUser(session.user);
+        setSession(session);
         setLoading(false);
       }
-      return;
-    }
+    };
 
-    // If no business key, redirect to login
-    if (mounted) {
-      setLoading(false);
-      navigate("/");
-    }
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session && mounted) {
+        navigate("/auth");
+      }
+    });
 
     return () => {
       mounted = false;
+      subscription.unsubscribe();
     };
   }, [navigate]);
 
   const handleSignOut = async () => {
-    // Clear business session storage
-    sessionStorage.removeItem("becca_business_name");
-    sessionStorage.removeItem("becca_business_key");
-    
-    navigate("/");
+    await supabase.auth.signOut();
+    toast.success("Signed out successfully");
+    navigate("/auth");
   };
 
   const scrollToSection = (id: string) => {
