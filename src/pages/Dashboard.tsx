@@ -34,43 +34,27 @@ const Dashboard = () => {
   useEffect(() => {
     let mounted = true;
 
-    // Check for existing session
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (mounted) {
-        setSession(session);
-        setUser(session?.user || null);
-        setLoading(false);
-        
-        // Redirect if no session
-        if (!session) {
-          navigate("/");
-        }
-      }
-    };
+    // Check for business key session
+    const businessName = sessionStorage.getItem("becca_business_name");
+    const businessKey = sessionStorage.getItem("becca_business_key");
 
-    checkSession();
-
-    // Set up auth state listener
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (businessName && businessKey) {
+      // User is logged in with business key - create a pseudo-user
       if (mounted) {
-        setSession(session);
-        setUser(session?.user || null);
+        setUser({ id: businessKey, email: `${businessName}@business` } as User);
         setLoading(false);
-        
-        // Handle sign out
-        if (_event === 'SIGNED_OUT') {
-          sessionStorage.removeItem("becca_business_name");
-          sessionStorage.removeItem("becca_business_key");
-          navigate("/");
-        }
       }
-    });
+      return;
+    }
+
+    // If no business key, redirect to login
+    if (mounted) {
+      setLoading(false);
+      navigate("/");
+    }
 
     return () => {
       mounted = false;
-      authListener?.subscription.unsubscribe();
     };
   }, [navigate]);
 
@@ -78,9 +62,6 @@ const Dashboard = () => {
     // Clear business session storage
     sessionStorage.removeItem("becca_business_name");
     sessionStorage.removeItem("becca_business_key");
-    
-    // Sign out from Supabase
-    await supabase.auth.signOut();
     
     navigate("/");
   };
