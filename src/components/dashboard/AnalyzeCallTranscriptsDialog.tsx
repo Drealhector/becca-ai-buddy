@@ -232,33 +232,33 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
       onOpenChange(open);
       if (!open) resetDialog();
     }}>
-      <DialogContent className="max-w-[92vw] sm:max-w-3xl max-h-[90vh] p-1.5 sm:p-6">
-        <DialogHeader className="pb-1 sm:pb-4">
-          <DialogTitle className="flex items-center gap-1 text-xs sm:text-lg">
-            <Brain className="h-3 w-3 sm:h-5 sm:w-5" />
-            <Phone className="h-3 w-3 sm:h-5 sm:w-5" />
-            <span className="text-[11px] sm:text-lg">Analyze Call Transcripts</span>
+      <DialogContent className="max-w-[92vw] sm:max-w-xl max-h-[90vh] p-1.5 sm:p-3">
+        <DialogHeader className="pb-1 sm:pb-2">
+          <DialogTitle className="flex items-center gap-1 text-xs sm:text-sm">
+            <Brain className="h-3 w-3 sm:h-4 sm:w-4" />
+            <Phone className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="text-[11px] sm:text-sm">Analyze Call Transcripts</span>
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-5rem)] pr-1 sm:pr-4">
-          <div className="space-y-1.5 sm:space-y-4">
+        <ScrollArea className="max-h-[calc(90vh-5rem)] pr-1 sm:pr-2">
+          <div className="space-y-1.5 sm:space-y-2">
             {!analysisReady ? (
               <>
                 {/* Call Type Selection */}
-                <div className="space-y-1 sm:space-y-3">
+                <div className="space-y-1 sm:space-y-2">
                   <div className="flex items-center justify-between gap-1">
-                    <Label className="text-[10px] sm:text-base font-semibold">Call Type</Label>
+                    <Label className="text-[10px] sm:text-sm font-semibold">Call Type</Label>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleSelectAll}
-                      className="text-[9px] sm:text-sm h-5 sm:h-8 px-1.5 sm:px-3"
+                      className="text-[9px] sm:text-xs h-5 sm:h-7 px-1.5 sm:px-2"
                     >
                       {selectedCallTypes.length === callTypes.length ? "Deselect" : "Select All"}
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-1 sm:gap-3">
+                  <div className="grid grid-cols-2 gap-1 sm:gap-2">
                     {callTypes.map((type) => (
                       <div key={type.id} className="flex items-center space-x-1 sm:space-x-1.5">
                         <Checkbox
@@ -276,9 +276,9 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                 </div>
 
                 {/* Time Selection */}
-                <div className="space-y-1 sm:space-y-3">
-                  <Label className="text-[10px] sm:text-base font-semibold">Time Window (Max 24h)</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-4">
+                <div className="space-y-1 sm:space-y-2">
+                  <Label className="text-[10px] sm:text-sm font-semibold">Time Window (Max 24h)</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
                     {/* Start DateTime */}
                     <div className="space-y-1">
                       <Label className="text-[10px] sm:text-sm">Start</Label>
@@ -352,7 +352,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                 <Button
                   onClick={fetchTranscripts}
                   disabled={isFetchingData}
-                  className="w-full text-xs sm:text-base h-8 sm:h-10"
+                  className="w-full text-xs sm:text-sm h-8 sm:h-9"
                   size="sm"
                 >
                   {isFetchingData ? (
@@ -368,23 +368,23 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
             ) : (
               <>
                 {/* Analysis Ready State */}
-                <div className="bg-primary/10 p-1.5 sm:p-3 rounded-lg text-center space-y-1 sm:space-y-2">
+                <div className="bg-primary/10 p-1.5 sm:p-2 rounded-lg text-center space-y-1">
                   <div className="flex items-center justify-center gap-1 sm:gap-2">
-                    <Brain className="h-5 w-5 sm:h-10 sm:w-10 text-primary" />
-                    <Phone className="h-5 w-5 sm:h-10 sm:w-10 text-primary" />
+                    <Brain className="h-5 w-5 sm:h-7 sm:w-7 text-primary" />
+                    <Phone className="h-5 w-5 sm:h-7 sm:w-7 text-primary" />
                   </div>
-                  <h3 className="text-[10px] sm:text-base font-bold">READY FOR ANALYSIS</h3>
+                  <h3 className="text-[10px] sm:text-sm font-bold">READY FOR ANALYSIS</h3>
                   <p className="text-[9px] sm:text-xs text-muted-foreground">
                     {transcriptCount} transcript(s) from {selectedCallTypes.join(", ")}
                   </p>
-                  <Button variant="outline" size="sm" onClick={resetDialog} className="text-[9px] sm:text-sm h-5 sm:h-8 px-1.5 sm:px-3">
+                  <Button variant="outline" size="sm" onClick={resetDialog} className="text-[9px] sm:text-xs h-5 sm:h-7 px-1.5 sm:px-2">
                     New Analysis
                   </Button>
                 </div>
 
                 {/* Analysis Result - Conversational */}
                 {analysis && (
-                  <div className="space-y-2 sm:space-y-3 bg-muted/30 p-3 sm:p-4 rounded-lg">
+                  <div className="space-y-2 bg-muted/30 p-3 rounded-lg">
                     <div className="space-y-2">
                       <p className="text-xs sm:text-sm">{analysis.summary || "No summary available"}</p>
                       {analysis.conversationCount > 0 && (
@@ -449,26 +449,26 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                 )}
 
                 {/* Questions and Input Section */}
-                <div className={cn("flex flex-col sm:flex-row gap-2 sm:gap-3", analysis && !questionsExpanded && "sm:items-start")}>
+                <div className={cn("flex flex-col sm:flex-row gap-2", analysis && !questionsExpanded && "sm:items-start")}>
                   {/* Question Templates - Collapsible with manual control */}
                   <div className={cn(
                     "transition-all duration-200",
                     questionsExpanded ? "flex-1" : (analysis ? "sm:w-[45%]" : "w-auto")
                   )}>
                     {questionsExpanded ? (
-                      <div className="space-y-1 sm:space-y-2">
+                      <div className="space-y-1 sm:space-y-1.5">
                         <div className="flex items-center justify-between gap-1">
-                          <Label className="text-[10px] sm:text-sm font-semibold">Questions</Label>
+                          <Label className="text-[10px] sm:text-xs font-semibold">Questions</Label>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setQuestionsExpanded(false)}
-                            className="text-[9px] sm:text-xs h-5 sm:h-7 px-1.5 sm:px-3"
+                            className="text-[9px] sm:text-[10px] h-5 sm:h-6 px-1.5 sm:px-2"
                           >
                             Minimize
                           </Button>
                         </div>
-                        <div className="grid gap-1 sm:gap-2">
+                        <div className="grid gap-1 sm:gap-1.5">
                           {questionTemplates.map((question, idx) => (
                             <Button
                               key={idx}
@@ -498,9 +498,9 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
 
                 {/* Custom Question Input - Always visible */}
                   <div className={cn(
-                    "space-y-1 sm:space-y-2 transition-all duration-200 flex-1"
+                    "space-y-1 sm:space-y-1.5 transition-all duration-200 flex-1"
                   )}>
-                    <Label className="text-[10px] sm:text-sm font-semibold">Your Question</Label>
+                    <Label className="text-[10px] sm:text-xs font-semibold">Your Question</Label>
                     <Textarea
                       placeholder="Type here..."
                       value={customQuestion}
@@ -511,7 +511,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                     <Button
                       onClick={handleCustomQuestion}
                       disabled={isAsking || !customQuestion.trim()}
-                      className="w-full text-[9px] sm:text-sm h-6 sm:h-9 px-2"
+                      className="w-full text-[9px] sm:text-xs h-6 sm:h-8 px-2"
                       size="sm"
                     >
                       {isAsking ? (
