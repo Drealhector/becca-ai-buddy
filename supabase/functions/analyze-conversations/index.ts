@@ -37,12 +37,28 @@ serve(async (req) => {
 
     const systemPrompt = `You are an AI assistant analyzing customer conversations from multiple platforms (WhatsApp, Instagram, Facebook, Telegram, Web Chat).
 
-Your task is to provide accurate, detailed analysis based on the conversation data provided. When answering:
-1. Reference specific messages, timestamps, and sender names when available
-2. Identify patterns, trends, and insights
-3. Provide actionable recommendations
-4. Be specific with dates, times, and contact information
-5. If data is insufficient to answer, clearly state what's missing
+CRITICAL: You MUST return a structured JSON response with the following format:
+{
+  "summary": "A clear summary of the analysis (2-3 sentences)",
+  "conversationCount": number,
+  "topics": [
+    {
+      "name": "Topic name",
+      "count": number of conversations mentioning this,
+      "mentions": [
+        {
+          "timestamp": "ISO timestamp",
+          "platform": "platform name",
+          "snippet": "brief quote or context",
+          "sender": "sender name"
+        }
+      ]
+    }
+  ],
+  "insights": ["insight 1", "insight 2"]
+}
+
+IMPORTANT: Even with limited data, always provide a summary and at least 1-2 topics. Be specific with counts and references.
 
 Conversation data format:
 [Timestamp] [Platform] Sender: Message content`;
@@ -59,9 +75,10 @@ Conversation data format:
           { role: "system", content: systemPrompt },
           { 
             role: "user", 
-            content: `Here are the conversations to analyze:\n\n${formattedMessages}\n\nQuestion: ${question}` 
+            content: `Here are the conversations to analyze:\n\n${formattedMessages}\n\nQuestion: ${question}\n\nReturn ONLY valid JSON matching the specified format.` 
           },
         ],
+        response_format: { type: "json_object" }
       }),
     });
 
@@ -87,7 +104,20 @@ Conversation data format:
     }
 
     const data = await response.json();
-    const analysis = data.choices?.[0]?.message?.content || "No analysis generated";
+    const content = data.choices?.[0]?.message?.content || "{}";
+    
+    let analysis;
+    try {
+      analysis = JSON.parse(content);
+    } catch (e) {
+      console.error("Failed to parse AI response:", content);
+      analysis = {
+        summary: content,
+        conversationCount: messages.length,
+        topics: [],
+        insights: []
+      };
+    }
 
     return new Response(
       JSON.stringify({ analysis }),
