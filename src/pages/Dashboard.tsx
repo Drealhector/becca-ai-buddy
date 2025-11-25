@@ -32,26 +32,35 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener FIRST
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user || null);
-      if (!session?.user) {
-        navigate("/auth");
+      if (mounted) {
+        setSession(session);
+        setUser(session?.user || null);
+        // Only redirect to auth if explicitly signed out
+        if (_event === 'SIGNED_OUT') {
+          navigate("/auth");
+        }
       }
     });
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user || null);
-      setLoading(false);
-      if (!session?.user) {
-        navigate("/auth");
+      if (mounted) {
+        setSession(session);
+        setUser(session?.user || null);
+        setLoading(false);
+        // Only redirect if no session after initial check
+        if (!session?.user) {
+          navigate("/auth");
+        }
       }
     });
 
     return () => {
+      mounted = false;
       authListener?.subscription.unsubscribe();
     };
   }, [navigate]);
@@ -112,10 +121,18 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Loading your dashboard...</p>
+        </div>
       </div>
     );
+  }
+
+  // Show nothing if no user yet (prevents flash)
+  if (!user) {
+    return null;
   }
 
   return (
