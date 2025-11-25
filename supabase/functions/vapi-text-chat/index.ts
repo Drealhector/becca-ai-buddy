@@ -12,7 +12,15 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, conversationId } = await req.json();
+    const body = await req.json();
+    console.log('Received request body:', JSON.stringify(body));
+    
+    const { messages, conversationId } = body;
+    
+    if (!messages || !Array.isArray(messages)) {
+      console.error('Invalid messages:', messages);
+      throw new Error('Messages array is required');
+    }
     
     const VAPI_PRIVATE_KEY = Deno.env.get('VAPI_WEB_PRIVATE_KEY');
     const VAPI_ASSISTANT_ID = Deno.env.get('VAPI_WEB_ASSISTANT_ID');
@@ -22,6 +30,7 @@ serve(async (req) => {
     }
 
     console.log('Processing Vapi text chat for conversation:', conversationId);
+    console.log('Message count:', messages.length);
     console.log('Using Vapi assistant:', VAPI_ASSISTANT_ID);
 
     // Get the latest user message
@@ -53,7 +62,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log('Vapi chat response received');
+    console.log('Vapi chat response:', JSON.stringify(data));
     
     // Extract response from Vapi's output array
     const responseText = data.output?.[0]?.content || data.message || "I'm here to help!";
