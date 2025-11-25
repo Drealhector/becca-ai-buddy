@@ -115,7 +115,8 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`API returned ${response.status}: ${errorText}`);
+        console.error("API Error:", response.status, errorText);
+        throw new Error(`Failed to send message`);
       }
 
       if (!response.body) throw new Error("No response body");
@@ -123,10 +124,6 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let assistantContent = "";
-
-      // Add empty assistant message to update
-      addMessage("assistant", "");
-      const messageIndex = messages.length + 1; // +1 for the user message we just added
 
       while (true) {
         const { done, value } = await reader.read();
@@ -145,11 +142,6 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
             const content = parsed.choices?.[0]?.delta?.content;
             if (content) {
               assistantContent += content;
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                newMessages[messageIndex].content = assistantContent;
-                return newMessages;
-              });
             }
           } catch (e) {
             // Ignore parse errors
@@ -157,8 +149,11 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
         }
       }
 
-      // Save AI message to database
+      // Add the complete assistant response
       if (assistantContent) {
+        addMessage("assistant", assistantContent);
+        
+        // Save AI message to database
         await supabase.from("messages").insert({
           conversation_id: conversationId,
           role: "ai",
