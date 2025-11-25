@@ -232,41 +232,42 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
       onOpenChange(open);
       if (!open) resetDialog();
     }}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-4 sm:p-6">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[92vh] p-2 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-            <Brain className="h-4 w-4 sm:h-5 sm:w-5" />
-            <Phone className="h-4 w-4 sm:h-5 sm:w-5" />
+          <DialogTitle className="flex items-center gap-1.5 text-sm sm:text-lg">
+            <Brain className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
+            <Phone className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
             Analyze Call Transcripts
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-8rem)] pr-2 sm:pr-4">
-          <div className="space-y-3 sm:space-y-4">
+        <ScrollArea className="max-h-[calc(92vh-6rem)] pr-1 sm:pr-4">
+          <div className="space-y-2 sm:space-y-4">
             {!analysisReady ? (
               <>
                 {/* Call Type Selection */}
-                <div className="space-y-2 sm:space-y-3">
+                <div className="space-y-1.5 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm sm:text-base font-semibold">Select Call Type</Label>
+                    <Label className="text-xs sm:text-base font-semibold">Select Call Type</Label>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleSelectAll}
-                      className="text-xs sm:text-sm h-8"
+                      className="text-[10px] sm:text-sm h-6 sm:h-8 px-2"
                     >
                       {selectedCallTypes.length === callTypes.length ? "Deselect All" : "Select All"}
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-2 gap-1.5 sm:gap-3">
                     {callTypes.map((type) => (
-                      <div key={type.id} className="flex items-center space-x-2">
+                      <div key={type.id} className="flex items-center space-x-1.5">
                         <Checkbox
                           id={type.id}
                           checked={selectedCallTypes.includes(type.id)}
                           onCheckedChange={() => handleCallTypeToggle(type.id)}
+                          className="h-3.5 w-3.5 sm:h-4 sm:w-4"
                         />
-                        <Label htmlFor={type.id} className="cursor-pointer">
+                        <Label htmlFor={type.id} className="cursor-pointer text-xs sm:text-sm">
                           {type.label}
                         </Label>
                       </div>
@@ -275,12 +276,12 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                 </div>
 
                 {/* Time Selection */}
-                <div className="space-y-2 sm:space-y-3">
-                  <Label className="text-sm sm:text-base font-semibold">Select Time Window (Max 24 hours)</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-1.5 sm:space-y-3">
+                  <Label className="text-xs sm:text-base font-semibold">Select Time Window (Max 24 hours)</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                     {/* Start DateTime */}
-                    <div className="space-y-2">
-                      <Label className="text-sm">Start</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs sm:text-sm">Start</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
@@ -313,8 +314,8 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                     </div>
 
                     {/* End DateTime */}
-                    <div className="space-y-2">
-                      <Label className="text-sm">End</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs sm:text-sm">End</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
@@ -351,12 +352,12 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                 <Button
                   onClick={fetchTranscripts}
                   disabled={isFetchingData}
-                  className="w-full text-sm sm:text-base"
-                  size="default"
+                  className="w-full text-xs sm:text-base h-8 sm:h-10"
+                  size="sm"
                 >
                   {isFetchingData ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                       Fetching...
                     </>
                   ) : (
@@ -367,16 +368,16 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
             ) : (
               <>
                 {/* Analysis Ready State */}
-                <div className="bg-primary/10 p-3 rounded-lg text-center space-y-2">
-                  <div className="flex items-center justify-center gap-2">
-                    <Brain className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
-                    <Phone className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
+                <div className="bg-primary/10 p-2 sm:p-3 rounded-lg text-center space-y-1.5 sm:space-y-2">
+                  <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                    <Brain className="h-6 w-6 sm:h-10 sm:w-10 text-primary" />
+                    <Phone className="h-6 w-6 sm:h-10 sm:w-10 text-primary" />
                   </div>
-                  <h3 className="text-sm sm:text-base font-bold">THE BRAIN IS READY FOR ANALYSIS</h3>
-                  <p className="text-xs text-muted-foreground">
+                  <h3 className="text-xs sm:text-base font-bold">THE BRAIN IS READY FOR ANALYSIS</h3>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
                     {transcriptCount} call transcript(s) from {selectedCallTypes.join(", ")} calls
                   </p>
-                  <Button variant="outline" size="sm" onClick={resetDialog} className="text-xs sm:text-sm h-8">
+                  <Button variant="outline" size="sm" onClick={resetDialog} className="text-[10px] sm:text-sm h-6 sm:h-8 px-2">
                     Start New Analysis
                   </Button>
                 </div>
@@ -495,27 +496,27 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
                     )}
                   </div>
 
-                  {/* Custom Question Input - Always visible */}
+                {/* Custom Question Input - Always visible */}
                   <div className={cn(
-                    "space-y-1.5 sm:space-y-2 transition-all duration-200 flex-1"
+                    "space-y-1 sm:space-y-2 transition-all duration-200 flex-1"
                   )}>
-                    <Label className="text-xs sm:text-sm font-semibold">Ask Your Own Question</Label>
+                    <Label className="text-[10px] sm:text-sm font-semibold">Ask Your Own Question</Label>
                     <Textarea
                       placeholder="Type your response or question here..."
                       value={customQuestion}
                       onChange={(e) => setCustomQuestion(e.target.value)}
                       rows={3}
-                      className="resize-none text-xs sm:text-sm"
+                      className="resize-none text-[11px] sm:text-sm"
                     />
                     <Button
                       onClick={handleCustomQuestion}
                       disabled={isAsking || !customQuestion.trim()}
-                      className="w-full text-xs sm:text-sm h-8 sm:h-9"
+                      className="w-full text-[10px] sm:text-sm h-7 sm:h-9 px-2"
                       size="sm"
                     >
                       {isAsking ? (
                         <>
-                          <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                          <Loader2 className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                           Analyzing...
                         </>
                       ) : (
