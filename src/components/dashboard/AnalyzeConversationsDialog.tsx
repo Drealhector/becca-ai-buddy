@@ -228,39 +228,41 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
       onOpenChange(open);
       if (!open) resetDialog();
     }}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
-            Analyze Conversations
+      <DialogContent className="max-w-[92vw] sm:max-w-xl max-h-[90vh] p-1.5 sm:p-3">
+        <DialogHeader className="pb-1 sm:pb-2">
+          <DialogTitle className="flex items-center gap-1 text-xs sm:text-sm">
+            <Brain className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="text-[11px] sm:text-sm">Analyze Conversations</span>
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-8rem)] pr-4">
-          <div className="space-y-6">
+        <ScrollArea className="max-h-[calc(90vh-5rem)] pr-1 sm:pr-2">
+          <div className="space-y-1.5 sm:space-y-2">
             {!analysisReady ? (
               <>
                 {/* Platform Selection */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-base font-semibold">Select Platforms</Label>
+                <div className="space-y-1 sm:space-y-2">
+                  <div className="flex items-center justify-between gap-1">
+                    <Label className="text-[10px] sm:text-sm font-semibold">Select Platforms</Label>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleSelectAll}
+                      className="text-[9px] sm:text-xs h-5 sm:h-7 px-1.5 sm:px-2"
                     >
-                      {selectedPlatforms.length === platforms.length ? "Deselect All" : "Select All"}
+                      {selectedPlatforms.length === platforms.length ? "Deselect" : "Select All"}
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-1 sm:gap-2">
                     {platforms.map((platform) => (
-                      <div key={platform.id} className="flex items-center space-x-2">
+                      <div key={platform.id} className="flex items-center space-x-1 sm:space-x-1.5">
                         <Checkbox
                           id={platform.id}
                           checked={selectedPlatforms.includes(platform.id)}
                           onCheckedChange={() => handlePlatformToggle(platform.id)}
+                          className="h-3 w-3 sm:h-4 sm:w-4"
                         />
-                        <Label htmlFor={platform.id} className="cursor-pointer">
+                        <Label htmlFor={platform.id} className="cursor-pointer text-[10px] sm:text-sm">
                           {platform.label}
                         </Label>
                       </div>
@@ -269,12 +271,12 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
                 </div>
 
                 {/* Time Selection */}
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold">Select Time Window (Max 24 hours)</Label>
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1 sm:space-y-2">
+                  <Label className="text-[10px] sm:text-sm font-semibold">Time Window (Max 24h)</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
                     {/* Start DateTime */}
-                    <div className="space-y-2">
-                      <Label>Start</Label>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] sm:text-sm">Start</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
@@ -307,8 +309,8 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
                     </div>
 
                     {/* End DateTime */}
-                    <div className="space-y-2">
-                      <Label>End</Label>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] sm:text-sm">End</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
@@ -345,13 +347,13 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
                 <Button
                   onClick={fetchMessages}
                   disabled={isFetchingData}
-                  className="w-full"
-                  size="lg"
+                  className="w-full text-xs sm:text-sm h-8 sm:h-9"
+                  size="sm"
                 >
                   {isFetchingData ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Fetching Messages...
+                      <Loader2 className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                      Fetching...
                     </>
                   ) : (
                     "Analyze Conversations"
@@ -361,26 +363,26 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
             ) : (
               <>
                 {/* Analysis Ready State */}
-                <div className="bg-primary/10 p-4 rounded-lg text-center space-y-2">
-                  <Brain className="h-12 w-12 mx-auto text-primary" />
-                  <h3 className="text-lg font-bold">THE BRAIN IS READY FOR ANALYSIS</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Analyzing {messageCount} messages from {selectedPlatforms.length} platform(s)
+                <div className="bg-primary/10 p-1.5 sm:p-2 rounded-lg text-center space-y-1">
+                  <Brain className="h-5 w-5 sm:h-7 sm:w-7 mx-auto text-primary" />
+                  <h3 className="text-[10px] sm:text-sm font-bold">READY FOR ANALYSIS</h3>
+                  <p className="text-[9px] sm:text-xs text-muted-foreground">
+                    {messageCount} message(s) from {selectedPlatforms.length} platform(s)
                   </p>
-                  <Button variant="outline" size="sm" onClick={resetDialog}>
-                    Start New Analysis
+                  <Button variant="outline" size="sm" onClick={resetDialog} className="text-[9px] sm:text-xs h-5 sm:h-7 px-1.5 sm:px-2">
+                    New Analysis
                   </Button>
                 </div>
 
                 {/* Question Templates */}
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold">Popular Questions</Label>
-                  <div className="grid gap-2">
+                <div className="space-y-1 sm:space-y-1.5">
+                  <Label className="text-[10px] sm:text-xs font-semibold">Questions</Label>
+                  <div className="grid gap-1 sm:gap-1.5">
                     {questionTemplates.map((question, idx) => (
                       <Button
                         key={idx}
                         variant="outline"
-                        className="justify-start text-left h-auto py-3"
+                        className="justify-start text-left h-auto py-1 sm:py-2 text-[10px] sm:text-xs leading-tight px-2"
                         onClick={() => handleTemplateQuestion(question)}
                         disabled={isAsking}
                       >
@@ -391,78 +393,62 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
                 </div>
 
                 {/* Custom Question */}
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold">Ask Your Own Question</Label>
+                <div className="space-y-1 sm:space-y-1.5">
+                  <Label className="text-[10px] sm:text-xs font-semibold">Your Question</Label>
                   <Textarea
-                    placeholder="Type your custom question here..."
+                    placeholder="Type here..."
                     value={customQuestion}
                     onChange={(e) => setCustomQuestion(e.target.value)}
-                    rows={3}
+                    rows={2}
+                    className="resize-none text-[10px] sm:text-sm py-1.5 px-2"
                   />
                   <Button
                     onClick={handleCustomQuestion}
                     disabled={isAsking || !customQuestion.trim()}
-                    className="w-full"
+                    className="w-full text-[9px] sm:text-xs h-6 sm:h-8 px-2"
+                    size="sm"
                   >
                     {isAsking ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-1 h-2.5 w-2.5 sm:h-4 sm:w-4 animate-spin" />
                         Analyzing...
                       </>
                     ) : (
-                      "Get Answer"
+                      "Send"
                     )}
                   </Button>
                 </div>
 
                 {/* Analysis Result */}
                 {analysis && (
-                  <div className="space-y-4">
-                    <Label className="text-base font-semibold">Analysis Result</Label>
-                    
-                    {/* Summary */}
-                    <div className="bg-primary/10 p-4 rounded-lg">
-                      <p className="text-sm font-medium mb-2">Summary</p>
-                      <p className="text-sm">{analysis.summary || "No summary available"}</p>
+                  <div className="space-y-2 bg-muted/30 p-3 rounded-lg">
+                    <div className="space-y-2">
+                      <p className="text-xs sm:text-sm">{analysis.summary || "No summary available"}</p>
                       {analysis.conversationCount > 0 && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Analyzed {analysis.conversationCount} conversation{analysis.conversationCount !== 1 ? 's' : ''}
+                        <p className="text-xs text-muted-foreground">
+                          Based on {analysis.conversationCount} conversation{analysis.conversationCount !== 1 ? 's' : ''}
                         </p>
                       )}
                     </div>
 
                     {/* Topics */}
                     {analysis.topics && analysis.topics.length > 0 && (
-                      <div className="space-y-3">
-                        <p className="text-sm font-medium">Key Topics</p>
+                      <div className="space-y-2">
+                        <p className="text-xs sm:text-sm">
+                          I found {analysis.topics.length} key topic{analysis.topics.length !== 1 ? 's' : ''}:
+                        </p>
                         {analysis.topics.map((topic: any, idx: number) => (
-                          <div key={idx} className="border rounded-lg overflow-hidden">
-                            <div className="p-4 bg-muted/50">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="font-medium">{topic.name}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Mentioned in {topic.count} conversation{topic.count !== 1 ? 's' : ''}
-                                  </p>
-                                </div>
-                                {topic.mentions && topic.mentions.length > 0 && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => toggleTopic(idx)}
-                                  >
-                                    {expandedTopics.has(idx) ? "Hide Details" : "View Details"}
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
+                          <div key={idx} className="bg-background p-2 rounded">
+                            <p className="text-xs sm:text-sm">
+                              <span className="font-medium">{topic.name}</span> - {topic.count} conversation{topic.count !== 1 ? 's' : ''}.
+                            </p>
                             
                             {expandedTopics.has(idx) && topic.mentions && (
-                              <div className="p-4 space-y-3 bg-background">
+                              <div className="mt-2 pl-4 space-y-2">
                                 {topic.mentions.map((mention: any, mIdx: number) => (
-                                  <div key={mIdx} className="border-l-2 border-primary pl-3 space-y-1">
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                      <span>{mention.platform}</span>
+                                  <div key={mIdx} className="border-l-2 border-primary pl-3 py-1 bg-muted/30 rounded-r">
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                                      <span className="capitalize">{mention.platform}</span>
                                       <span>•</span>
                                       <span>{new Date(mention.timestamp).toLocaleString()}</span>
                                       {mention.sender && (
@@ -472,7 +458,7 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
                                         </>
                                       )}
                                     </div>
-                                    <p className="text-sm">{mention.snippet}</p>
+                                    <p className="text-xs">{mention.snippet}</p>
                                   </div>
                                 ))}
                               </div>
@@ -485,16 +471,20 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
                     {/* Insights */}
                     {analysis.insights && analysis.insights.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Key Insights</p>
-                        <ul className="space-y-2">
+                        <p className="text-xs sm:text-sm">Key insights:</p>
+                        <ul className="space-y-1">
                           {analysis.insights.map((insight: string, idx: number) => (
-                            <li key={idx} className="text-sm bg-muted/30 p-3 rounded-lg">
-                              {insight}
+                            <li key={idx} className="text-xs bg-background p-1.5 sm:p-2 rounded">
+                              • {insight}
                             </li>
                           ))}
                         </ul>
                       </div>
                     )}
+
+                    <p className="text-xs text-muted-foreground italic mt-3">
+                      You can ask me more questions using the templates or type your own above.
+                    </p>
                   </div>
                 )}
               </>
