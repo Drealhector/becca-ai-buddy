@@ -89,7 +89,13 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
         }
       );
 
-      if (!response.ok || !response.body) throw new Error("Stream failed");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error:", response.status, errorText);
+        throw new Error(`API returned ${response.status}: ${errorText}`);
+      }
+      
+      if (!response.body) throw new Error("No response body");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -141,10 +147,14 @@ const WebChatWidget = ({ customization, onClose }: WebChatWidgetProps) => {
       }
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Sorry, I encountered an error. Please try again." },
-      ]);
+      setMessages((prev) => {
+        // Remove the empty assistant message if it exists
+        const filtered = prev.filter(m => m.content !== "");
+        return [
+          ...filtered,
+          { role: "assistant", content: "Sorry, message sending failed. Please try again." },
+        ];
+      });
     } finally {
       setIsLoading(false);
     }

@@ -12,18 +12,47 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, conversationId } = await req.json();
+    const body = await req.json();
+    console.log('Received body:', body);
+    
+    const { messages, conversationId } = body;
     
     if (!messages || !Array.isArray(messages)) {
-      throw new Error('Messages array is required');
+      console.error('Invalid messages received:', messages);
+      return new Response(
+        JSON.stringify({ error: 'Messages array is required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+    
+    if (messages.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Messages array cannot be empty' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
     }
     
     const VAPI_PRIVATE_KEY = Deno.env.get('VAPI_WEB_PRIVATE_KEY');
     const VAPI_ASSISTANT_ID = Deno.env.get('VAPI_WEB_ASSISTANT_ID');
     
     if (!VAPI_PRIVATE_KEY || !VAPI_ASSISTANT_ID) {
-      throw new Error('VAPI credentials not configured');
+      console.error('Missing VAPI credentials');
+      return new Response(
+        JSON.stringify({ error: 'VAPI credentials not configured' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
     }
+
+    console.log('Processing chat with', messages.length, 'messages for conversation:', conversationId);
 
     // Get the latest user message
     const latestUserMessage = messages[messages.length - 1];
