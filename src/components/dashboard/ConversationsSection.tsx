@@ -92,8 +92,19 @@ const ConversationsSection = () => {
               .order("timestamp", { ascending: true })
               .limit(15);
 
-            return { ...convo, messages: messages || [] };
+            return { 
+              ...convo, 
+              messages: messages || [],
+              latest_message_time: messages && messages.length > 0 
+                ? messages[messages.length - 1].timestamp 
+                : convo.start_time
+            };
           })
+        );
+
+        // Sort by latest message timestamp (most recent first)
+        conversationsWithMessages.sort((a, b) => 
+          new Date(b.latest_message_time).getTime() - new Date(a.latest_message_time).getTime()
         );
 
         setConversations(conversationsWithMessages);
@@ -147,7 +158,7 @@ const ConversationsSection = () => {
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{convo.platform || "web"}</Badge>
                   <span className="text-sm text-muted-foreground">
-                    {format(new Date(convo.start_time), "MMM dd, HH:mm")}
+                    {format(new Date(convo.latest_message_time || convo.start_time), "MMM dd, HH:mm")}
                   </span>
                 </div>
               </div>
