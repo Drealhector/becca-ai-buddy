@@ -289,27 +289,27 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
         {step === "choose" && (
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">Choose how you want to create your AI character:</p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Button
                 variant="outline"
-                className="h-auto flex-col gap-3 p-6"
+                className="h-auto flex-col gap-3 p-6 py-8 min-h-[140px]"
                 onClick={() => handleChoose("new")}
               >
-                <Sparkles className="h-8 w-8" />
-                <div>
-                  <div className="font-semibold">New Character</div>
-                  <div className="text-xs text-muted-foreground">Create from description</div>
+                <Sparkles className="h-8 w-8 flex-shrink-0" />
+                <div className="w-full text-center">
+                  <div className="font-semibold text-base">New Character</div>
+                  <div className="text-sm text-muted-foreground mt-1">Create from description</div>
                 </div>
               </Button>
               <Button
                 variant="outline"
-                className="h-auto flex-col gap-3 p-6"
+                className="h-auto flex-col gap-3 p-6 py-8 min-h-[140px]"
                 onClick={() => handleChoose("human")}
               >
-                <User className="h-8 w-8" />
-                <div>
-                  <div className="font-semibold">Human Character</div>
-                  <div className="text-xs text-muted-foreground">Based on real person</div>
+                <User className="h-8 w-8 flex-shrink-0" />
+                <div className="w-full text-center">
+                  <div className="font-semibold text-base">Human Character</div>
+                  <div className="text-sm text-muted-foreground mt-1">Based on real person</div>
                 </div>
               </Button>
             </div>
