@@ -34,11 +34,33 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a greeting message generator. Based on the personality description provided, create a short, friendly greeting message (1-2 sentences max) that matches the tone and personality. Do not include any introductions like "Here\'s a greeting" - just output the greeting itself.'
+            content: `You are a greeting message generator. Based on the personality description provided, create a short, friendly greeting message (1-2 sentences max) that matches the tone and personality.
+
+**CRITICAL RULES:**
+1. This is for VOICE/CHAT communication, NOT video calls
+2. **NEVER use visual references**: NO "see", "look", "watch", "you look [adjective]", "good to see you", "nice to see you"
+3. **NEVER use vague contextual phrases**: NO "about that thing", "what's the latest", "how's that going", "you mentioned", "so about that" - this is a FIRST greeting with NO prior context
+4. Use casual, warm greetings appropriate for starting a fresh conversation
+5. You can comment on VOICE, ENERGY, or VIBE but NEVER appearance
+6. Keep it natural and conversational
+7. Do not include any introductions like "Here's a greeting" - just output the greeting itself
+
+**GOOD EXAMPLES:**
+- "Hey there, how's it going?"
+- "What's up? Good to hear from you."
+- "Yo! How are you doing today?"
+
+**BAD EXAMPLES (NEVER USE):**
+- "Good to see you today!" (visual reference)
+- "You look great!" (visual reference)  
+- "So about that thing, what's the latest?" (vague context - no prior conversation)
+- "How's that project going?" (assumes prior knowledge)`
           },
           { 
             role: 'user', 
-            content: `Generate a greeting message for an AI assistant with this personality: ${personality}`
+            content: `Generate a greeting message for an AI assistant with this personality: ${personality}
+
+Remember: NO visual words (see/look), NO vague context phrases (about that/what's the latest). This is a FIRST greeting for VOICE/CHAT.`
           }
         ],
       }),

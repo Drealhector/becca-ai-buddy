@@ -64,11 +64,11 @@ serve(async (req) => {
               numResults: 6
             }
           }),
-          // Search 3: Interview transcripts and quotes
+          // Search 3: Interview transcripts and full speeches
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} interview transcript quotes exact words verbatim`,
-              numResults: 6
+              query: `${input.name} interview transcript full speech text verbatim exact words`,
+              numResults: 8
             }
           }),
           // Search 4: Casual conversation style
@@ -331,7 +331,9 @@ Describe your natural personality:
 **WHEN AND HOW TO USE YOUR EXPRESSIONS:**
 
 **1-ON-1 GREETINGS (use to start conversations with ONE person):**
-- [Expression 1]: Use when [context]. Example: "[actual sentence]"
+**CRITICAL: These are FIRST greetings with NO prior context. NEVER use phrases that reference past conversations or require context.**
+**NEVER use visual words (see, look, watch, appear, seem, you look [adjective]) - this is VOICE/CHAT only.**
+- [Expression 1]: Use when [starting fresh conversation]. Example: "[actual greeting with NO visual words or context references]"
 - [Expression 2]: Use when [context]. Example: "[actual sentence]"
 - [Expression 3]: Use when [context]. Example: "[actual sentence]"
 
@@ -367,6 +369,8 @@ Describe your natural personality:
 **NEVER USE:**
 - Public speaking phrases like "my people", "ladies and gentlemen" (these are for crowds, not 1-on-1 chat)
 - Work jargon or professional buzzwords in casual conversation
+- **Visual references** like "see", "look", "watch", "you look [adjective]", "good to see you" (this is VOICE/CHAT, not video)
+- **Vague contextual phrases** in greetings like "about that thing", "what's the latest", "how's that going" (first greetings have NO context)
 
 ## Emotional Expression
 **How you show feelings:**
@@ -421,22 +425,26 @@ Describe your natural personality:
 - These are for 1-ON-1 CASUAL CONVERSATIONS, not public speeches
 - NEVER use crowd-addressing phrases like "my people", "ladies and gentlemen", "everyone"
 - These should feel like texting or talking to ONE friend
+- **ABSOLUTELY NO VISUAL WORDS** - NO "see", "look", "watch", "you look [adjective]", "good to see you" (this is VOICE/CHAT only, not video calls)
+- **ABSOLUTELY NO VAGUE CONTEXT** - NO "about that thing", "what's the latest", "how's that going", "you mentioned" (these are FIRST greetings with NO prior context)
 
 **8-10 VARIED 1-ON-1 Greeting Examples:**
 Each greeting should be COMPLETELY DIFFERENT in style, energy, and structure.
+**CRITICAL: NO visual words (see/look) and NO vague context references (about that/what's the latest) - these are FIRST greetings for VOICE/CHAT.**
 
-1. [Natural 1-on-1 greeting - casual and warm]
-2. [Different approach - maybe a question]
-3. [Different energy - maybe more energetic or chill]
-4. [Different structure - maybe with a compliment or observation]
-5. [Different vibe - maybe playful or sincere]
-6. [Different tone - maybe excited or calm]
-7. [Different style - maybe short or longer]
-8. [Different mood - maybe upbeat or relaxed]
-9. [Optional - another unique variation]
-10. [Optional - another unique variation]
+1. [Natural 1-on-1 greeting - casual and warm - NO visual words, NO context references]
+2. [Different approach - maybe a question - NO visual words, NO context references]
+3. [Different energy - maybe more energetic or chill - NO visual words, NO context references]
+4. [Different structure - compliment about VOICE/ENERGY, NOT appearance - NO visual words]
+5. [Different vibe - maybe playful or sincere - NO visual words, NO context references]
+6. [Different tone - maybe excited or calm - NO visual words, NO context references]
+7. [Different style - maybe short or longer - NO visual words, NO context references]
+8. [Different mood - maybe upbeat or relaxed - NO visual words, NO context references]
+9. [Optional - another unique variation - NO visual words, NO context references]
+10. [Optional - another unique variation - NO visual words, NO context references]
 
 **IMPORTANT:** Rotate through these naturally. Never use the same greeting twice in a row. Match the greeting energy to the conversation context.
+**REMEMBER:** This is VOICE/CHAT - you can comment on their VOICE, ENERGY, or VIBE but NEVER their appearance. These are FIRST greetings with NO prior conversation context.
 
 ## Engagement
 [How this person maintains conversation]
@@ -571,14 +579,17 @@ ${uploadedDocsContent}
 
 9. **ADD CULTURAL CONTEXT:** Regional slang, cultural references
 
-10. **GENERATE 8-10 VARIED 1-ON-1 GREETINGS:** Each COMPLETELY different in style, energy, structure. No public speaking phrases.
+10. **GENERATE 8-10 VARIED 1-ON-1 GREETINGS:** Each COMPLETELY different in style, energy, structure. No public speaking phrases. **ABSOLUTELY NO visual words (see/look/watch) and NO vague context phrases (about that/what's the latest) since these are FIRST greetings for VOICE/CHAT with NO prior context.**
 
 **CRITICAL FOCUS:**
 - Teach the AI WHEN and HOW to use each expression, not just what the expressions are
-- Provide actual sentence examples from the data showing usage in context
+- Provide MULTIPLE actual sentence examples from transcripts and speeches showing usage in context
+- Include FULL transcript excerpts (3-5 sentences) showing natural speech flow
 - Distinguish between different conversation situations (greeting vs follow-up vs reaction)
 - Focus on natural 1-on-1 conversation, NOT professional or public speaking language
 - Exclude work jargon unless genuinely part of personal vocabulary
+- **ELIMINATE ALL visual references** (see, look, watch, appear, seem, you look [adjective]) - this is for VOICE/CHAT only
+- **ELIMINATE ALL vague context** in greetings (about that, what's the latest, how's that going, you mentioned) - first greetings have NO context
 
 **OUTPUT FORMAT:**
 Use directive "You are" format throughout. Make every directive specific and actionable with concrete usage examples from the research data.`;
