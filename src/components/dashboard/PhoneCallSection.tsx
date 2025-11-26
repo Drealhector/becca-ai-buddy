@@ -303,29 +303,32 @@ const PhoneCallSection = () => {
       )}
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-full bg-primary/10">
-            <Phone className="h-6 w-6 text-primary" />
+        {/* Left side: Icon, Title, and Action Buttons (desktop/tablet) */}
+        <div className="flex flex-col gap-3 w-full sm:w-auto">
+          <div className="flex items-center justify-between sm:justify-start gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-full bg-primary/10">
+                <Phone className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold">Phone Calls</h3>
+            </div>
+            {/* Analyze Button - Mobile only (inline with title) */}
+            <Button
+              onClick={() => setAnalyzeDialogOpen(true)}
+              variant="outline"
+              className="gap-2 sm:hidden"
+            >
+              <Brain className="w-4 h-4" />
+              <Phone className="w-4 h-4" />
+              Analyze
+            </Button>
           </div>
-          <h3 className="text-lg font-semibold">Phone Calls</h3>
-        </div>
-        <div className="flex flex-col gap-2 w-full sm:w-auto">
-          {/* Analyze Button - Full width */}
-          <Button
-            onClick={() => setAnalyzeDialogOpen(true)}
-            variant="outline"
-            className="gap-2 w-full"
-          >
-            <Brain className="w-4 h-4" />
-            <Phone className="w-4 h-4" />
-            Analyze
-          </Button>
-          {/* Make Call and Schedule Calls - Side by side, smaller */}
-          <div className="flex gap-2 w-full">
+          {/* Make Call and Schedule - Below title on desktop/tablet, below analyze on mobile */}
+          <div className="flex gap-2 w-full sm:w-auto">
             <Button
               onClick={() => setShowMakeCall(!showMakeCall)}
               size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white gap-1 flex-1"
+              className="bg-green-600 hover:bg-green-700 text-white gap-1 flex-1 sm:flex-initial"
             >
               <Phone className="w-3 h-3" />
               Make Call
@@ -334,13 +337,23 @@ const PhoneCallSection = () => {
               onClick={() => setShowScheduleCall(!showScheduleCall)}
               size="sm"
               variant="outline"
-              className="gap-1 flex-1"
+              className="gap-1 flex-1 sm:flex-initial"
             >
               <Clock className="w-3 h-3" />
               Schedule
             </Button>
           </div>
         </div>
+        {/* Right side: Analyze Button (desktop/tablet only, opposite the icon) */}
+        <Button
+          onClick={() => setAnalyzeDialogOpen(true)}
+          variant="outline"
+          className="gap-2 hidden sm:flex"
+        >
+          <Brain className="w-4 h-4" />
+          <Phone className="w-4 h-4" />
+          Analyze
+        </Button>
       </div>
 
       {showMakeCall && (
