@@ -237,12 +237,15 @@ e) **Frequency**: very common / common / occasional
 - Age-appropriate language patterns
 
 **CRITICAL RULES:**
-1. Extract actual quotes with full context from search results
+1. Extract FULL sentence quotes from actual speeches, interviews, and transcripts
 2. Categorize EVERY expression by type and usage
 3. Distinguish between greetings (1-on-1) and public speaking phrases
-4. Show HOW the person uses words, not just WHAT words they use
+4. Show HOW the person uses words with ACTUAL sentence examples from transcripts
 5. Focus on natural conversation, NOT professional vocabulary
-6. Provide at least 15-20 specific expressions with full usage details`;
+6. **NEVER include visual references** - NO words like "see", "look", "watch", "you look [adjective]" in ANY expressions since this is for VOICE/CHAT only
+7. **NEVER use vague contextual phrases** - NO phrases like "about that thing", "what's the latest", "how's that going" in greetings since there's NO prior context in a first greeting
+8. Provide at least 20-30 specific expressions with FULL usage details and actual sentence examples
+9. Include MULTIPLE full transcript excerpts showing actual speech patterns`;
         
         userPrompt = `Analyze these web search results about ${input.name}${input.context ? ` (${input.context})` : ''}:
 
@@ -279,10 +282,13 @@ For each expression, slang, or recurring word, provide:
 - Cultural elements (regional slang, age-appropriate language)
 
 **CRITICAL:**
-- Provide at least 15-20 specific expressions with FULL usage details
-- Show HOW they use words with actual sentence examples
+- Provide at least 20-30 specific expressions with FULL usage details
+- Show HOW they use words with MULTIPLE actual sentence examples from transcripts
+- Include FULL excerpts from speeches and interviews showing their natural speech flow
 - Distinguish 1-on-1 greetings from public speaking phrases
 - Focus on conversational language, NOT work jargon
+- **NEVER include visual words** (see, look, watch, appear, seem, etc.) - this is for VOICE/CHAT
+- **NEVER use vague context phrases** in greetings (about that, what's the latest, how's that going) - first greetings have NO prior context
 - This is for entertainment purposes, analyzing PUBLIC communication only`;
       }
     } else if (type === "create_human_character") {
