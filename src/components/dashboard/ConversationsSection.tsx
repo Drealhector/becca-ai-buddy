@@ -53,14 +53,14 @@ const ConversationsSection = () => {
               .from("messages")
               .select("*")
               .eq("conversation_id", convo.id)
-              .order("timestamp", { ascending: true })
+              .order("timestamp", { ascending: false })
               .limit(15);
 
             return { 
               ...convo, 
               messages: messages || [],
               latest_message_time: messages && messages.length > 0 
-                ? messages[messages.length - 1].timestamp 
+                ? messages[0].timestamp 
                 : convo.start_time
             };
           })
@@ -89,14 +89,14 @@ const ConversationsSection = () => {
               .from("messages")
               .select("*")
               .eq("conversation_id", convo.id)
-              .order("timestamp", { ascending: true })
+              .order("timestamp", { ascending: false })
               .limit(15);
 
             return { 
               ...convo, 
               messages: messages || [],
               latest_message_time: messages && messages.length > 0 
-                ? messages[messages.length - 1].timestamp 
+                ? messages[0].timestamp 
                 : convo.start_time
             };
           })
