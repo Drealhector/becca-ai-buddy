@@ -47,8 +47,8 @@ serve(async (req) => {
       try {
         const allResults: any[] = [];
         
-        // Run all searches in PARALLEL for 5-7x faster performance
-        console.log("Running 8 parallel searches...");
+        // Run all searches in PARALLEL for maximum speed
+        console.log("Running 12 parallel searches for comprehensive speech analysis...");
         const searchPromises = [
           // Search 1: Identity and background
           supabase.functions.invoke('web-search', {
@@ -57,53 +57,81 @@ serve(async (req) => {
               numResults: 5
             }
           }),
-          // Search 2: How they talk - specific phrases and slang
+          // Search 2: Interview transcripts - PRIMARY SOURCE
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} favorite phrases common sayings slang words catchphrases how they talk`,
+              query: `${input.name} interview full transcript verbatim text complete`,
+              numResults: 8
+            }
+          }),
+          // Search 3: Speech transcripts and recordings
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} speech transcript recording verbatim spoken words`,
+              numResults: 7
+            }
+          }),
+          // Search 4: Podcast appearances with transcripts
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} podcast transcript episode conversation full text`,
+              numResults: 7
+            }
+          }),
+          // Search 5: Direct quotes and exact phrases
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} quotes exact phrases catchphrases signature sayings words`,
+              numResults: 7
+            }
+          }),
+          // Search 6: Word usage and vocabulary analysis
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} word choice vocabulary slang expressions how they speak`,
               numResults: 6
             }
           }),
-          // Search 3: Interview transcripts and quotes
+          // Search 7: Conversational style analysis
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} interview transcript quotes exact words verbatim`,
+              query: `${input.name} conversation style talking pattern communication informal`,
               numResults: 6
             }
           }),
-          // Search 4: Casual conversation style
+          // Search 8: Video content and speaking patterns
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} casual conversation informal talking style natural speech`,
+              query: `${input.name} youtube video speaking style tone delivery`,
               numResults: 5
             }
           }),
-          // Search 5: Video/podcast content
+          // Search 9: Social media voice
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} youtube podcast video speaking style tone voice`,
+              query: `${input.name} twitter instagram posts writing style personality`,
               numResults: 5
             }
           }),
-          // Search 6: Social media personality
+          // Search 10: Greeting patterns
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} twitter instagram posts personality informal communication`,
-              numResults: 5
-            }
-          }),
-          // Search 7: Interaction style and mannerisms
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} interaction style mannerisms quirks behavior patterns ${input.context || ''}`.trim(),
-              numResults: 5
-            }
-          }),
-          // Search 8: Greetings and sign-offs
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} greeting style hello introduction how they start conversations`,
+              query: `${input.name} greeting hello introduction how start conversation`,
               numResults: 4
+            }
+          }),
+          // Search 11: Behavioral quirks and mannerisms
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} mannerisms behavior patterns quirks habits ${input.context || ''}`.trim(),
+              numResults: 5
+            }
+          }),
+          // Search 12: Q&A and responses
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} Q&A questions answers response style`,
+              numResults: 5
             }
           })
         ];
@@ -156,7 +184,15 @@ CRITICAL RULES:
 - Greetings must be casual with pleasantries first, do not jump to business unless customer initiates
 - Keep all responses to one or two sentences unless customer specifically asks for more explanation
 - Sound conversational and natural, not formal or robotic
-- Generate 8-10 VARIED greeting examples that sound natural and different from each other`;
+- Generate 8-10 VARIED greeting examples that sound natural and different from each other
+
+**GREETING REQUIREMENTS:**
+- These are for TEXT and VOICE chat (not video) - NO visual language
+- Never use: "see", "look", "good to see you", "you look", "tremendous"
+- Never use: "about that thing", vague references without context
+- Never use: public speaking phrases like "my people", "ladies and gentlemen"
+- Use appropriate greetings: "hey", "what's up", "how's it going", "nice to hear from you"
+- Each greeting must be completely different in style, energy, and structure`;
       userPrompt = `Create an AI personality prompt for: ${input.description}
 
 ${uploadedDocsContent}
@@ -179,70 +215,117 @@ If you don't have reliable information about this specific person, say: "I could
         
         userPrompt = `Do you have any information about ${input.name}${input.context ? ` (${input.context})` : ''}? Provide whatever details you can recall, or indicate if you don't have reliable information about them.`;
       } else {
-        systemPrompt = `You are an expert personality analyst. Extract communication patterns from public sources (interviews, appearances, social media) to create an AI character profile.
+        systemPrompt = `You are an expert speech pattern analyst specializing in extracting authentic conversational patterns from transcripts and interviews.
 
-**YOUR TASK:** Analyze the search results and create a comprehensive personality profile.
+**YOUR TASK:** Analyze the search results (especially interview transcripts, podcast transcripts, and recorded speech) to create a comprehensive communication profile.
+
+**CRITICAL PRIORITY: EXTRACT FROM INTERVIEW/SPEECH TRANSCRIPTS FIRST**
+Focus heavily on:
+- Full interview transcripts (verbatim quotes)
+- Podcast episode transcripts
+- Speech recordings and transcripts
+- Q&A session transcripts
+- Video transcripts with exact spoken words
 
 **STRUCTURE YOUR RESPONSE:**
 
 **IDENTITY & BACKGROUND:**
-First, identify who this person is:
 - Full name
 - Primary profession or role
 - Brief background (1-2 sentences)
 - Key accomplishments or what they're known for
 
-**COMMUNICATION PATTERN ANALYSIS:**
+**SPEECH PATTERN EXTRACTION (60% of analysis - PRIMARY FOCUS)**
 
-**1. WORD & PHRASE USAGE ANALYSIS (MOST CRITICAL - 50% of analysis)**
+For EACH recurring word, phrase, or expression found in transcripts/interviews, provide:
 
-For EACH recurring word, phrase, or slang you identify, provide:
+**FORMAT FOR EACH EXPRESSION:**
 
-a) **The exact expression** (quote it verbatim)
-b) **Type of expression**: greeting / follow-up / reaction / transition / emphasis / exclamation / filler
-c) **Usage context**: WHEN they use it (start of convo, mid-conversation, when excited, when agreeing, etc.)
-d) **Example sentences**: Show 2-3 actual sentences from search results where they used it
-e) **Frequency**: very common / common / occasional
+**Expression:** "[exact quote from transcript]"
+**Category:** [greeting / follow-up / reaction / transition / emphasis / filler / agreement / disagreement]
+**Context of Use:** [WHEN they use it - be specific: "at start of 1-on-1 chat", "when excited about idea", "when agreeing with someone", "mid-conversation transition"]
+**Frequency:** [very common (40-50% of situations) / common (20-30%) / occasional (10-15%)]
+**Source Examples from Transcripts:**
+- Example 1: "[full sentence from interview/speech showing usage]" - [context: what they were responding to]
+- Example 2: "[another full sentence showing usage]" - [context]
+- Example 3: "[third example if available]" - [context]
 
-**Focus on identifying:**
-- **Greetings**: How they start 1-on-1 conversations (NOT public speeches or group addresses)
-  - Examples: "Hey", "What's up", "Yo", etc. - NOT "my people", "ladies and gentlemen"
-- **Follow-up phrases**: What they say to continue conversation ("so about that...", "anyway...")
-- **Reactions**: How they respond ("oh wow", "for real", "that's crazy")
-- **Emphasis words**: What they say for emphasis ("literally", "honestly", "definitely")
-- **Filler words**: Natural pauses ("like", "you know", "uh", "um")
-- **Transitions**: How they change topics ("but yeah", "anyway", "so")
-- **Agreement/disagreement**: How they express opinions ("I feel you", "nah", "exactly")
+**ORGANIZE BY USAGE CATEGORY:**
 
-**2. SENTENCE STRUCTURE & RHYTHM (20%)**
-- Do they use short punchy sentences or long flowing ones?
-- Where do they naturally pause?
-- Do they ask questions frequently?
-- How do they structure thoughts? (list format, storytelling, point by point)
+**1. 1-ON-1 GREETINGS (for starting conversation with ONE person):**
+- ONLY include: casual greetings like "hey", "what's up", "yo", "hi there"
+- EXCLUDE: public speaking phrases ("my people", "ladies and gentlemen", "everyone", "folks")
+- EXCLUDE: professional openings ("good morning team", "welcome all")
+- Find at least 5-8 different greeting styles from transcripts
 
-**3. EMOTIONAL TONE (15%)**
-- Baseline mood: cheerful, calm, energetic, serious, playful
-- How they express excitement, frustration, agreement
-- Empathy level in responses
-- Humor style: sarcastic, playful, witty, silly
+**2. FOLLOW-UP PHRASES (continuing conversation):**
+- "so about that...", "anyway...", "but yeah...", etc.
+- Find at least 5-7 examples
 
-**4. PERSONALITY TRAITS (10%)**
-- Confidence level (assertive, humble, balanced)
-- Extroversion (very social, selective, reserved)
-- How they handle disagreement or criticism
+**3. REACTIONS (responding to information):**
+- Surprise: "oh wow", "no way", "seriously?"
+- Agreement: "exactly", "for real", "I feel you"
+- Disagreement: "nah", "I don't know about that"
+- Find at least 8-10 different reactions
 
-**5. CULTURAL & REGIONAL ELEMENTS (5%)**
-- Regional slang or dialect
+**4. EMPHASIS WORDS (stressing a point):**
+- "literally", "honestly", "definitely", "absolutely", "totally"
+- Find at least 5-7 examples with usage context
+
+**5. FILLER WORDS (natural pauses in speech):**
+- "like", "you know", "uh", "um", "so", "basically", "actually"
+- Note frequency of each filler
+
+**6. TRANSITIONS (changing topics):**
+- "but yeah", "anyway", "so", "speaking of", "by the way"
+- Find at least 5-6 examples
+
+**7. AGREEMENT/DISAGREEMENT EXPRESSIONS:**
+- How they express "yes": [list with examples]
+- How they express "no": [list with examples]
+- How they express partial agreement: [list with examples]
+
+**SENTENCE STRUCTURE ANALYSIS (15%):**
+- Average sentence length: [short (5-10 words) / medium (10-20) / long (20+)]
+- Sentence complexity: [simple / compound / complex]
+- Question frequency: [asks many questions / moderate / rarely asks]
+- Rhythm: [fast-paced, many thoughts / measured, thoughtful / varies by topic]
+- Pause patterns: [where they naturally pause in sentences]
+
+**EMOTIONAL TONE ANALYSIS (10%):**
+- Baseline emotional state: [energetic / calm / serious / playful / warm / intense]
+- How they express excitement: [specific phrases and patterns from transcripts]
+- How they express frustration: [specific phrases from transcripts]
+- How they express empathy: [specific phrases from transcripts]
+- Humor style: [sarcastic / playful / witty / self-deprecating / observational] with examples
+
+**CONVERSATIONAL HABITS (10%):**
+- Do they interrupt or wait for others to finish?
+- Do they ask follow-up questions?
+- Do they tell stories or give direct answers?
+- Do they use metaphors or analogies?
+- Do they reference their own experiences?
+
+**CULTURAL & REGIONAL ELEMENTS (5%):**
+- Regional slang or dialect markers
 - Cultural references they make
-- Age-appropriate language patterns
+- Age-cohort language patterns
+- Industry-specific casual language (not jargon)
 
 **CRITICAL RULES:**
-1. Extract actual quotes with full context from search results
-2. Categorize EVERY expression by type and usage
-3. Distinguish between greetings (1-on-1) and public speaking phrases
-4. Show HOW the person uses words, not just WHAT words they use
-5. Focus on natural conversation, NOT professional vocabulary
-6. Provide at least 15-20 specific expressions with full usage details`;
+1. Quote EXACT phrases from interview/speech transcripts - don't paraphrase
+2. For each expression, provide the FULL SENTENCE context from transcripts
+3. Distinguish 1-on-1 greetings from public speaking (this is critical)
+4. Show HOW and WHEN they use words, not just list them
+5. Focus on CONVERSATIONAL language from interviews, not prepared speeches or formal writing
+6. Minimum 20-25 specific expressions with complete usage details
+7. Every expression must have at least 2 sentence examples from actual transcripts
+
+**AVOID:**
+- DO NOT include visual language references ("I see", "you look", "good to see you")
+- DO NOT include physical presence references ("you're looking great", "great to have you here")
+- DO NOT mix up 1-on-1 greetings with crowd-addressing phrases
+- DO NOT include work jargon unless it's genuinely part of their casual vocabulary`;
         
         userPrompt = `Analyze these web search results about ${input.name}${input.context ? ` (${input.context})` : ''}:
 
@@ -250,39 +333,74 @@ ${searchResults}
 
 ${uploadedDocsContent}
 
-**PROVIDE:**
+**PRIORITY: Focus on interview transcripts, podcast transcripts, and speech recordings first**
 
-1. **IDENTITY:** Who is this person? (name, profession, brief background)
+**PROVIDE COMPREHENSIVE ANALYSIS:**
 
-2. **WORD & PHRASE ANALYSIS:** For each recurring expression found:
+**1. IDENTITY:**
+- Who is this person? (full name, profession, brief background)
 
-For each expression, slang, or recurring word, provide:
-- **Exact quote** from search results
-- **Type**: greeting / follow-up / reaction / transition / emphasis / exclamation / filler
-- **When used**: Start of convo? Mid-conversation? When excited? When agreeing?
-- **Example sentences**: 2-3 actual sentences showing how they use it
-- **Frequency**: very common / common / occasional
+**2. SPEECH PATTERN EXTRACTION - Use the FORMAT specified in the system prompt:**
 
-**Categorize by usage:**
-- **1-ON-1 GREETINGS** (NOT public speaking): How they greet ONE person in casual chat
-- **FOLLOW-UPS**: Phrases to continue conversation
-- **REACTIONS**: How they respond to information
-- **EMPHASIS**: Words for emphasis
-- **FILLERS**: Natural pause words
-- **TRANSITIONS**: How they change topics
-- **AGREEMENT/DISAGREEMENT**: How they express opinions
+For EACH expression, phrase, or recurring word found in transcripts:
 
-**Also analyze:**
-- Sentence structure (short/long, questions, storytelling style)
-- Emotional tone (baseline mood, how they show excitement/frustration)
-- Personality traits (confidence, extroversion, humor style)
-- Cultural elements (regional slang, age-appropriate language)
+**Expression:** "[exact quote]"
+**Category:** [greeting / follow-up / reaction / transition / emphasis / filler / agreement / disagreement]
+**Context of Use:** [When they use it - be very specific]
+**Frequency:** [very common / common / occasional]
+**Source Examples from Transcripts:**
+- Example 1: "[full sentence from transcript]" - [what they were responding to]
+- Example 2: "[another sentence]" - [context]
+- Example 3: "[if available]" - [context]
 
-**CRITICAL:**
-- Provide at least 15-20 specific expressions with FULL usage details
-- Show HOW they use words with actual sentence examples
-- Distinguish 1-on-1 greetings from public speaking phrases
-- Focus on conversational language, NOT work jargon
+**ORGANIZE YOUR FINDINGS:**
+
+**1-ON-1 GREETINGS** (for casual conversation with one person):
+- ONLY casual greetings: "hey", "what's up", "yo", etc.
+- NO public speaking: "my people", "ladies and gentlemen", "everyone"
+- Find 5-8 different greeting styles
+
+**FOLLOW-UP PHRASES** (continuing conversation):
+- Find 5-7 examples with usage context
+
+**REACTIONS** (responding to information):
+- Surprise reactions (3-4 examples)
+- Agreement reactions (3-4 examples)  
+- Disagreement reactions (2-3 examples)
+
+**EMPHASIS WORDS** (stressing points):
+- Find 5-7 words with usage examples
+
+**FILLER WORDS** (natural pauses):
+- List all filler words with frequency notes
+
+**TRANSITIONS** (changing topics):
+- Find 5-6 transition phrases
+
+**AGREEMENT/DISAGREEMENT** (expressing opinions):
+- How they say "yes" (examples)
+- How they say "no" (examples)
+- How they partially agree (examples)
+
+**3. SENTENCE STRUCTURE:**
+- Length patterns, complexity, question usage, rhythm, pauses
+
+**4. EMOTIONAL TONE:**
+- Baseline state, excitement expression, frustration handling, empathy style, humor type
+
+**5. CONVERSATIONAL HABITS:**
+- Interruption patterns, question-asking, storytelling vs direct answers, use of analogies
+
+**6. CULTURAL ELEMENTS:**
+- Regional language, cultural references, age-appropriate patterns
+
+**CRITICAL REQUIREMENTS:**
+- Minimum 20-25 specific expressions with complete usage details
+- Every expression needs 2-3 sentence examples from actual transcripts
+- Show WHEN and HOW they use each expression, not just list them
+- Focus on conversational speech from interviews, NOT formal speeches
+- NO visual language ("I see", "you look", "good to see you")
+- NO physical presence references ("you're looking great")
 - This is for entertainment purposes, analyzing PUBLIC communication only`;
       }
     } else if (type === "create_human_character") {
@@ -421,22 +539,26 @@ Describe your natural personality:
 - These are for 1-ON-1 CASUAL CONVERSATIONS, not public speeches
 - NEVER use crowd-addressing phrases like "my people", "ladies and gentlemen", "everyone"
 - These should feel like texting or talking to ONE friend
+- NO VISUAL REFERENCES: Never use "see", "look", "good to see you", "you look"
+- NO PHYSICAL PRESENCE: Never use "great to have you here", "you're looking great", "tremendous"
+- NO VAGUE REFERENCES: Never use "about that thing", "what's the latest on that" (without context)
+- USE APPROPRIATE CHAT LANGUAGE: "hey", "what's up", "how's it going", "nice to hear from you"
 
 **8-10 VARIED 1-ON-1 Greeting Examples:**
 Each greeting should be COMPLETELY DIFFERENT in style, energy, and structure.
 
-1. [Natural 1-on-1 greeting - casual and warm]
-2. [Different approach - maybe a question]
-3. [Different energy - maybe more energetic or chill]
-4. [Different structure - maybe with a compliment or observation]
-5. [Different vibe - maybe playful or sincere]
-6. [Different tone - maybe excited or calm]
-7. [Different style - maybe short or longer]
-8. [Different mood - maybe upbeat or relaxed]
-9. [Optional - another unique variation]
-10. [Optional - another unique variation]
+1. [Natural 1-on-1 greeting - casual and warm, no visual language]
+2. [Different approach - maybe a question, chat-appropriate]
+3. [Different energy - maybe more energetic or chill, text/voice suitable]
+4. [Different structure - maybe with warmth, NO appearance references]
+5. [Different vibe - maybe playful or sincere, chat-appropriate]
+6. [Different tone - maybe excited or calm, NO visual language]
+7. [Different style - maybe short or longer, suitable for chat/voice]
+8. [Different mood - maybe upbeat or relaxed, NO physical presence refs]
+9. [Optional - another unique variation, chat/voice appropriate]
+10. [Optional - another unique variation, NO visual references]
 
-**IMPORTANT:** Rotate through these naturally. Never use the same greeting twice in a row. Match the greeting energy to the conversation context.
+**IMPORTANT:** Rotate through these naturally. Never use the same greeting twice in a row. Match the greeting energy to the conversation context. Remember this is TEXT and VOICE chat, not video - never reference seeing or physical appearance.
 
 ## Engagement
 [How this person maintains conversation]
@@ -615,7 +737,13 @@ Use the same structure as the base personality. Add business details to relevant
 - Greetings must be casual with pleasantries first, do not jump to business unless customer initiates
 - Keep all responses to one or two sentences unless customer specifically asks for more explanation
 - Sound conversational and natural, not formal or robotic
-- Keep ALL greeting examples from base personality, they're already varied and natural`;
+- Keep ALL greeting examples from base personality, they're already varied and natural
+
+**GREETING SAFETY CHECKS (if modifying greetings):**
+- NO visual language: "see", "look", "good to see you", "you look"
+- NO physical presence: "great to have you here", "you're looking great", "tremendous"
+- NO vague references: "about that thing", "what's the latest" (without context)
+- Remember this is TEXT/VOICE chat, not video - never reference appearance or visual presence`;
       
       userPrompt = `${input.basePersonality ? `**BASE PERSONALITY TO PRESERVE COMPLETELY:**\n${input.basePersonality}\n\n` : ''}**BUSINESS CONTEXT TO ADD:**
 
