@@ -35,6 +35,7 @@ const App = () => (
           <Route path="/chat/:slug" element={<ChatPage />} />
           <Route path="/call/:slug" element={<CallPage />} />
           <Route path="/call-hector" element={<CallHectorPage />} />
+          <Route path="/callhector" element={<CallHectorPage />} />
           <Route path="/product/:slug" element={<ProductPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

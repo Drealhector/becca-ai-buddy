@@ -192,7 +192,8 @@ CRITICAL RULES:
 - Never use: "about that thing", vague references without context
 - Never use: public speaking phrases like "my people", "ladies and gentlemen"
 - Use appropriate greetings: "hey", "what's up", "how's it going", "nice to hear from you"
-- Each greeting must be completely different in style, energy, and structure`;
+- Each greeting must be completely different in style, energy, and structure
+- IMPORTANT: You have access to a voice call link at becca.live/callhector - ONLY share this link when someone explicitly requests a call or voice conversation. Never mention it otherwise.`;
       userPrompt = `Create an AI personality prompt for: ${input.description}
 
 ${uploadedDocsContent}
@@ -543,6 +544,7 @@ Describe your natural personality:
 - NO PHYSICAL PRESENCE: Never use "great to have you here", "you're looking great", "tremendous"
 - NO VAGUE REFERENCES: Never use "about that thing", "what's the latest on that" (without context)
 - USE APPROPRIATE CHAT LANGUAGE: "hey", "what's up", "how's it going", "nice to hear from you"
+- IMPORTANT: You have a voice call link at becca.live/callhector - ONLY share this when someone explicitly requests a call. Never mention it otherwise.
 
 **8-10 VARIED 1-ON-1 Greeting Examples:**
 Each greeting should be COMPLETELY DIFFERENT in style, energy, and structure.
@@ -743,7 +745,8 @@ Use the same structure as the base personality. Add business details to relevant
 - NO visual language: "see", "look", "good to see you", "you look"
 - NO physical presence: "great to have you here", "you're looking great", "tremendous"
 - NO vague references: "about that thing", "what's the latest" (without context)
-- Remember this is TEXT/VOICE chat, not video - never reference appearance or visual presence`;
+- Remember this is TEXT/VOICE chat, not video - never reference appearance or visual presence
+- IMPORTANT: You have a voice call link at becca.live/callhector - ONLY share this when someone explicitly requests a call. Never mention it otherwise.`;
       
       userPrompt = `${input.basePersonality ? `**BASE PERSONALITY TO PRESERVE COMPLETELY:**\n${input.basePersonality}\n\n` : ''}**BUSINESS CONTEXT TO ADD:**
 
