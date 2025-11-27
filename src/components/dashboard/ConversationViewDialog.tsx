@@ -11,7 +11,7 @@ interface ConversationViewDialogProps {
 export const ConversationViewDialog = ({ open, onOpenChange, title, conversations }: ConversationViewDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>{title} Conversations</DialogTitle>
         </DialogHeader>
@@ -21,7 +21,7 @@ export const ConversationViewDialog = ({ open, onOpenChange, title, conversation
           ) : (
             <div className="space-y-4">
               {conversations.map((conversation, index) => (
-                <div key={index} className="border border-border rounded-lg p-4 space-y-2">
+                <div key={index} className="border border-border rounded-lg p-4 space-y-2 overflow-hidden">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm text-muted-foreground">
@@ -34,7 +34,7 @@ export const ConversationViewDialog = ({ open, onOpenChange, title, conversation
                   </div>
                   <div className="mt-3">
                     <p className="text-xs text-muted-foreground mb-1">Message:</p>
-                    <p className="text-sm bg-muted/50 p-3 rounded whitespace-pre-wrap">
+                    <p className="text-sm bg-muted/50 p-3 rounded whitespace-pre-wrap break-words overflow-wrap-anywhere">
                       {conversation.content || conversation.transcript || "No content available"}
                     </p>
                   </div>
