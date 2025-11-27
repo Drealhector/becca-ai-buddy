@@ -11,17 +11,17 @@ interface ConversationViewDialogProps {
 export const ConversationViewDialog = ({ open, onOpenChange, title, conversations }: ConversationViewDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{title} Conversations</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="h-[500px] pr-4">
+        <ScrollArea className="h-[500px] pr-4 overflow-x-hidden">
           {conversations.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No conversations yet</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 w-full">
               {conversations.map((conversation, index) => (
-                <div key={index} className="border border-border rounded-lg p-4 space-y-2 overflow-hidden">
+                <div key={index} className="border border-border rounded-lg p-4 space-y-2 w-full overflow-hidden">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm text-muted-foreground">
@@ -32,9 +32,9 @@ export const ConversationViewDialog = ({ open, onOpenChange, title, conversation
                       </p>
                     </div>
                   </div>
-                  <div className="mt-3">
+                  <div className="mt-3 w-full overflow-hidden">
                     <p className="text-xs text-muted-foreground mb-1">Message:</p>
-                    <p className="text-sm bg-muted/50 p-3 rounded whitespace-pre-wrap break-words overflow-wrap-anywhere">
+                    <p className="text-sm bg-muted/50 p-3 rounded break-words hyphens-auto" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                       {conversation.content || conversation.transcript || "No content available"}
                     </p>
                   </div>
