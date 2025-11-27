@@ -188,9 +188,9 @@ If you don't have reliable information about this specific person, say: "I could
         
         userPrompt = `Do you have any information about ${input.name}${input.context ? ` (${input.context})` : ''}? Provide whatever details you can recall, or indicate if you don't have reliable information about them.`;
       } else {
-        systemPrompt = `You are an expert personality analyst. Analyze the search results to create a comprehensive communication profile based on articles, interviews, social media, and any available content about how this person communicates.
+        systemPrompt = `You are an expert personality analyst. Analyze the search results to create a RICH, DETAILED communication profile based on articles, interviews, social media, and any available content.
 
-**YOUR TASK:** Extract communication patterns, personality traits, and speech characteristics from the available content.
+**YOUR TASK:** Extract deep personality traits, speech patterns, and communication characteristics that make this person unique.
 
 **STRUCTURE YOUR RESPONSE:**
 
@@ -202,64 +202,107 @@ If you don't have reliable information about this specific person, say: "I could
 
 **COMMUNICATION PATTERNS:**
 
-Analyze and extract recurring patterns in how they communicate:
+**1. FILLER WORDS & VERBAL HABITS:**
+Extract and list ALL filler words and verbal tics you can find:
+- Common fillers: "um", "uh", "like", "you know", "so", "actually", "basically", "right", "I mean", "well"
+- Thinking sounds: "hmm", "uhh", "erm"
+- Pause patterns: do they pause mid-sentence? Where?
+- Repetitive verbal tics or patterns
+- Frequency: very often / often / sometimes / occasionally / rarely
+- Context: when do they use these? (thinking time, emphasis, transitions)
 
-**1. COMMON PHRASES & EXPRESSIONS:**
-- List phrases, catchphrases, or expressions they're known to use
-- Note context of when they use them
-- Include any signature sayings or quotes attributed to them
+**2. FAVORITE PHRASES & SIGNATURE EXPRESSIONS:**
+List ALL phrases, catchphrases, and expressions with DETAILED CONTEXT:
+- **Exact phrase**: "[quote the phrase]"
+  - **When used**: [specific situations/emotions/contexts]
+  - **How used**: [at start of sentence? for emphasis? as response?]
+  - **Frequency**: [very common / common / occasional]
+  - **Example in sentence**: "[full example sentence]"
+  
+Repeat this structure for EVERY phrase found. Include:
+- Catchphrases and signature sayings
+- Industry-specific terms they favor
+- Unique expressions or coined terms
+- Ways they emphasize points
+- Transition phrases between topics
 
-**2. 1-ON-1 GREETINGS:**
+**3. HOW THEY CONTINUE & BUILD SPEECH:**
+Analyze conversational flow and continuation patterns:
+- How they continue thoughts: "and...", "so...", "but...", "like...", "you know..."
+- How they build on previous statements
+- Pattern of elaboration: do they explain more? Give examples? Tell stories?
+- How they circle back to topics
+- How they conclude thoughts or stories: "so yeah...", "anyway...", "that's it..."
+- Sentence connectors they prefer
+- How they transition between ideas
+
+**4. 1-ON-1 GREETINGS:**
 - How they typically greet people in casual conversations
 - ONLY include: casual greetings like "hey", "what's up", "yo", "hi there"
 - EXCLUDE: public speaking phrases ("my people", "ladies and gentlemen", "everyone", "folks")
 - EXCLUDE: professional openings ("good morning team", "welcome all")
 
-**3. CONVERSATIONAL STYLE:**
-- Formal vs casual tendencies
-- Direct vs indirect communication
-- Talkative vs concise
-- Use of slang or colloquialisms
-- Regional or cultural language patterns
+**5. TONE & EMOTIONAL EXPRESSION:**
+Provide RICH detail on how they express emotions:
+- **Baseline emotional state**: [energetic / calm / serious / playful / warm / intense / reserved]
+- **Energy level**: [high-energy / moderate / low-key / varies by topic]
+- **How they express excitement**: [specific words, volume changes, repetition]
+- **How they show concern or empathy**: [tone shifts, specific phrases]
+- **How they express agreement**: [specific words/phrases]
+- **How they express disagreement**: [direct/indirect, specific phrases]
+- **Humor style**: [sarcastic / playful / witty / self-deprecating / observational / dry]
+- **Emotional range**: [expressive / controlled / variable]
+- **Tone variations**: how does their tone change across different contexts?
 
-**4. EMOTIONAL TONE:**
-- Baseline emotional state: [energetic / calm / serious / playful / warm / intense]
-- How they express excitement
-- How they express concern or empathy
-- Humor style: [sarcastic / playful / witty / self-deprecating / observational]
+**6. CONVERSATIONAL STYLE:**
+- **Rhythm & Pace**: fast-paced / measured / varies / energetic / relaxed
+- **Sentence structure**: short and punchy / long and detailed / mixed
+- **Formal vs casual**: lean formal / balanced / very casual
+- **Direct vs indirect**: get to the point / build up gradually
+- **Talkative vs concise**: elaborate responses / brief answers
+- **Use of questions**: ask many questions / make statements / balanced
+- **Storytelling**: tell stories often / give direct answers / use examples
+- **Use of analogies or examples**: frequently / occasionally / rarely
+- **Regional or cultural language patterns**: slang, colloquialisms, accents
 
-**5. COMMON REACTIONS:**
-- How they express agreement
-- How they express disagreement
-- How they react to surprises or unexpected information
-- Common response patterns
+**7. GESTURES & PHYSICAL MANNERISMS (if mentioned in content):**
+Extract any references to physical communication:
+- Common hand gestures or movements
+- Facial expressions described in interviews/articles
+- Body language patterns mentioned
+- How they show engagement physically
+- Physical mannerisms while speaking
+- Note if sources mention their "animated" style, hand-talking, etc.
 
-**6. SPEECH CHARACTERISTICS:**
-- Sentence length tendencies (short and punchy vs long and detailed)
-- Use of questions in conversation
-- Storytelling vs direct answers
-- Use of examples or analogies
-- Filler words or pause patterns (if noted in sources)
+**8. SPEECH CHARACTERISTICS:**
+- **Volume & Intensity**: loud / moderate / soft / varies
+- **Emphasis patterns**: what words do they stress?
+- **Repetition for effect**: do they repeat words/phrases for emphasis?
+- **Question patterns**: rhetorical questions / genuine questions / tag questions
+- **Pause placement**: where do they pause in sentences?
 
-**7. PERSONALITY TRAITS:**
-- Energy level
-- Confidence level
-- Warmth and approachability
-- Humor and playfulness
-- Professional vs casual balance
+**9. PERSONALITY TRAITS:**
+- Energy level: high / moderate / low / dynamic
+- Confidence level: very confident / balanced / humble
+- Warmth and approachability: very warm / professional / reserved
+- Humor and playfulness: frequent / occasional / rare
+- Professional vs casual balance: where do they lean?
+- Authenticity: genuine / polished / varies
 
 **CRITICAL RULES:**
-1. Base analysis on what's described in the search results
-2. Distinguish 1-on-1 greetings from public speaking
-3. Focus on conversational language, not formal speeches
-4. Extract patterns from multiple sources when possible
-5. Note if certain traits are emphasized across multiple sources
+1. Extract EVERY specific detail from the search results
+2. Focus on PATTERNS mentioned across multiple sources
+3. Be CONCRETE - quote actual phrases, not generic descriptions
+4. Distinguish 1-on-1 greetings from public speaking
+5. Note FREQUENCY and CONTEXT for all traits
+6. Look for CONSISTENCY across different sources
 
 **AVOID:**
-- DO NOT include visual language references ("I see", "you look", "good to see you")
+- DO NOT include visual language ("I see", "you look", "good to see you")
 - DO NOT include physical presence references ("you're looking great", "great to have you here")
 - DO NOT mix up 1-on-1 greetings with crowd-addressing phrases
-- DO NOT include work jargon unless it's genuinely part of their casual vocabulary`;
+- DO NOT include work jargon unless it's genuinely part of their casual vocabulary
+- DO NOT make vague statements - always be specific with examples`;
         
         userPrompt = `Analyze these web search results about ${input.name}${input.context ? ` (${input.context})` : ''}:
 
@@ -267,63 +310,103 @@ ${searchResults}
 
 ${uploadedDocsContent}
 
-**PROVIDE COMPREHENSIVE ANALYSIS:**
+**PROVIDE COMPREHENSIVE, DETAILED ANALYSIS:**
 
-**1. IDENTITY:**
-- Who is this person? (full name, profession, brief background)
+**1. IDENTITY & BACKGROUND:**
+- Who is this person? (full name, profession, brief background, accomplishments)
 
-**2. COMMUNICATION PATTERNS:**
+**2. EXTRACT RICH PERSONALITY DATA:**
 
-Extract from the search results:
+**FILLER WORDS & VERBAL HABITS:**
+List EVERY filler word and verbal habit you find:
+- Fillers: "um", "uh", "like", "you know", "so", "actually", "basically", "right", "I mean", "well"
+- Thinking sounds: "hmm", "uhh", "erm"
+- Pause patterns and where they occur
+- Repetitive verbal tics
+- Frequency: very often / often / sometimes / occasionally / rarely
+- When do they use these? (thinking, emphasis, transitions)
 
-**COMMON PHRASES & EXPRESSIONS:**
-- What phrases, catchphrases, or expressions are they known to use?
-- When/how do they use them?
-- Any signature sayings or quotes?
+**FAVORITE PHRASES & SIGNATURE EXPRESSIONS:**
+For EVERY phrase found, provide:
+- **Exact phrase**: "[quote it]"
+- **When used**: [specific context/situation]
+- **How used**: [position in sentence, purpose]
+- **Frequency**: [very common / common / occasional]
+- **Example sentence**: "[full example]"
+
+Include:
+- Catchphrases and signature sayings
+- Industry terms they favor
+- Unique expressions or coined terms
+- Emphasis phrases
+- Transition phrases
+
+**HOW THEY CONTINUE & BUILD SPEECH:**
+- How do they continue thoughts? ("and...", "so...", "but...")
+- How do they build on statements?
+- Do they elaborate? Give examples? Tell stories?
+- How do they circle back to topics?
+- How do they conclude? ("so yeah...", "anyway...")
+- Sentence connectors they prefer
+- How do they transition between ideas?
 
 **1-ON-1 GREETINGS:**
-- How do they typically greet people casually?
-- ONLY casual greetings: "hey", "what's up", "yo", etc.
-- NO public speaking: "my people", "ladies and gentlemen", "everyone"
+- Casual greetings: "hey", "what's up", "yo", "hi there"
+- NO public speaking: "my people", "ladies and gentlemen"
+
+**TONE & EMOTIONAL EXPRESSION:**
+Provide RICH detail:
+- Baseline emotional state: [energetic/calm/serious/playful/warm/intense]
+- Energy level: [high/moderate/low/varies]
+- How they express excitement: [specific words, patterns]
+- How they show concern/empathy: [tone shifts, phrases]
+- How they express agreement: [specific phrases]
+- How they express disagreement: [direct/indirect, phrases]
+- Humor style: [sarcastic/playful/witty/self-deprecating/observational/dry]
+- Emotional range: [expressive/controlled/variable]
+- Tone variations across contexts
 
 **CONVERSATIONAL STYLE:**
-- Formal vs casual balance
-- Direct vs indirect
-- Talkative vs concise
-- Use of slang or colloquialisms
-- Regional or cultural language
+- Rhythm & pace: [fast/measured/varies/energetic/relaxed]
+- Sentence structure: [short/long/mixed]
+- Formal vs casual: [formal/balanced/casual]
+- Direct vs indirect: [get to point/build up]
+- Talkative vs concise: [elaborate/brief]
+- Use of questions: [many/few/balanced]
+- Storytelling: [stories/direct/examples]
+- Analogies/examples: [frequently/occasionally/rarely]
+- Regional/cultural language: [slang, colloquialisms, accents]
 
-**EMOTIONAL TONE:**
-- Baseline emotional state
-- How they express excitement, concern, empathy
-- Humor style
-
-**COMMON REACTIONS:**
-- Agreement expressions
-- Disagreement expressions
-- Surprise reactions
-- Response patterns
+**GESTURES & PHYSICAL MANNERISMS (if mentioned):**
+- Hand gestures or movements described
+- Facial expressions mentioned
+- Body language patterns
+- Physical engagement patterns
+- Animated style references
 
 **SPEECH CHARACTERISTICS:**
-- Sentence length tendencies
-- Use of questions
-- Storytelling vs direct answers
-- Use of examples/analogies
-- Filler words (if noted)
+- Volume & intensity: [loud/moderate/soft/varies]
+- Emphasis patterns: [what words stressed?]
+- Repetition for effect: [yes/no/sometimes]
+- Question patterns: [rhetorical/genuine/tag questions]
+- Pause placement: [where in sentences?]
 
 **PERSONALITY TRAITS:**
-- Energy level
-- Confidence level
-- Warmth and approachability
-- Humor and playfulness
-- Professional vs casual balance
+- Energy level: [high/moderate/low/dynamic]
+- Confidence: [very confident/balanced/humble]
+- Warmth: [very warm/professional/reserved]
+- Humor: [frequent/occasional/rare]
+- Professional vs casual: [lean where?]
+- Authenticity: [genuine/polished/varies]
 
 **CRITICAL REQUIREMENTS:**
-- Base analysis on what's in the search results
-- Focus on patterns mentioned across multiple sources
-- NO visual language ("I see", "you look", "good to see you")
-- NO physical presence references ("you're looking great")
-- This is for entertainment purposes, analyzing PUBLIC communication only`;
+- Extract EVERY specific detail from search results
+- Focus on PATTERNS across multiple sources
+- Be CONCRETE - quote actual phrases
+- Note FREQUENCY and CONTEXT for everything
+- NO visual language ("I see", "you look")
+- NO physical presence references
+- NO vague statements - always specific with examples`;
       }
     } else if (type === "create_human_character") {
       systemPrompt = `You are an expert personality architect. Generate a complete directive AI personality prompt.
