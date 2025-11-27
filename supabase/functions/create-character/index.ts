@@ -48,61 +48,131 @@ serve(async (req) => {
         const allResults: any[] = [];
         
         // Run all searches in PARALLEL for maximum speed
-        console.log("Running 8 parallel searches for personality analysis...");
+        console.log("Running 18 parallel searches for comprehensive personality analysis...");
         const searchPromises = [
           // Search 1: Identity and background
           supabase.functions.invoke('web-search', {
             body: { 
               query: `${input.name} biography background profession career who is`,
-              numResults: 5
-            }
-          }),
-          // Search 2: Interviews and conversations
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} interview talks about conversation says`,
               numResults: 6
             }
           }),
-          // Search 3: Quotes and sayings
+          // Search 2: YouTube interviews - general
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} quotes famous sayings catchphrases known for saying`,
+              query: `${input.name} youtube interview full conversation talking site:youtube.com`,
+              numResults: 8
+            }
+          }),
+          // Search 3: YouTube interviews - podcast
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} podcast interview episode full site:youtube.com`,
+              numResults: 8
+            }
+          }),
+          // Search 4: YouTube interviews - long form
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} interview "how he speaks" "speaking style" site:youtube.com`,
+              numResults: 7
+            }
+          }),
+          // Search 5: Filler words and speech patterns
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} "filler words" "speech patterns" "how he talks" "verbal tics" "says um" "says like"`,
+              numResults: 7
+            }
+          }),
+          // Search 6: Catchphrases and signature sayings
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} catchphrase "always says" "known for saying" signature phrase favorite expression`,
+              numResults: 8
+            }
+          }),
+          // Search 7: Quotes and famous sayings
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} quotes best quotes famous sayings what he said memorable`,
+              numResults: 7
+            }
+          }),
+          // Search 8: Communication and speaking style
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} communication style speaking style how he speaks personality voice`,
+              numResults: 7
+            }
+          }),
+          // Search 9: Mannerisms and habits
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} mannerisms habits quirks "talks like" "speaks like" gestures`,
               numResults: 6
             }
           }),
-          // Search 4: Communication style
+          // Search 10: Social media posts
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} communication style personality how speaks talks`,
+              query: `${input.name} twitter tweets instagram posts facebook social media`,
               numResults: 6
             }
           }),
-          // Search 5: Social media and casual voice
+          // Search 11: Personality analysis
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} twitter instagram facebook posts social media`,
+              query: `${input.name} personality traits character analysis what is he like ${input.context || ''}`.trim(),
+              numResults: 6
+            }
+          }),
+          // Search 12: Tone and emotion
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} tone voice energy enthusiastic calm serious playful humorous`,
+              numResults: 6
+            }
+          }),
+          // Search 13: Conversation style
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} conversation conversational "in conversation" discussing talking about`,
+              numResults: 6
+            }
+          }),
+          // Search 14: Greetings and openings
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} greeting hello "how he greets" "starts conversation" opening`,
               numResults: 5
             }
           }),
-          // Search 6: Video content
+          // Search 15: Interview transcripts
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} youtube video speaking style`,
+              query: `${input.name} interview transcript verbatim word for word what he said`,
+              numResults: 7
+            }
+          }),
+          // Search 16: Video commentary and analysis
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} video analysis speaking breakdown communication breakdown`,
               numResults: 5
             }
           }),
-          // Search 7: Personal mannerisms
+          // Search 17: Public appearances
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} personality traits mannerisms habits ${input.context || ''}`.trim(),
+              query: `${input.name} public appearance speech talk event conference ${input.context || ''}`.trim(),
               numResults: 5
             }
           }),
-          // Search 8: General personality
+          // Search 18: Casual/informal content
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} personality character known for ${input.context || ''}`.trim(),
+              query: `${input.name} casual informal relaxed candid behind the scenes`,
               numResults: 5
             }
           })
@@ -114,7 +184,7 @@ serve(async (req) => {
         results.forEach((result, index) => {
           if (result.data?.results) {
             allResults.push(...result.data.results);
-            console.log(`Search ${index + 1} completed: ${result.data.results.length} results`);
+            console.log(`Search ${index + 1}/18 completed: ${result.data.results.length} results`);
           }
         });
 
