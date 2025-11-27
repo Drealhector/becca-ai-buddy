@@ -48,7 +48,7 @@ serve(async (req) => {
         const allResults: any[] = [];
         
         // Run all searches in PARALLEL for maximum speed
-        console.log("Running 12 parallel searches for comprehensive speech analysis...");
+        console.log("Running 8 parallel searches for personality analysis...");
         const searchPromises = [
           // Search 1: Identity and background
           supabase.functions.invoke('web-search', {
@@ -57,80 +57,52 @@ serve(async (req) => {
               numResults: 5
             }
           }),
-          // Search 2: Interview transcripts - PRIMARY SOURCE
+          // Search 2: Interviews and conversations
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} interview full transcript verbatim text complete`,
-              numResults: 8
-            }
-          }),
-          // Search 3: Speech transcripts and recordings
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} speech transcript recording verbatim spoken words`,
-              numResults: 7
-            }
-          }),
-          // Search 4: Podcast appearances with transcripts
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} podcast transcript episode conversation full text`,
-              numResults: 7
-            }
-          }),
-          // Search 5: Direct quotes and exact phrases
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} quotes exact phrases catchphrases signature sayings words`,
-              numResults: 7
-            }
-          }),
-          // Search 6: Word usage and vocabulary analysis
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} word choice vocabulary slang expressions how they speak`,
+              query: `${input.name} interview talks about conversation says`,
               numResults: 6
             }
           }),
-          // Search 7: Conversational style analysis
+          // Search 3: Quotes and sayings
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} conversation style talking pattern communication informal`,
+              query: `${input.name} quotes famous sayings catchphrases known for saying`,
               numResults: 6
             }
           }),
-          // Search 8: Video content and speaking patterns
+          // Search 4: Communication style
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} youtube video speaking style tone delivery`,
+              query: `${input.name} communication style personality how speaks talks`,
+              numResults: 6
+            }
+          }),
+          // Search 5: Social media and casual voice
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} twitter instagram facebook posts social media`,
               numResults: 5
             }
           }),
-          // Search 9: Social media voice
+          // Search 6: Video content
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} twitter instagram posts writing style personality`,
+              query: `${input.name} youtube video speaking style`,
               numResults: 5
             }
           }),
-          // Search 10: Greeting patterns
+          // Search 7: Personal mannerisms
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} greeting hello introduction how start conversation`,
-              numResults: 4
-            }
-          }),
-          // Search 11: Behavioral quirks and mannerisms
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} mannerisms behavior patterns quirks habits ${input.context || ''}`.trim(),
+              query: `${input.name} personality traits mannerisms habits ${input.context || ''}`.trim(),
               numResults: 5
             }
           }),
-          // Search 12: Q&A and responses
+          // Search 8: General personality
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} Q&A questions answers response style`,
+              query: `${input.name} personality character known for ${input.context || ''}`.trim(),
               numResults: 5
             }
           })
@@ -216,17 +188,9 @@ If you don't have reliable information about this specific person, say: "I could
         
         userPrompt = `Do you have any information about ${input.name}${input.context ? ` (${input.context})` : ''}? Provide whatever details you can recall, or indicate if you don't have reliable information about them.`;
       } else {
-        systemPrompt = `You are an expert speech pattern analyst specializing in extracting authentic conversational patterns from transcripts and interviews.
+        systemPrompt = `You are an expert personality analyst. Analyze the search results to create a comprehensive communication profile based on articles, interviews, social media, and any available content about how this person communicates.
 
-**YOUR TASK:** Analyze the search results (especially interview transcripts, podcast transcripts, and recorded speech) to create a comprehensive communication profile.
-
-**CRITICAL PRIORITY: EXTRACT FROM INTERVIEW/SPEECH TRANSCRIPTS FIRST**
-Focus heavily on:
-- Full interview transcripts (verbatim quotes)
-- Podcast episode transcripts
-- Speech recordings and transcripts
-- Q&A session transcripts
-- Video transcripts with exact spoken words
+**YOUR TASK:** Extract communication patterns, personality traits, and speech characteristics from the available content.
 
 **STRUCTURE YOUR RESPONSE:**
 
@@ -236,91 +200,60 @@ Focus heavily on:
 - Brief background (1-2 sentences)
 - Key accomplishments or what they're known for
 
-**SPEECH PATTERN EXTRACTION (60% of analysis - PRIMARY FOCUS)**
+**COMMUNICATION PATTERNS:**
 
-For EACH recurring word, phrase, or expression found in transcripts/interviews, provide:
+Analyze and extract recurring patterns in how they communicate:
 
-**FORMAT FOR EACH EXPRESSION:**
+**1. COMMON PHRASES & EXPRESSIONS:**
+- List phrases, catchphrases, or expressions they're known to use
+- Note context of when they use them
+- Include any signature sayings or quotes attributed to them
 
-**Expression:** "[exact quote from transcript]"
-**Category:** [greeting / follow-up / reaction / transition / emphasis / filler / agreement / disagreement]
-**Context of Use:** [WHEN they use it - be specific: "at start of 1-on-1 chat", "when excited about idea", "when agreeing with someone", "mid-conversation transition"]
-**Frequency:** [very common (40-50% of situations) / common (20-30%) / occasional (10-15%)]
-**Source Examples from Transcripts:**
-- Example 1: "[full sentence from interview/speech showing usage]" - [context: what they were responding to]
-- Example 2: "[another full sentence showing usage]" - [context]
-- Example 3: "[third example if available]" - [context]
-
-**ORGANIZE BY USAGE CATEGORY:**
-
-**1. 1-ON-1 GREETINGS (for starting conversation with ONE person):**
+**2. 1-ON-1 GREETINGS:**
+- How they typically greet people in casual conversations
 - ONLY include: casual greetings like "hey", "what's up", "yo", "hi there"
 - EXCLUDE: public speaking phrases ("my people", "ladies and gentlemen", "everyone", "folks")
 - EXCLUDE: professional openings ("good morning team", "welcome all")
-- Find at least 5-8 different greeting styles from transcripts
 
-**2. FOLLOW-UP PHRASES (continuing conversation):**
-- "so about that...", "anyway...", "but yeah...", etc.
-- Find at least 5-7 examples
+**3. CONVERSATIONAL STYLE:**
+- Formal vs casual tendencies
+- Direct vs indirect communication
+- Talkative vs concise
+- Use of slang or colloquialisms
+- Regional or cultural language patterns
 
-**3. REACTIONS (responding to information):**
-- Surprise: "oh wow", "no way", "seriously?"
-- Agreement: "exactly", "for real", "I feel you"
-- Disagreement: "nah", "I don't know about that"
-- Find at least 8-10 different reactions
-
-**4. EMPHASIS WORDS (stressing a point):**
-- "literally", "honestly", "definitely", "absolutely", "totally"
-- Find at least 5-7 examples with usage context
-
-**5. FILLER WORDS (natural pauses in speech):**
-- "like", "you know", "uh", "um", "so", "basically", "actually"
-- Note frequency of each filler
-
-**6. TRANSITIONS (changing topics):**
-- "but yeah", "anyway", "so", "speaking of", "by the way"
-- Find at least 5-6 examples
-
-**7. AGREEMENT/DISAGREEMENT EXPRESSIONS:**
-- How they express "yes": [list with examples]
-- How they express "no": [list with examples]
-- How they express partial agreement: [list with examples]
-
-**SENTENCE STRUCTURE ANALYSIS (15%):**
-- Average sentence length: [short (5-10 words) / medium (10-20) / long (20+)]
-- Sentence complexity: [simple / compound / complex]
-- Question frequency: [asks many questions / moderate / rarely asks]
-- Rhythm: [fast-paced, many thoughts / measured, thoughtful / varies by topic]
-- Pause patterns: [where they naturally pause in sentences]
-
-**EMOTIONAL TONE ANALYSIS (10%):**
+**4. EMOTIONAL TONE:**
 - Baseline emotional state: [energetic / calm / serious / playful / warm / intense]
-- How they express excitement: [specific phrases and patterns from transcripts]
-- How they express frustration: [specific phrases from transcripts]
-- How they express empathy: [specific phrases from transcripts]
-- Humor style: [sarcastic / playful / witty / self-deprecating / observational] with examples
+- How they express excitement
+- How they express concern or empathy
+- Humor style: [sarcastic / playful / witty / self-deprecating / observational]
 
-**CONVERSATIONAL HABITS (10%):**
-- Do they interrupt or wait for others to finish?
-- Do they ask follow-up questions?
-- Do they tell stories or give direct answers?
-- Do they use metaphors or analogies?
-- Do they reference their own experiences?
+**5. COMMON REACTIONS:**
+- How they express agreement
+- How they express disagreement
+- How they react to surprises or unexpected information
+- Common response patterns
 
-**CULTURAL & REGIONAL ELEMENTS (5%):**
-- Regional slang or dialect markers
-- Cultural references they make
-- Age-cohort language patterns
-- Industry-specific casual language (not jargon)
+**6. SPEECH CHARACTERISTICS:**
+- Sentence length tendencies (short and punchy vs long and detailed)
+- Use of questions in conversation
+- Storytelling vs direct answers
+- Use of examples or analogies
+- Filler words or pause patterns (if noted in sources)
+
+**7. PERSONALITY TRAITS:**
+- Energy level
+- Confidence level
+- Warmth and approachability
+- Humor and playfulness
+- Professional vs casual balance
 
 **CRITICAL RULES:**
-1. Quote EXACT phrases from interview/speech transcripts - don't paraphrase
-2. For each expression, provide the FULL SENTENCE context from transcripts
-3. Distinguish 1-on-1 greetings from public speaking (this is critical)
-4. Show HOW and WHEN they use words, not just list them
-5. Focus on CONVERSATIONAL language from interviews, not prepared speeches or formal writing
-6. Minimum 20-25 specific expressions with complete usage details
-7. Every expression must have at least 2 sentence examples from actual transcripts
+1. Base analysis on what's described in the search results
+2. Distinguish 1-on-1 greetings from public speaking
+3. Focus on conversational language, not formal speeches
+4. Extract patterns from multiple sources when possible
+5. Note if certain traits are emphasized across multiple sources
 
 **AVOID:**
 - DO NOT include visual language references ("I see", "you look", "good to see you")
@@ -334,72 +267,60 @@ ${searchResults}
 
 ${uploadedDocsContent}
 
-**PRIORITY: Focus on interview transcripts, podcast transcripts, and speech recordings first**
-
 **PROVIDE COMPREHENSIVE ANALYSIS:**
 
 **1. IDENTITY:**
 - Who is this person? (full name, profession, brief background)
 
-**2. SPEECH PATTERN EXTRACTION - Use the FORMAT specified in the system prompt:**
+**2. COMMUNICATION PATTERNS:**
 
-For EACH expression, phrase, or recurring word found in transcripts:
+Extract from the search results:
 
-**Expression:** "[exact quote]"
-**Category:** [greeting / follow-up / reaction / transition / emphasis / filler / agreement / disagreement]
-**Context of Use:** [When they use it - be very specific]
-**Frequency:** [very common / common / occasional]
-**Source Examples from Transcripts:**
-- Example 1: "[full sentence from transcript]" - [what they were responding to]
-- Example 2: "[another sentence]" - [context]
-- Example 3: "[if available]" - [context]
+**COMMON PHRASES & EXPRESSIONS:**
+- What phrases, catchphrases, or expressions are they known to use?
+- When/how do they use them?
+- Any signature sayings or quotes?
 
-**ORGANIZE YOUR FINDINGS:**
-
-**1-ON-1 GREETINGS** (for casual conversation with one person):
+**1-ON-1 GREETINGS:**
+- How do they typically greet people casually?
 - ONLY casual greetings: "hey", "what's up", "yo", etc.
 - NO public speaking: "my people", "ladies and gentlemen", "everyone"
-- Find 5-8 different greeting styles
 
-**FOLLOW-UP PHRASES** (continuing conversation):
-- Find 5-7 examples with usage context
+**CONVERSATIONAL STYLE:**
+- Formal vs casual balance
+- Direct vs indirect
+- Talkative vs concise
+- Use of slang or colloquialisms
+- Regional or cultural language
 
-**REACTIONS** (responding to information):
-- Surprise reactions (3-4 examples)
-- Agreement reactions (3-4 examples)  
-- Disagreement reactions (2-3 examples)
+**EMOTIONAL TONE:**
+- Baseline emotional state
+- How they express excitement, concern, empathy
+- Humor style
 
-**EMPHASIS WORDS** (stressing points):
-- Find 5-7 words with usage examples
+**COMMON REACTIONS:**
+- Agreement expressions
+- Disagreement expressions
+- Surprise reactions
+- Response patterns
 
-**FILLER WORDS** (natural pauses):
-- List all filler words with frequency notes
+**SPEECH CHARACTERISTICS:**
+- Sentence length tendencies
+- Use of questions
+- Storytelling vs direct answers
+- Use of examples/analogies
+- Filler words (if noted)
 
-**TRANSITIONS** (changing topics):
-- Find 5-6 transition phrases
-
-**AGREEMENT/DISAGREEMENT** (expressing opinions):
-- How they say "yes" (examples)
-- How they say "no" (examples)
-- How they partially agree (examples)
-
-**3. SENTENCE STRUCTURE:**
-- Length patterns, complexity, question usage, rhythm, pauses
-
-**4. EMOTIONAL TONE:**
-- Baseline state, excitement expression, frustration handling, empathy style, humor type
-
-**5. CONVERSATIONAL HABITS:**
-- Interruption patterns, question-asking, storytelling vs direct answers, use of analogies
-
-**6. CULTURAL ELEMENTS:**
-- Regional language, cultural references, age-appropriate patterns
+**PERSONALITY TRAITS:**
+- Energy level
+- Confidence level
+- Warmth and approachability
+- Humor and playfulness
+- Professional vs casual balance
 
 **CRITICAL REQUIREMENTS:**
-- Minimum 20-25 specific expressions with complete usage details
-- Every expression needs 2-3 sentence examples from actual transcripts
-- Show WHEN and HOW they use each expression, not just list them
-- Focus on conversational speech from interviews, NOT formal speeches
+- Base analysis on what's in the search results
+- Focus on patterns mentioned across multiple sources
 - NO visual language ("I see", "you look", "good to see you")
 - NO physical presence references ("you're looking great")
 - This is for entertainment purposes, analyzing PUBLIC communication only`;
