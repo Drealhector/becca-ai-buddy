@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { ExternalLink } from "lucide-react";
 
 const CustomizationPanel = () => {
   const [customization, setCustomization] = useState<any>({});
@@ -73,43 +74,91 @@ const CustomizationPanel = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">WhatsApp Phone</label>
-              <Input
-                value={customization.whatsapp_username || ""}
-                onChange={(e) =>
-                  setCustomization({ ...customization, whatsapp_username: e.target.value })
-                }
-                placeholder="1234567890 (with country code)"
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={customization.whatsapp_username || ""}
+                  onChange={(e) =>
+                    setCustomization({ ...customization, whatsapp_username: e.target.value })
+                  }
+                  placeholder="1234567890 (with country code)"
+                  className="flex-1"
+                />
+                {customization.whatsapp_username && (
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => window.open(`https://wa.me/${customization.whatsapp_username}`, '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Instagram Username</label>
-              <Input
-                value={customization.instagram_username || ""}
-                onChange={(e) =>
-                  setCustomization({ ...customization, instagram_username: e.target.value })
-                }
-                placeholder="yourusername"
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={customization.instagram_username || ""}
+                  onChange={(e) =>
+                    setCustomization({ ...customization, instagram_username: e.target.value })
+                  }
+                  placeholder="yourusername"
+                  className="flex-1"
+                />
+                {customization.instagram_username && (
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => window.open(`https://instagram.com/${customization.instagram_username}`, '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Facebook Username</label>
-              <Input
-                value={customization.facebook_username || ""}
-                onChange={(e) =>
-                  setCustomization({ ...customization, facebook_username: e.target.value })
-                }
-                placeholder="yourusername"
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={customization.facebook_username || ""}
+                  onChange={(e) =>
+                    setCustomization({ ...customization, facebook_username: e.target.value })
+                  }
+                  placeholder="yourusername"
+                  className="flex-1"
+                />
+                {customization.facebook_username && (
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => window.open(`https://facebook.com/${customization.facebook_username}`, '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Telegram Username</label>
-              <Input
-                value={customization.telegram_username || ""}
-                onChange={(e) =>
-                  setCustomization({ ...customization, telegram_username: e.target.value })
-                }
-                placeholder="yourusername"
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={customization.telegram_username || ""}
+                  onChange={(e) =>
+                    setCustomization({ ...customization, telegram_username: e.target.value })
+                  }
+                  placeholder="yourusername"
+                  className="flex-1"
+                />
+                {customization.telegram_username && (
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => window.open(`https://t.me/${customization.telegram_username}`, '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
