@@ -47,133 +47,77 @@ serve(async (req) => {
       try {
         const allResults: any[] = [];
         
-        // Run all searches in PARALLEL for maximum speed
-        console.log("Running 18 parallel searches for comprehensive personality analysis...");
+        // Run 10 FOCUSED searches in parallel for rich personality data
+        console.log("Running 10 focused parallel searches for deep personality analysis...");
         const searchPromises = [
           // Search 1: Identity and background
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} biography background profession career who is`,
-              numResults: 6
-            }
-          }),
-          // Search 2: YouTube interviews - general
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} youtube interview full conversation talking site:youtube.com`,
+              query: `${input.name} biography background profession career achievements ${input.context || ''}`.trim(),
               numResults: 8
             }
           }),
-          // Search 3: YouTube interviews - podcast
+          // Search 2: YouTube interviews and podcasts (combined for better quality)
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} podcast interview episode full site:youtube.com`,
+              query: `${input.name} interview podcast youtube full conversation speaking talking site:youtube.com`,
+              numResults: 10
+            }
+          }),
+          // Search 3: Speech patterns, filler words, and verbal habits
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `"${input.name}" "how he talks" "speech pattern" "always says" "filler words" "catchphrase" "signature phrase"`,
+              numResults: 10
+            }
+          }),
+          // Search 4: Quotes and famous sayings
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `"${input.name}" quotes "what he said" "famous for saying" memorable sayings expressions`,
+              numResults: 10
+            }
+          }),
+          // Search 5: Communication style and personality
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `"${input.name}" communication style personality "how he speaks" tone voice manner conversational`,
+              numResults: 10
+            }
+          }),
+          // Search 6: Social media and casual content
+          supabase.functions.invoke('web-search', {
+            body: { 
+              query: `${input.name} twitter instagram facebook posts social media casual candid`,
               numResults: 8
             }
           }),
-          // Search 4: YouTube interviews - long form
+          // Search 7: Interview transcripts and verbatim content
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} interview "how he speaks" "speaking style" site:youtube.com`,
-              numResults: 7
+              query: `"${input.name}" interview transcript verbatim "word for word" "he said" conversation`,
+              numResults: 10
             }
           }),
-          // Search 5: Filler words and speech patterns
+          // Search 8: Mannerisms, habits, and gestures
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} "filler words" "speech patterns" "how he talks" "verbal tics" "says um" "says like"`,
-              numResults: 7
-            }
-          }),
-          // Search 6: Catchphrases and signature sayings
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} catchphrase "always says" "known for saying" signature phrase favorite expression`,
+              query: `"${input.name}" mannerisms habits gestures quirks "talks like" animated speaking style`,
               numResults: 8
             }
           }),
-          // Search 7: Quotes and famous sayings
+          // Search 9: Greeting style and conversation opening
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} quotes best quotes famous sayings what he said memorable`,
+              query: `"${input.name}" greeting "how he greets" "starts conversation" "says hello" opening casual`,
               numResults: 7
             }
           }),
-          // Search 8: Communication and speaking style
+          // Search 10: Personality analysis and character traits
           supabase.functions.invoke('web-search', {
             body: { 
-              query: `${input.name} communication style speaking style how he speaks personality voice`,
-              numResults: 7
-            }
-          }),
-          // Search 9: Mannerisms and habits
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} mannerisms habits quirks "talks like" "speaks like" gestures`,
-              numResults: 6
-            }
-          }),
-          // Search 10: Social media posts
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} twitter tweets instagram posts facebook social media`,
-              numResults: 6
-            }
-          }),
-          // Search 11: Personality analysis
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} personality traits character analysis what is he like ${input.context || ''}`.trim(),
-              numResults: 6
-            }
-          }),
-          // Search 12: Tone and emotion
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} tone voice energy enthusiastic calm serious playful humorous`,
-              numResults: 6
-            }
-          }),
-          // Search 13: Conversation style
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} conversation conversational "in conversation" discussing talking about`,
-              numResults: 6
-            }
-          }),
-          // Search 14: Greetings and openings
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} greeting hello "how he greets" "starts conversation" opening`,
-              numResults: 5
-            }
-          }),
-          // Search 15: Interview transcripts
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} interview transcript verbatim word for word what he said`,
-              numResults: 7
-            }
-          }),
-          // Search 16: Video commentary and analysis
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} video analysis speaking breakdown communication breakdown`,
-              numResults: 5
-            }
-          }),
-          // Search 17: Public appearances
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} public appearance speech talk event conference ${input.context || ''}`.trim(),
-              numResults: 5
-            }
-          }),
-          // Search 18: Casual/informal content
-          supabase.functions.invoke('web-search', {
-            body: { 
-              query: `${input.name} casual informal relaxed candid behind the scenes`,
-              numResults: 5
+              query: `"${input.name}" personality analysis character traits "what makes him" unique energy ${input.context || ''}`.trim(),
+              numResults: 9
             }
           })
         ];
@@ -184,7 +128,7 @@ serve(async (req) => {
         results.forEach((result, index) => {
           if (result.data?.results) {
             allResults.push(...result.data.results);
-            console.log(`Search ${index + 1}/18 completed: ${result.data.results.length} results`);
+            console.log(`Search ${index + 1}/10 completed: ${result.data.results.length} results`);
           }
         });
 
@@ -258,225 +202,320 @@ If you don't have reliable information about this specific person, say: "I could
         
         userPrompt = `Do you have any information about ${input.name}${input.context ? ` (${input.context})` : ''}? Provide whatever details you can recall, or indicate if you don't have reliable information about them.`;
       } else {
-        systemPrompt = `You are an expert personality analyst. Analyze the search results to create a RICH, DETAILED communication profile based on articles, interviews, social media, and any available content.
+        systemPrompt = `You are an expert personality analyst with deep expertise in communication patterns. Your task is to BUILD A COMPREHENSIVE PERSONALITY PROFILE by synthesizing information from articles, interviews, social media, and any available content.
 
-**YOUR TASK:** Extract deep personality traits, speech patterns, and communication characteristics that make this person unique.
+**CRITICAL UNDERSTANDING:**
+- You will receive web search results (articles, summaries, social posts, interview descriptions)
+- Your job is to INFER and BUILD rich personality traits from this content
+- Look for patterns, descriptions, quotes, and characteristics mentioned
+- Synthesize a complete picture even if individual data points are incomplete
 
-**STRUCTURE YOUR RESPONSE:**
+**CREATE THIS DETAILED PROFILE:**
 
-**IDENTITY & BACKGROUND:**
-- Full name
-- Primary profession or role
-- Brief background (1-2 sentences)
-- Key accomplishments or what they're known for
+═══════════════════════════════════════════════════════════════
 
-**COMMUNICATION PATTERNS:**
+**SECTION 1: IDENTITY & BACKGROUND**
 
-**1. FILLER WORDS & VERBAL HABITS:**
-Extract and list ALL filler words and verbal tics you can find:
-- Common fillers: "um", "uh", "like", "you know", "so", "actually", "basically", "right", "I mean", "well"
-- Thinking sounds: "hmm", "uhh", "erm"
-- Pause patterns: do they pause mid-sentence? Where?
-- Repetitive verbal tics or patterns
-- Frequency: very often / often / sometimes / occasionally / rarely
-- Context: when do they use these? (thinking time, emphasis, transitions)
+Provide comprehensive identity information:
+- **Full name and common nicknames**
+- **Primary profession/role and organization**
+- **Background**: Key career milestones, education, journey (3-4 sentences)
+- **Known for**: Major accomplishments, contributions, reputation
+- **Context**: Industry, field, domain expertise
 
-**2. FAVORITE PHRASES & SIGNATURE EXPRESSIONS:**
-List ALL phrases, catchphrases, and expressions with DETAILED CONTEXT:
-- **Exact phrase**: "[quote the phrase]"
-  - **When used**: [specific situations/emotions/contexts]
-  - **How used**: [at start of sentence? for emphasis? as response?]
-  - **Frequency**: [very common / common / occasional]
-  - **Example in sentence**: "[full example sentence]"
-  
-Repeat this structure for EVERY phrase found. Include:
+═══════════════════════════════════════════════════════════════
+
+**SECTION 2: SPEECH PATTERNS & VERBAL CHARACTERISTICS**
+
+Build a complete picture of HOW they communicate:
+
+**A. FILLER WORDS & VERBAL HABITS:**
+From any mentions in content, identify and synthesize:
+- Common fillers they use: "um", "uh", "like", "you know", "so", "actually", "basically", "right"
+- Thinking sounds: "hmm", "err", "well"
+- Verbal tics or repetitive patterns
+- Pause patterns: where they pause (mid-sentence, between thoughts)
+- Speech continuers: "and...", "so...", "but...", "like..."
+- How often: constantly / frequently / moderately / occasionally / rarely
+- When used: during thinking / for emphasis / at transitions / when excited
+
+If specific filler words are mentioned in articles/interviews, list them. If not mentioned but speech is described as "thoughtful" or "rapid-fire", infer typical patterns.
+
+**B. FAVORITE PHRASES & SIGNATURE EXPRESSIONS:**
+Extract and synthesize signature language:
+
+For EACH phrase/expression found or described:
+- **Phrase**: "[exact wording or close approximation]"
+- **Context**: When/why they use it (emphasis, greeting, closing, transition)
+- **Frequency**: Very common / Common / Occasional / Rare
+- **Usage**: How it appears in their speech (sentence starter, punctuation, closer)
+- **Example**: Full sentence showing usage
+- **Source note**: From quote / From description / Inferred from personality
+
+Include:
 - Catchphrases and signature sayings
-- Industry-specific terms they favor
-- Unique expressions or coined terms
-- Ways they emphasize points
-- Transition phrases between topics
+- Industry/niche terms they favor
+- Unique expressions or coined phrases
+- Emphasis patterns ("I mean, really...", "look...", "here's the thing...")
+- Transition phrases ("so anyway...", "but here's what...")
+- Closing expressions ("you know what I mean?", "that's it", "period")
 
-**3. HOW THEY CONTINUE & BUILD SPEECH:**
-Analyze conversational flow and continuation patterns:
-- How they continue thoughts: "and...", "so...", "but...", "like...", "you know..."
-- How they build on previous statements
-- Pattern of elaboration: do they explain more? Give examples? Tell stories?
-- How they circle back to topics
-- How they conclude thoughts or stories: "so yeah...", "anyway...", "that's it..."
-- Sentence connectors they prefer
-- How they transition between ideas
+**C. HOW THEY BUILD & CONTINUE SPEECH:**
+Describe their conversational flow:
+- **Thought continuation**: How they link ideas ("and also...", "plus...", "on top of that...")
+- **Elaboration style**: Do they expand with examples, stories, analogies, data?
+- **Circular patterns**: Do they return to earlier points? How?
+- **Topic transitions**: Smooth / abrupt / uses verbal bridges
+- **Conclusion style**: How they wrap up thoughts ("so yeah...", "that's my take...", "anyway...")
+- **Sentence connectors**: "but", "however", "and", "so", "because", "like"
+- **Building momentum**: How they develop arguments or stories
 
-**4. 1-ON-1 GREETINGS:**
-- How they typically greet people in casual conversations
-- ONLY include: casual greetings like "hey", "what's up", "yo", "hi there"
-- EXCLUDE: public speaking phrases ("my people", "ladies and gentlemen", "everyone", "folks")
-- EXCLUDE: professional openings ("good morning team", "welcome all")
+═══════════════════════════════════════════════════════════════
 
-**5. TONE & EMOTIONAL EXPRESSION:**
-Provide RICH detail on how they express emotions:
-- **Baseline emotional state**: [energetic / calm / serious / playful / warm / intense / reserved]
-- **Energy level**: [high-energy / moderate / low-key / varies by topic]
-- **How they express excitement**: [specific words, volume changes, repetition]
-- **How they show concern or empathy**: [tone shifts, specific phrases]
-- **How they express agreement**: [specific words/phrases]
-- **How they express disagreement**: [direct/indirect, specific phrases]
-- **Humor style**: [sarcastic / playful / witty / self-deprecating / observational / dry]
-- **Emotional range**: [expressive / controlled / variable]
-- **Tone variations**: how does their tone change across different contexts?
+**SECTION 3: TONE & EMOTIONAL EXPRESSION**
 
-**6. CONVERSATIONAL STYLE:**
-- **Rhythm & Pace**: fast-paced / measured / varies / energetic / relaxed
-- **Sentence structure**: short and punchy / long and detailed / mixed
-- **Formal vs casual**: lean formal / balanced / very casual
-- **Direct vs indirect**: get to the point / build up gradually
-- **Talkative vs concise**: elaborate responses / brief answers
-- **Use of questions**: ask many questions / make statements / balanced
-- **Storytelling**: tell stories often / give direct answers / use examples
-- **Use of analogies or examples**: frequently / occasionally / rarely
-- **Regional or cultural language patterns**: slang, colloquialisms, accents
+Create a RICH emotional profile:
 
-**7. GESTURES & PHYSICAL MANNERISMS (if mentioned in content):**
-Extract any references to physical communication:
-- Common hand gestures or movements
-- Facial expressions described in interviews/articles
-- Body language patterns mentioned
-- How they show engagement physically
-- Physical mannerisms while speaking
-- Note if sources mention their "animated" style, hand-talking, etc.
+**A. BASELINE TONE:**
+- Default energy: high / moderate / low / variable
+- General mood: enthusiastic / serious / playful / warm / intense / calm / professional
+- Emotional baseline: optimistic / realistic / cautious / confident / humble
 
-**8. SPEECH CHARACTERISTICS:**
-- **Volume & Intensity**: loud / moderate / soft / varies
-- **Emphasis patterns**: what words do they stress?
-- **Repetition for effect**: do they repeat words/phrases for emphasis?
-- **Question patterns**: rhetorical questions / genuine questions / tag questions
-- **Pause placement**: where do they pause in sentences?
+**B. EMOTIONAL RANGE & EXPRESSION:**
+- **Excitement**: How shown (volume, repetition, specific words, rapid speech)
+- **Concern/Empathy**: Tone shifts, softening, specific phrases
+- **Agreement**: How expressed ("exactly!", "absolutely", "for sure", "100%")
+- **Disagreement**: Direct/indirect, phrases used ("but...", "I hear you, but...", "respectfully...")
+- **Humor style**: Sarcastic / witty / playful / self-deprecating / observational / dry / silly
+- **Emotional expressiveness**: Highly expressive / controlled / moderate / varies by topic
 
-**9. PERSONALITY TRAITS:**
-- Energy level: high / moderate / low / dynamic
-- Confidence level: very confident / balanced / humble
-- Warmth and approachability: very warm / professional / reserved
-- Humor and playfulness: frequent / occasional / rare
-- Professional vs casual balance: where do they lean?
-- Authenticity: genuine / polished / varies
+**C. ENERGY & INTENSITY:**
+- Volume patterns: loud / moderate / soft / varies
+- Intensity level: intense / passionate / measured / relaxed
+- Pace variations: when fast, when slow, typical rhythm
+- Emphasis: What they stress, how they stress it
+
+═══════════════════════════════════════════════════════════════
+
+**SECTION 4: CONVERSATIONAL STYLE & INTERACTION**
+
+**A. OVERALL COMMUNICATION STYLE:**
+- **Formality**: Very formal / professional / balanced / casual / very casual
+- **Directness**: Straight to the point / builds up gradually / depends on topic
+- **Talkativeness**: Very talkative / balanced / concise / varies
+- **Question usage**: Asks many questions / mostly statements / balanced / rhetorical questions
+- **Rhythm & pace**: Fast-paced / measured / relaxed / energetic / varies
+- **Sentence structure**: Short punchy / long detailed / mixed / varies by topic
+
+**B. ENGAGEMENT PATTERNS:**
+- **Storytelling**: Frequent storyteller / gives examples / direct answers / mixed
+- **Use of analogies**: Constantly / often / sometimes / rarely / never
+- **Personal vs impersonal**: Shares personal stories / sticks to facts / balanced
+- **Listener engagement**: Checks understanding / assumes following / interactive / monologue-style
+
+**C. GREETING & CONVERSATION OPENING:**
+Extract or infer 1-on-1 greeting style:
+- Typical casual greetings: "hey", "what's up", "hi", "yo", "how's it going"
+- Warmth level: very warm / friendly / professional / reserved
+- Opening style: jumps to topic / small talk first / depends on context
+- Energy in greetings: high / moderate / chill / varies
+
+**CRITICAL**: 
+- These are TEXT/VOICE greetings (not video) - NO visual language
+- Exclude: "see", "look", "good to see you", "you look"
+- Exclude: public speaking ("my people", "ladies and gentlemen", "folks", "everyone")
+- Include only: 1-on-1 conversational greetings
+
+═══════════════════════════════════════════════════════════════
+
+**SECTION 5: MANNERISMS & PHYSICAL COMMUNICATION**
+(If mentioned in sources)
+
+Extract any references to physical communication style:
+- Hand gestures described (expressive, minimal, specific patterns)
+- Facial expressions mentioned (animated, serious, smiling)
+- Body language patterns (leans in, sits back, moves around)
+- Physical engagement level (very animated / moderate / calm / still)
+- Eye contact patterns (if mentioned)
+- Overall physical presence (commanding / approachable / reserved / energetic)
+
+If physical mannerisms not mentioned, note: "Physical mannerisms not documented in available sources."
+
+═══════════════════════════════════════════════════════════════
+
+**SECTION 6: PERSONALITY CORE TRAITS**
+
+Synthesize overall personality:
+- **Energy level**: High / moderate / low / dynamic / context-dependent
+- **Confidence**: Very confident / balanced / humble / varies
+- **Warmth**: Very warm / friendly / professional / reserved / varies
+- **Humor**: Frequent / moderate / occasional / rare / serious
+- **Authenticity**: Very genuine / polished / balanced / varies
+- **Professional vs casual**: Leans professional / balanced / leans casual / very casual
+- **Approachability**: Very approachable / friendly / professional / formal / reserved
+- **Passion level**: Highly passionate / engaged / measured / calm / varies by topic
+
+═══════════════════════════════════════════════════════════════
+
+**SYNTHESIS APPROACH:**
+
+1. **Extract directly** when sources provide quotes, descriptions, or specific details
+2. **Infer intelligently** when descriptions suggest patterns (e.g., "energetic speaker" → likely uses exclamations, varied pace)
+3. **Synthesize patterns** from multiple mentions across sources
+4. **Note confidence level**:
+   - "Based on multiple sources..."
+   - "Described in interviews as..."
+   - "Likely pattern based on personality type..."
+   - "Common in [their role/industry]..."
+5. **Be specific** even when inferring - provide examples and context
+6. **Build completeness** - create full picture from partial data
 
 **CRITICAL RULES:**
-1. Extract EVERY specific detail from the search results
-2. Focus on PATTERNS mentioned across multiple sources
-3. Be CONCRETE - quote actual phrases, not generic descriptions
-4. Distinguish 1-on-1 greetings from public speaking
-5. Note FREQUENCY and CONTEXT for all traits
-6. Look for CONSISTENCY across different sources
-
-**AVOID:**
-- DO NOT include visual language ("I see", "you look", "good to see you")
-- DO NOT include physical presence references ("you're looking great", "great to have you here")
-- DO NOT mix up 1-on-1 greetings with crowd-addressing phrases
-- DO NOT include work jargon unless it's genuinely part of their casual vocabulary
-- DO NOT make vague statements - always be specific with examples`;
+- NO visual language in greetings ("see", "look", "good to see")
+- NO physical presence references ("you look great", "great to have you here")
+- Distinguish 1-on-1 casual greetings from public speaking
+- Quote directly when available, infer intelligently when not
+- Mark quotes vs inferences clearly
+- Focus on PATTERNS across sources, not one-off mentions
+- Provide RICH DETAIL even from summary content`;
         
-        userPrompt = `Analyze these web search results about ${input.name}${input.context ? ` (${input.context})` : ''}:
+        userPrompt = `Analyze these web search results about ${input.name}${input.context ? ` (${input.context})` : ''} and build a COMPREHENSIVE personality profile:
 
 ${searchResults}
 
 ${uploadedDocsContent}
 
-**PROVIDE COMPREHENSIVE, DETAILED ANALYSIS:**
+**SYNTHESIZE ALL 6 SECTIONS:**
 
-**1. IDENTITY & BACKGROUND:**
-- Who is this person? (full name, profession, brief background, accomplishments)
+═══════════════════════════════════════════════════════════════
+**SECTION 1: IDENTITY & BACKGROUND**
 
-**2. EXTRACT RICH PERSONALITY DATA:**
+Who is this person?
+- Full name and common nicknames
+- Primary profession/role and organization
+- Career background and key milestones (3-4 sentences)
+- Major accomplishments and reputation
+- Industry/field context
 
-**FILLER WORDS & VERBAL HABITS:**
-List EVERY filler word and verbal habit you find:
-- Fillers: "um", "uh", "like", "you know", "so", "actually", "basically", "right", "I mean", "well"
-- Thinking sounds: "hmm", "uhh", "erm"
-- Pause patterns and where they occur
-- Repetitive verbal tics
-- Frequency: very often / often / sometimes / occasionally / rarely
-- When do they use these? (thinking, emphasis, transitions)
+═══════════════════════════════════════════════════════════════
+**SECTION 2: SPEECH PATTERNS & VERBAL CHARACTERISTICS**
 
-**FAVORITE PHRASES & SIGNATURE EXPRESSIONS:**
-For EVERY phrase found, provide:
-- **Exact phrase**: "[quote it]"
-- **When used**: [specific context/situation]
-- **How used**: [position in sentence, purpose]
-- **Frequency**: [very common / common / occasional]
-- **Example sentence**: "[full example]"
+**A. FILLER WORDS & VERBAL HABITS:**
+From the search results, extract or intelligently infer:
+- Common fillers: "um", "uh", "like", "you know", "so", "actually", "basically", "right"
+- Thinking sounds and verbal tics
+- Pause patterns and speech continuers
+- Frequency: constantly / frequently / moderately / occasionally / rarely
+- When/why used: during thinking / for emphasis / at transitions
+- Note if directly mentioned in sources OR inferred from descriptions
 
-Include:
+**B. FAVORITE PHRASES & SIGNATURE EXPRESSIONS:**
+For EACH phrase identified (directly quoted or described in sources):
+- **Phrase**: [exact wording or close approximation]
+- **Context**: When/why used
+- **Frequency**: Very common / Common / Occasional
+- **Usage**: How it appears in speech
+- **Example sentence**: Full example
+- **Source type**: Direct quote / Described / Inferred
+
+Look for:
 - Catchphrases and signature sayings
 - Industry terms they favor
-- Unique expressions or coined terms
-- Emphasis phrases
-- Transition phrases
+- Unique expressions
+- Emphasis patterns
+- Transition and closing phrases
 
-**HOW THEY CONTINUE & BUILD SPEECH:**
-- How do they continue thoughts? ("and...", "so...", "but...")
-- How do they build on statements?
-- Do they elaborate? Give examples? Tell stories?
-- How do they circle back to topics?
-- How do they conclude? ("so yeah...", "anyway...")
-- Sentence connectors they prefer
-- How do they transition between ideas?
+**C. HOW THEY BUILD & CONTINUE SPEECH:**
+Describe their conversational flow:
+- How they continue thoughts and link ideas
+- Elaboration style: examples / stories / analogies / data
+- Topic transition approach
+- How they conclude thoughts
+- Sentence connectors they use
+- How they build momentum in conversation
 
-**1-ON-1 GREETINGS:**
-- Casual greetings: "hey", "what's up", "yo", "hi there"
-- NO public speaking: "my people", "ladies and gentlemen"
+═══════════════════════════════════════════════════════════════
+**SECTION 3: TONE & EMOTIONAL EXPRESSION**
 
-**TONE & EMOTIONAL EXPRESSION:**
-Provide RICH detail:
-- Baseline emotional state: [energetic/calm/serious/playful/warm/intense]
-- Energy level: [high/moderate/low/varies]
-- How they express excitement: [specific words, patterns]
-- How they show concern/empathy: [tone shifts, phrases]
-- How they express agreement: [specific phrases]
-- How they express disagreement: [direct/indirect, phrases]
-- Humor style: [sarcastic/playful/witty/self-deprecating/observational/dry]
-- Emotional range: [expressive/controlled/variable]
-- Tone variations across contexts
+**A. BASELINE TONE:**
+- Default energy: high / moderate / low / variable
+- General mood: enthusiastic / serious / playful / warm / intense / calm
+- Emotional baseline: optimistic / realistic / cautious / confident
 
-**CONVERSATIONAL STYLE:**
-- Rhythm & pace: [fast/measured/varies/energetic/relaxed]
-- Sentence structure: [short/long/mixed]
-- Formal vs casual: [formal/balanced/casual]
-- Direct vs indirect: [get to point/build up]
-- Talkative vs concise: [elaborate/brief]
-- Use of questions: [many/few/balanced]
-- Storytelling: [stories/direct/examples]
-- Analogies/examples: [frequently/occasionally/rarely]
-- Regional/cultural language: [slang, colloquialisms, accents]
+**B. EMOTIONAL RANGE & EXPRESSION:**
+- How they express excitement
+- How they show concern/empathy
+- How they express agreement
+- How they express disagreement
+- Humor style: sarcastic / witty / playful / self-deprecating / observational / dry
+- Emotional expressiveness level
 
-**GESTURES & PHYSICAL MANNERISMS (if mentioned):**
-- Hand gestures or movements described
+**C. ENERGY & INTENSITY:**
+- Volume and intensity patterns
+- Pace variations
+- Emphasis patterns
+
+═══════════════════════════════════════════════════════════════
+**SECTION 4: CONVERSATIONAL STYLE & INTERACTION**
+
+**A. OVERALL COMMUNICATION STYLE:**
+- Formality level: very formal / professional / balanced / casual / very casual
+- Directness: straight to point / builds up / varies
+- Talkativeness: very talkative / balanced / concise
+- Question usage: many / moderate / few / rhetorical
+- Rhythm & pace: fast / measured / relaxed / energetic
+- Sentence structure: short / long / mixed
+
+**B. ENGAGEMENT PATTERNS:**
+- Storytelling approach
+- Use of analogies and examples
+- Personal vs impersonal style
+- Listener engagement approach
+
+**C. GREETING & CONVERSATION OPENING:**
+1-on-1 casual greeting style (TEXT/VOICE - NO visual language):
+- Typical greetings: "hey", "what's up", "hi", "yo"
+- Warmth level
+- Opening approach: topic first / small talk / varies
+- Energy level in greetings
+
+EXCLUDE: "see", "look", "good to see you", public speaking phrases
+
+═══════════════════════════════════════════════════════════════
+**SECTION 5: MANNERISMS & PHYSICAL COMMUNICATION**
+
+If mentioned in sources, extract:
+- Hand gestures described
 - Facial expressions mentioned
 - Body language patterns
-- Physical engagement patterns
-- Animated style references
+- Physical engagement level
+- Overall physical presence
 
-**SPEECH CHARACTERISTICS:**
-- Volume & intensity: [loud/moderate/soft/varies]
-- Emphasis patterns: [what words stressed?]
-- Repetition for effect: [yes/no/sometimes]
-- Question patterns: [rhetorical/genuine/tag questions]
-- Pause placement: [where in sentences?]
+If not mentioned: "Physical mannerisms not documented in available sources."
 
-**PERSONALITY TRAITS:**
-- Energy level: [high/moderate/low/dynamic]
-- Confidence: [very confident/balanced/humble]
-- Warmth: [very warm/professional/reserved]
-- Humor: [frequent/occasional/rare]
-- Professional vs casual: [lean where?]
-- Authenticity: [genuine/polished/varies]
+═══════════════════════════════════════════════════════════════
+**SECTION 6: PERSONALITY CORE TRAITS**
 
-**CRITICAL REQUIREMENTS:**
-- Extract EVERY specific detail from search results
-- Focus on PATTERNS across multiple sources
-- Be CONCRETE - quote actual phrases
-- Note FREQUENCY and CONTEXT for everything
-- NO visual language ("I see", "you look")
-- NO physical presence references
-- NO vague statements - always specific with examples`;
+Synthesize overall personality:
+- Energy level
+- Confidence level
+- Warmth and approachability
+- Humor frequency
+- Authenticity
+- Professional vs casual balance
+- Passion level
+
+═══════════════════════════════════════════════════════════════
+
+**SYNTHESIS INSTRUCTIONS:**
+1. Extract directly from quotes and specific mentions
+2. Infer intelligently from personality descriptions
+3. Synthesize patterns from multiple sources
+4. Note confidence: "Based on sources..." vs "Likely pattern..." vs "Inferred from..."
+5. Be specific with examples even when inferring
+6. Build complete picture from partial data
+7. Focus on PATTERNS across sources
+8. Provide RICH DETAIL throughout`;
       }
     } else if (type === "create_human_character") {
       systemPrompt = `You are an expert personality architect. Generate a complete directive AI personality prompt.
