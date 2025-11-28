@@ -165,7 +165,6 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
     }
 
     setIsAsking(true);
-    setAnalysis(null);
     setExpandedTopics(new Set());
 
     try {
@@ -176,6 +175,7 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
       if (error) throw error;
 
       setAnalysis(data.analysis);
+      setCustomQuestion(""); // Clear the input after successful question
     } catch (error) {
       console.error("Error analyzing conversations:", error);
       toast.error("Failed to analyze conversations");
