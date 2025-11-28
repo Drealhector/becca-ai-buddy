@@ -7,7 +7,11 @@ const corsHeaders = {
 
 // Available Vapi voice providers and their voices
 const VAPI_VOICES = [
+  // Becca voice
+  { id: 'becca', name: 'Becca', provider: 'elevenlabs', description: 'Professional, clear female voice' },
+  
   // ElevenLabs voices
+  { id: 'elevenlabs-jazzy', name: 'Jazzy', provider: 'elevenlabs', description: 'Smooth, jazzy female voice' },
   { id: 'elevenlabs-rachel', name: 'Rachel', provider: 'elevenlabs', description: 'Warm, friendly female voice' },
   { id: 'elevenlabs-adam', name: 'Adam', provider: 'elevenlabs', description: 'Clear, professional male voice' },
   { id: 'elevenlabs-charlie', name: 'Charlie', provider: 'elevenlabs', description: 'Natural, conversational male voice' },
