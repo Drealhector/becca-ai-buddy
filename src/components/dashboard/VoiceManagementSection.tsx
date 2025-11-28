@@ -22,20 +22,11 @@ const VoiceManagementSection = () => {
   const fetchVoices = async () => {
     setLoading(true);
     try {
-      // Add Becca voice at the top
-      const beccaVoice = {
-        id: "becca-voice-001",
-        name: "Becca",
-        description: "Natural, conversational female voice",
-        provider: "becca.live"
-      };
-
       // Fetch Vapi voices
       const { data, error } = await supabase.functions.invoke("fetch-vapi-voices");
       if (error) throw error;
       
-      // Add Becca voice at the beginning
-      setVapiVoices([beccaVoice, ...(data?.voices || [])]);
+      setVapiVoices(data?.voices || []);
 
       // Fetch custom voices and selected voice
       const { data: customData } = await supabase
