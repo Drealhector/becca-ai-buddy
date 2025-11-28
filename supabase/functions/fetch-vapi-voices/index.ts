@@ -11,7 +11,6 @@ const VAPI_VOICES = [
   { id: 'becca', name: 'Becca', provider: 'elevenlabs', description: 'Professional, clear female voice' },
   
   // ElevenLabs voices
-  { id: 'elevenlabs-jazzy', name: 'Jazzy', provider: 'elevenlabs', description: 'Smooth, jazzy female voice' },
   { id: 'elevenlabs-rachel', name: 'Rachel', provider: 'elevenlabs', description: 'Warm, friendly female voice' },
   { id: 'elevenlabs-adam', name: 'Adam', provider: 'elevenlabs', description: 'Clear, professional male voice' },
   { id: 'elevenlabs-charlie', name: 'Charlie', provider: 'elevenlabs', description: 'Natural, conversational male voice' },
@@ -38,6 +37,9 @@ const VAPI_VOICES = [
   { id: 'deepgram-aura-orpheus', name: 'Orpheus', provider: 'deepgram', description: 'Expressive male voice' },
   { id: 'deepgram-aura-helios', name: 'Helios', provider: 'deepgram', description: 'Warm male voice' },
   { id: 'deepgram-aura-zeus', name: 'Zeus', provider: 'deepgram', description: 'Authoritative male voice' },
+  
+  // Jazzy voice at the end
+  { id: 'elevenlabs-jazzy', name: 'Jazzy', provider: 'elevenlabs', description: 'Smooth, jazzy female voice' },
 ];
 
 serve(async (req) => {
