@@ -46,6 +46,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
   const [isAsking, setIsAsking] = useState(false);
   const [expandedTopics, setExpandedTopics] = useState<Set<number>>(new Set());
   const [questionsExpanded, setQuestionsExpanded] = useState(true);
+  const [conversationHistory, setConversationHistory] = useState<Array<{ question: string; answer: any }>>([]);
 
   const handleCallTypeToggle = (typeId: string) => {
     setSelectedCallTypes(prev =>
@@ -162,12 +163,15 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
             role: "transcript",
             platform: "Phone Call"
           })), 
-          question 
+          question,
+          conversationHistory
         },
       });
 
       if (error) throw error;
 
+      // Store this Q&A in conversation history
+      setConversationHistory(prev => [...prev, { question, answer: data.analysis }]);
       setAnalysis(data.analysis);
       setCustomQuestion(""); // Clear the input after successful question
     } catch (error) {
@@ -204,6 +208,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
     setAnalysis(null);
     setExpandedTopics(new Set());
     setQuestionsExpanded(true);
+    setConversationHistory([]);
   };
 
   const toggleTopic = (index: number) => {

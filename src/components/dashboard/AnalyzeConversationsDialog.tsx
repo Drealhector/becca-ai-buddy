@@ -49,6 +49,7 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
   const [analysis, setAnalysis] = useState<any>(null);
   const [isAsking, setIsAsking] = useState(false);
   const [expandedTopics, setExpandedTopics] = useState<Set<number>>(new Set());
+  const [conversationHistory, setConversationHistory] = useState<Array<{ question: string; answer: any }>>([]);
 
   const handlePlatformToggle = (platformId: string) => {
     setSelectedPlatforms(prev =>
@@ -169,11 +170,17 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
 
     try {
       const { data, error } = await supabase.functions.invoke("analyze-conversations", {
-        body: { messages, question },
+        body: { 
+          messages, 
+          question,
+          conversationHistory 
+        },
       });
 
       if (error) throw error;
 
+      // Store this Q&A in conversation history
+      setConversationHistory(prev => [...prev, { question, answer: data.analysis }]);
       setAnalysis(data.analysis);
       setCustomQuestion(""); // Clear the input after successful question
     } catch (error) {
@@ -209,6 +216,7 @@ export function AnalyzeConversationsDialog({ open, onOpenChange }: AnalyzeConver
     setCustomQuestion("");
     setAnalysis(null);
     setExpandedTopics(new Set());
+    setConversationHistory([]);
   };
 
   const toggleTopic = (index: number) => {

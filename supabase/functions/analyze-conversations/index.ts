@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, question } = await req.json();
+    const { messages, question, conversationHistory = [] } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
@@ -35,11 +35,19 @@ serve(async (req) => {
       })
       .join("\n");
 
-    const systemPrompt = `You are an AI assistant analyzing customer conversations from multiple platforms (WhatsApp, Instagram, Facebook, Telegram, Web Chat).
+    const systemPrompt = `You are an AI assistant analyzing customer conversations from multiple platforms (WhatsApp, Instagram, Facebook, Telegram, Web Chat, Phone Calls).
+
+You are having a conversational interaction with the user. They may ask follow-up questions, request clarifications, or dig deeper into previous analyses.
+
+When responding to follow-up questions:
+- Reference previous answers when relevant
+- Build upon earlier analysis
+- Provide additional details or different perspectives
+- Stay focused on the conversation data provided
 
 CRITICAL: You MUST return a structured JSON response with the following format:
 {
-  "summary": "A clear summary of the analysis (2-3 sentences)",
+  "summary": "A clear, conversational response to the user's question (2-4 sentences)",
   "conversationCount": number,
   "topics": [
     {
@@ -58,10 +66,31 @@ CRITICAL: You MUST return a structured JSON response with the following format:
   "insights": ["insight 1", "insight 2"]
 }
 
-IMPORTANT: Even with limited data, always provide a summary and at least 1-2 topics. Be specific with counts and references.
+For follow-up questions, you can provide a summary without topics if the question doesn't require topic breakdown.
 
 Conversation data format:
 [Timestamp] [Platform] Sender: Message content`;
+
+    // Build conversation messages including history
+    const aiMessages = [
+      { role: "system", content: systemPrompt },
+      { 
+        role: "user", 
+        content: `Here are the conversations to analyze:\n\n${formattedMessages}\n\nI will ask you questions about this data. Please analyze and respond in the specified JSON format.` 
+      },
+    ];
+
+    // Add conversation history
+    conversationHistory.forEach((entry: any) => {
+      aiMessages.push({ role: "user", content: entry.question });
+      aiMessages.push({ role: "assistant", content: JSON.stringify(entry.answer) });
+    });
+
+    // Add current question
+    aiMessages.push({ 
+      role: "user", 
+      content: question 
+    });
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -71,13 +100,7 @@ Conversation data format:
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { 
-            role: "user", 
-            content: `Here are the conversations to analyze:\n\n${formattedMessages}\n\nQuestion: ${question}\n\nReturn ONLY valid JSON matching the specified format.` 
-          },
-        ],
+        messages: aiMessages,
         response_format: { type: "json_object" }
       }),
     });
