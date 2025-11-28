@@ -151,7 +151,6 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
     }
 
     setIsAsking(true);
-    setAnalysis(null);
     setExpandedTopics(new Set());
 
     try {
@@ -170,6 +169,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
       if (error) throw error;
 
       setAnalysis(data.analysis);
+      setCustomQuestion(""); // Clear the input after successful question
     } catch (error) {
       console.error("Error analyzing transcripts:", error);
       toast.error("Failed to analyze transcripts");
@@ -184,16 +184,7 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
 
   const handleCustomQuestion = () => {
     if (!customQuestion.trim()) {
-      toast.error("Please enter a question or response");
-      return;
-    }
-    
-    // Check if user is responding to a "see where and when" prompt
-    const response = customQuestion.toLowerCase();
-    if ((response.includes("yes") || response.includes("show") || response.includes("see")) && analysis?.topics) {
-      // Expand all topics
-      setExpandedTopics(new Set(analysis.topics.map((_: any, idx: number) => idx)));
-      setCustomQuestion("");
+      toast.error("Please enter a question");
       return;
     }
     
