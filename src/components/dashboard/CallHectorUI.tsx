@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Phone, PhoneOff } from 'lucide-react';
 import { toast } from 'sonner';
 import Vapi from '@vapi-ai/web';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CallHectorUIProps {
   onClose: () => void;
@@ -13,8 +14,10 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
   const vapiRef = useRef<Vapi | null>(null);
   const startTimeRef = useRef<number | null>(null);
+  const callIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     startCall();
@@ -78,13 +81,50 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
     }
   };
 
-  const handleEndCall = () => {
-    if (vapiRef.current) {
-      vapiRef.current.stop();
+  const handleEndCall = async () => {
+    if (isEnding) return; // Prevent multiple clicks
+    
+    setIsEnding(true);
+    console.log('Ending call...');
+    
+    try {
+      // Calculate call duration
+      const duration = startTimeRef.current 
+        ? Math.floor((Date.now() - startTimeRef.current) / 1000) 
+        : 0;
+      const durationMinutes = duration / 60;
+      
+      console.log('Call duration:', duration, 'seconds');
+
+      // Save call to database
+      const { error: callError } = await supabase.from("call_history").insert({
+        type: "outgoing",
+        number: "DREALHECTOR",
+        topic: "Voice call with DREALHECTOR",
+        duration_minutes: durationMinutes,
+        timestamp: new Date().toISOString(),
+        conversation_id: callIdRef.current,
+      });
+
+      if (callError) {
+        console.error('Error saving call history:', callError);
+      } else {
+        console.log('Call saved to database');
+      }
+
+      // Stop the call
+      if (vapiRef.current) {
+        vapiRef.current.stop();
+      }
+      
+      setIsConnected(false);
+      toast.info('Call ended');
+    } catch (error) {
+      console.error('Error ending call:', error);
+      toast.error('Error ending call');
+    } finally {
+      onClose();
     }
-    setIsConnected(false);
-    toast.info('Call ended');
-    onClose();
   };
 
   const formatDuration = (seconds: number) => {
@@ -135,10 +175,10 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
           <div className="flex justify-center pb-12 pt-4 px-6">
             <Button
               onClick={handleEndCall}
-              disabled={isConnecting}
-              className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+              disabled={isConnecting || isEnding}
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 disabled:hover:scale-100"
             >
-              <PhoneOff className="w-8 h-8 text-white" />
+              <PhoneOff className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
             </Button>
           </div>
         </div>
