@@ -41,39 +41,37 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
 
   const startCall = async () => {
     try {
-      const publicKey = 'a73cb300-eae5-4375-9b68-0dda8733474a';
-      const assistantId = '6c411909-067b-4ce3-ad02-10299109dc64';
-
-      vapiRef.current = new Vapi(publicKey);
-
-      vapiRef.current.on('call-start', () => {
-        console.log('Call started');
+      startTimeRef.current = Date.now();
+      
+      // Show connecting UI for 3 seconds
+      setTimeout(() => {
         setIsConnecting(false);
         setIsConnected(true);
-        startTimeRef.current = Date.now();
-        toast.success('Connected to DREALHECTOR');
-      });
-
-      vapiRef.current.on('call-end', () => {
-        console.log('Call ended');
-        handleEndCall();
-      });
-
-      vapiRef.current.on('speech-start', () => {
-        setIsSpeaking(true);
-      });
-
-      vapiRef.current.on('speech-end', () => {
-        setIsSpeaking(false);
-      });
-
-      vapiRef.current.on('error', (error: any) => {
-        console.error('Vapi error:', error);
-        toast.error('Call failed. Please try again.');
-        onClose();
-      });
-
-      await vapiRef.current.start(assistantId);
+        
+        // Show limit reached message for 2 seconds then end call
+        setTimeout(async () => {
+          toast.error('Limit reached - Connect routing number');
+          
+          // Record failed call
+          const duration = startTimeRef.current 
+            ? Math.floor((Date.now() - startTimeRef.current) / 1000) 
+            : 0;
+          const durationMinutes = duration / 60;
+          
+          await supabase.from("call_history").insert({
+            type: "outgoing",
+            number: "DREALHECTOR",
+            topic: "Call failed - Limit reached",
+            duration_minutes: durationMinutes,
+            timestamp: new Date().toISOString(),
+            conversation_id: null,
+          });
+          
+          setTimeout(() => {
+            onClose();
+          }, 1500);
+        }, 2000);
+      }, 3000);
     } catch (error) {
       console.error('Error starting call:', error);
       toast.error('Failed to start call');
@@ -140,7 +138,7 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
           {/* Call Header */}
           <div className="pt-12 pb-8 px-6 text-center">
             <div className="text-gray-400 text-sm mb-2">
-              {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Call Ended'}
+              {isConnecting ? 'Connecting...' : isConnected ? 'Limit reached - Connect routing number' : 'Call Ended'}
             </div>
             <h2 className="text-3xl font-semibold text-white mb-2">DREALHECTOR</h2>
             <div className="text-lg text-gray-300 font-mono">
