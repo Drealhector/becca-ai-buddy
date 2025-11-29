@@ -11,6 +11,7 @@ interface CallHectorUIProps {
 
 const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
   const [isConnecting, setIsConnecting] = useState(true);
+  const [showLimitReached, setShowLimitReached] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -46,7 +47,7 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
       // Show connecting UI for 3 seconds
       setTimeout(() => {
         setIsConnecting(false);
-        setIsConnected(true);
+        setShowLimitReached(true);
         
         // Show limit reached message for 2 seconds then end call
         setTimeout(async () => {
@@ -138,11 +139,11 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
           {/* Call Header */}
           <div className="pt-12 pb-8 px-6 text-center">
             <div className="text-gray-400 text-sm mb-2">
-              {isConnecting ? 'Connecting...' : isConnected ? 'Limit reached - Connect routing number' : 'Call Ended'}
+              {isConnecting ? 'Connecting...' : showLimitReached ? 'Limit reached - Connect routing number' : 'Call Ended'}
             </div>
             <h2 className="text-3xl font-semibold text-white mb-2">DREALHECTOR</h2>
             <div className="text-lg text-gray-300 font-mono">
-              {isConnecting ? '00:00' : formatDuration(callDuration)}
+              00:00
             </div>
           </div>
 
