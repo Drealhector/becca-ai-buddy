@@ -41,8 +41,24 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
 
   const startCall = async () => {
     try {
-      const publicKey = 'a73cb300-eae5-4375-9b68-0dda8733474a';
-      const assistantId = '6c411909-067b-4ce3-ad02-10299109dc64';
+      // Fetch Vapi configuration from edge function
+      const { data: configData, error: configError } = await supabase.functions.invoke('get-vapi-config');
+      
+      if (configError || !configData) {
+        console.error('Failed to get Vapi config:', configError);
+        toast.error('Failed to initialize call');
+        onClose();
+        return;
+      }
+
+      const { publicKey, assistantId } = configData;
+      
+      if (!publicKey || !assistantId) {
+        console.error('Invalid Vapi configuration');
+        toast.error('Invalid call configuration');
+        onClose();
+        return;
+      }
 
       vapiRef.current = new Vapi(publicKey);
 
