@@ -27,15 +27,23 @@ const VoiceManagementSection = () => {
         id: "becca-voice-001",
         name: "Becca",
         description: "Natural, conversational female voice",
-        provider: "becca.live"
+        provider: "elevenlabs"
+      };
+
+      // Add Jazzy voice
+      const jazzyVoice = {
+        id: "jazzy-voice-001",
+        name: "Jazzy",
+        description: "Smooth, jazzy female voice",
+        provider: "elevenlabs"
       };
 
       // Fetch Vapi voices
       const { data, error } = await supabase.functions.invoke("fetch-vapi-voices");
       if (error) throw error;
       
-      // Add Becca voice at the beginning
-      setVapiVoices([beccaVoice, ...(data?.voices || [])]);
+      // Add Becca at beginning, Jazzy at end
+      setVapiVoices([beccaVoice, ...(data?.voices || []), jazzyVoice]);
 
       // Fetch custom voices and selected voice
       const { data: customData } = await supabase

@@ -41,55 +41,28 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
 
   const startCall = async () => {
     try {
-      // Fetch Vapi configuration from edge function
-      const { data: configData, error: configError } = await supabase.functions.invoke('get-vapi-config');
+      // Simulate connecting for a few seconds then fail
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
-      if (configError || !configData) {
-        console.error('Failed to get Vapi config:', configError);
-        toast.error('Failed to initialize call');
-        onClose();
-        return;
-      }
-
-      const { publicKey, assistantId } = configData;
+      // Automatically fail the call
+      setIsConnecting(false);
+      toast.error('Call limit reached - connect routing number');
       
-      if (!publicKey || !assistantId) {
-        console.error('Invalid Vapi configuration');
-        toast.error('Invalid call configuration');
-        onClose();
-        return;
+      // Record failed call in database
+      const { error: callError } = await supabase.from("call_history").insert({
+        type: "outgoing",
+        number: "DREALHECTOR",
+        topic: "Failed call attempt",
+        duration_minutes: 0,
+        timestamp: new Date().toISOString(),
+        conversation_id: null,
+      });
+
+      if (callError) {
+        console.error('Error saving failed call:', callError);
       }
-
-      vapiRef.current = new Vapi(publicKey);
-
-      vapiRef.current.on('call-start', () => {
-        console.log('Call started');
-        setIsConnecting(false);
-        setIsConnected(true);
-        startTimeRef.current = Date.now();
-        toast.success('Connected to DREALHECTOR');
-      });
-
-      vapiRef.current.on('call-end', () => {
-        console.log('Call ended');
-        handleEndCall();
-      });
-
-      vapiRef.current.on('speech-start', () => {
-        setIsSpeaking(true);
-      });
-
-      vapiRef.current.on('speech-end', () => {
-        setIsSpeaking(false);
-      });
-
-      vapiRef.current.on('error', (error: any) => {
-        console.error('Vapi error:', error);
-        toast.error('Call failed. Please try again.');
-        onClose();
-      });
-
-      await vapiRef.current.start(assistantId);
+      
+      onClose();
     } catch (error) {
       console.error('Error starting call:', error);
       toast.error('Failed to start call');
