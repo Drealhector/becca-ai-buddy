@@ -167,9 +167,13 @@ const PhoneCallSection = () => {
           conversation_id: null,
         });
         
+        // Refresh call history to ensure it shows up
+        await fetchCallHistory();
+        
         toast.error('Call limit reached - connect routing number');
       } catch (error) {
         console.error('Error saving failed call:', error);
+        toast.error('Failed to save call log');
       }
       
       // Reset states
