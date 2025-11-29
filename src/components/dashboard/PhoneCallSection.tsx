@@ -151,11 +151,31 @@ const PhoneCallSection = () => {
     setCallStatus("calling");
     setShowMakeCall(false);
 
-    // Simulate ringing - 7 seconds connecting phase
-    setTimeout(() => {
-      setCallStatus("connected");
-      setCallStartTime(new Date());
-    }, 7000);
+    // Simulate connecting for 3 seconds then auto-fail
+    setTimeout(async () => {
+      setIsInCall(false);
+      setCallStatus(null);
+      
+      // Record failed call in database
+      try {
+        await supabase.from("call_history").insert({
+          type: "outgoing",
+          number: callNumber,
+          topic: callTopic,
+          duration_minutes: 0,
+          timestamp: new Date().toISOString(),
+          conversation_id: null,
+        });
+        
+        toast.error('Call limit reached - connect routing number');
+      } catch (error) {
+        console.error('Error saving failed call:', error);
+      }
+      
+      // Reset states
+      setCallTopic("");
+      setCallNumber("");
+    }, 3000);
   };
 
   const handleScheduleCall = () => {
