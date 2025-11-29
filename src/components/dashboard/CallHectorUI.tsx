@@ -41,37 +41,66 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
 
   const startCall = async () => {
     try {
-      startTimeRef.current = Date.now();
+      const { data: config } = await supabase.functions.invoke('start-vapi-call');
       
-      // Show connecting UI for 3 seconds
-      setTimeout(() => {
+      if (!config?.vapiPublicKey || !config?.assistantId) {
+        throw new Error('Missing VAPI configuration');
+      }
+
+      const vapi = new Vapi(config.vapiPublicKey);
+      vapiRef.current = vapi;
+
+      vapi.on('call-start', () => {
+        console.log('Call started');
         setIsConnecting(false);
         setIsConnected(true);
+        startTimeRef.current = Date.now();
+      });
+
+      vapi.on('call-end', async () => {
+        console.log('Call ended');
+        setIsConnected(false);
         
-        // Show limit reached message for 2 seconds then end call
-        setTimeout(async () => {
-          toast.error('Limit reached - Connect routing number');
-          
-          // Record failed call
-          const duration = startTimeRef.current 
-            ? Math.floor((Date.now() - startTimeRef.current) / 1000) 
-            : 0;
-          const durationMinutes = duration / 60;
-          
-          await supabase.from("call_history").insert({
-            type: "outgoing",
-            number: "DREALHECTOR",
-            topic: "Call failed - Limit reached",
-            duration_minutes: durationMinutes,
-            timestamp: new Date().toISOString(),
-            conversation_id: null,
-          });
-          
-          setTimeout(() => {
-            onClose();
-          }, 1500);
-        }, 2000);
-      }, 3000);
+        const duration = startTimeRef.current 
+          ? Math.floor((Date.now() - startTimeRef.current) / 1000) 
+          : 0;
+        const durationMinutes = duration / 60;
+        
+        await supabase.from("call_history").insert({
+          type: "incoming",
+          number: "Public Hub Call",
+          topic: "Voice call from public hub",
+          duration_minutes: durationMinutes,
+          timestamp: new Date().toISOString(),
+          conversation_id: callIdRef.current,
+        });
+        
+        onClose();
+      });
+
+      vapi.on('speech-start', () => {
+        console.log('Speech started');
+        setIsSpeaking(true);
+      });
+
+      vapi.on('speech-end', () => {
+        console.log('Speech ended');
+        setIsSpeaking(false);
+      });
+
+      vapi.on('message', (message: any) => {
+        console.log('Message:', message);
+        if (message.type === 'conversation-update' && message.conversation) {
+          callIdRef.current = message.conversation.id;
+        }
+      });
+
+      vapi.on('error', (error: any) => {
+        console.error('VAPI error:', error);
+        toast.error('Call error occurred');
+      });
+
+      await vapi.start(config.assistantId, config.assistantOverrides);
     } catch (error) {
       console.error('Error starting call:', error);
       toast.error('Failed to start call');
@@ -142,7 +171,7 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
             </div>
             <h2 className="text-3xl font-semibold text-white mb-2">DREALHECTOR</h2>
             <div className="text-lg text-gray-300 font-mono">
-              {isConnecting ? '00:00' : formatDuration(callDuration)}
+              {formatDuration(callDuration)}
             </div>
           </div>
 
