@@ -85,6 +85,8 @@ const PhoneCallSection = () => {
         .order("timestamp", { ascending: false })
         .limit(100);
 
+      console.log("Fetched call history:", data);
+      console.log("Outgoing calls:", data?.filter(c => c.type === "outgoing"));
       setCallHistory(data || []);
     } catch (error) {
       console.error("Error fetching call history:", error);
@@ -294,6 +296,10 @@ const PhoneCallSection = () => {
 
   const incomingCalls = callHistory.filter((call) => call.type === "incoming");
   const outgoingCalls = callHistory.filter((call) => call.type === "outgoing");
+  
+  console.log("Total call history:", callHistory.length);
+  console.log("Incoming calls:", incomingCalls.length);
+  console.log("Outgoing calls:", outgoingCalls.length);
 
   return (
     <Card className="p-6 relative">
