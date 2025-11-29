@@ -83,7 +83,7 @@ const PhoneCallSection = () => {
         .from("call_history")
         .select("*")
         .order("timestamp", { ascending: false })
-        .limit(20);
+        .limit(100);
 
       setCallHistory(data || []);
     } catch (error) {
