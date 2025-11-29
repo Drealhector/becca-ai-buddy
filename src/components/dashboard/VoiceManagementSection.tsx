@@ -34,7 +34,7 @@ const VoiceManagementSection = () => {
       const jazzyVoice = {
         id: "jazzy-voice-001",
         name: "Jazzy",
-        description: "Smooth, jazzy female voice",
+        description: "Smooth, jazzy male voice",
         provider: "elevenlabs"
       };
 
