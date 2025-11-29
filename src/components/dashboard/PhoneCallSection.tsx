@@ -23,7 +23,7 @@ const PhoneCallSection = () => {
   const [scheduleTime, setScheduleTime] = useState("");
   const [queuedCalls, setQueuedCalls] = useState<any[]>([]);
   const [isInCall, setIsInCall] = useState(false);
-  const [callStatus, setCallStatus] = useState<"calling" | "connected" | "limitReached" | null>(null);
+  const [callStatus, setCallStatus] = useState<"calling" | "connected" | null>(null);
   const [callDuration, setCallDuration] = useState(0);
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
@@ -150,39 +150,12 @@ const PhoneCallSection = () => {
     setIsInCall(true);
     setCallStatus("calling");
     setShowMakeCall(false);
-    const startTime = Date.now();
 
-    // Show connecting for 3 seconds
-    setTimeout(async () => {
-      setCallStatus("limitReached");
-      toast.error("Limit reached - Connect routing number");
-      
-      const duration = Math.floor((Date.now() - startTime) / 1000);
-      const durationMinutes = duration / 60;
-      
-      try {
-        await supabase.from("call_history").insert({
-          type: "outgoing",
-          number: callNumber,
-          topic: "Call failed - Limit reached",
-          duration_minutes: durationMinutes,
-          timestamp: new Date().toISOString(),
-          conversation_id: null,
-        });
-      } catch (error) {
-        console.error("Error saving failed call:", error);
-      }
-      
-      // End call after 2 more seconds
-      setTimeout(() => {
-        setIsInCall(false);
-        setCallStatus(null);
-        setCallDuration(0);
-        setCallStartTime(null);
-        setCallTopic("");
-        setCallNumber("");
-      }, 2000);
-    }, 3000);
+    // Simulate ringing - 7 seconds connecting phase
+    setTimeout(() => {
+      setCallStatus("connected");
+      setCallStartTime(new Date());
+    }, 7000);
   };
 
   const handleScheduleCall = () => {
@@ -310,9 +283,7 @@ const PhoneCallSection = () => {
           <h2 className="text-3xl font-bold mb-2">{callNumber}</h2>
           
           {callStatus === "calling" ? (
-            <p className="text-xl text-muted-foreground mb-8 animate-pulse">Connecting...</p>
-          ) : callStatus === "limitReached" ? (
-            <p className="text-xl text-red-500 mb-8">Limit reached - Connect routing number</p>
+            <p className="text-xl text-muted-foreground mb-8 animate-pulse">Calling...</p>
           ) : (
             <>
               <p className="text-xl text-green-500 mb-4">Connected</p>

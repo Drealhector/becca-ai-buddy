@@ -41,66 +41,39 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
 
   const startCall = async () => {
     try {
-      const { data: config } = await supabase.functions.invoke('start-vapi-call');
-      
-      if (!config?.vapiPublicKey || !config?.assistantId) {
-        throw new Error('Missing VAPI configuration');
-      }
+      const publicKey = 'a73cb300-eae5-4375-9b68-0dda8733474a';
+      const assistantId = '6c411909-067b-4ce3-ad02-10299109dc64';
 
-      const vapi = new Vapi(config.vapiPublicKey);
-      vapiRef.current = vapi;
+      vapiRef.current = new Vapi(publicKey);
 
-      vapi.on('call-start', () => {
+      vapiRef.current.on('call-start', () => {
         console.log('Call started');
         setIsConnecting(false);
         setIsConnected(true);
         startTimeRef.current = Date.now();
+        toast.success('Connected to DREALHECTOR');
       });
 
-      vapi.on('call-end', async () => {
+      vapiRef.current.on('call-end', () => {
         console.log('Call ended');
-        setIsConnected(false);
-        
-        const duration = startTimeRef.current 
-          ? Math.floor((Date.now() - startTimeRef.current) / 1000) 
-          : 0;
-        const durationMinutes = duration / 60;
-        
-        await supabase.from("call_history").insert({
-          type: "incoming",
-          number: "Public Hub Call",
-          topic: "Voice call from public hub",
-          duration_minutes: durationMinutes,
-          timestamp: new Date().toISOString(),
-          conversation_id: callIdRef.current,
-        });
-        
-        onClose();
+        handleEndCall();
       });
 
-      vapi.on('speech-start', () => {
-        console.log('Speech started');
+      vapiRef.current.on('speech-start', () => {
         setIsSpeaking(true);
       });
 
-      vapi.on('speech-end', () => {
-        console.log('Speech ended');
+      vapiRef.current.on('speech-end', () => {
         setIsSpeaking(false);
       });
 
-      vapi.on('message', (message: any) => {
-        console.log('Message:', message);
-        if (message.type === 'conversation-update' && message.conversation) {
-          callIdRef.current = message.conversation.id;
-        }
+      vapiRef.current.on('error', (error: any) => {
+        console.error('Vapi error:', error);
+        toast.error('Call failed. Please try again.');
+        onClose();
       });
 
-      vapi.on('error', (error: any) => {
-        console.error('VAPI error:', error);
-        toast.error('Call error occurred');
-      });
-
-      await vapi.start(config.assistantId, config.assistantOverrides);
+      await vapiRef.current.start(assistantId);
     } catch (error) {
       console.error('Error starting call:', error);
       toast.error('Failed to start call');
@@ -171,7 +144,7 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
             </div>
             <h2 className="text-3xl font-semibold text-white mb-2">DREALHECTOR</h2>
             <div className="text-lg text-gray-300 font-mono">
-              {formatDuration(callDuration)}
+              {isConnecting ? '00:00' : formatDuration(callDuration)}
             </div>
           </div>
 
