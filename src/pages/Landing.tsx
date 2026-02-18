@@ -80,10 +80,9 @@ const Landing = () => {
               lineHeight: 1,
               display: 'inline-block'
             }}>
-              <span className="animate-glow-pulse" style={{
+              <span className="animate-b-glow" style={{
                 color: '#ffffff',
                 WebkitTextStroke: '1.5px #2c4a6f',
-                textShadow: `-3px -3px 0 #5dd5ed, -6px -6px 0 #5dd5ed, -9px -9px 0 #70dff0, 0 4px 12px rgba(0,0,0,0.4)`,
                 fontWeight: 900
               }}>B</span>
               <span style={{
