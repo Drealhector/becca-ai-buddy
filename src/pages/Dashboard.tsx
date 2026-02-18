@@ -15,6 +15,7 @@ import VoiceManagementSection from "@/components/dashboard/VoiceManagementSectio
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
 import { PhoneConnectionDialog } from "@/components/dashboard/PhoneConnectionDialog";
 import FloatingVapiAssistant from "@/components/dashboard/FloatingVapiAssistant";
+import MatrixBackground from "@/components/dashboard/MatrixBackground";
 import { Menu, LogOut, Phone, Link as LinkIcon, Settings, MessageSquare, Mic, Trash2 } from "lucide-react";
 
 
@@ -132,7 +133,10 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      {/* Matrix Background */}
+      <MatrixBackground />
+
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -141,20 +145,16 @@ const Dashboard = () => {
               <Menu className="h-5 w-5" />
             </Button>
             <h1 className="text-sm sm:text-xl md:text-2xl font-bold flex items-baseline">
-              <span style={{
-                fontSize: 'clamp(1rem, 4vw, 2rem)',
-                fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                fontWeight: 900,
-                display: 'inline-block',
-                color: '#ffffff',
-                WebkitTextStroke: '1px #2c4a6f',
-                textShadow: `
-                  -2px -2px 0 #5dd5ed,
-                  -4px -4px 0 #5dd5ed,
-                  -6px -6px 0 #70dff0,
-                  0 2px 6px rgba(0,0,0,0.4)
-                `
-              }}>B</span>
+              <span
+                className="animate-b-glow"
+                style={{
+                  fontSize: 'clamp(1rem, 4vw, 2rem)',
+                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                  fontWeight: 900,
+                  display: 'inline-block',
+                  color: '#ffffff',
+                  WebkitTextStroke: '1px #2c4a6f',
+                }}>B</span>
               <span className="bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent hidden sm:inline">ECCA Dashboard</span>
               <span className="bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent sm:hidden">ECCA</span>
             </h1>
@@ -290,7 +290,7 @@ const Dashboard = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Master Switch */}
         <div id="master-switch">
           <MasterSwitch />
