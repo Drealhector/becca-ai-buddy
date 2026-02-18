@@ -83,7 +83,8 @@ const Landing = () => {
               <span className="animate-b-glow" style={{
                 color: '#ffffff',
                 WebkitTextStroke: '1.5px #2c4a6f',
-                fontWeight: 900
+                fontWeight: 900,
+                display: 'inline-block',
               }}>B</span>
               <span style={{
                 color: '#ffffff',

@@ -171,6 +171,7 @@ All colors MUST be HSL.
 
 @keyframes b-glow {
   0%, 100% {
+    transform: scale(1);
     text-shadow:
       -3px  -3px 0 #5dd5ed,
       -6px  -6px 0 #5dd5ed,
@@ -181,6 +182,7 @@ All colors MUST be HSL.
       0 4px 12px rgba(0,0,0,0.4);
   }
   50% {
+    transform: scale(1.08);
     text-shadow:
       -3px  -3px 0 #7ee8f7,
       -6px  -6px 0 #7ee8f7,
