@@ -1,14 +1,47 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import NeuralBrain from "@/components/3d/NeuralBrain";
+import DimensionPortal from "@/components/ui/DimensionPortal";
 
 const Landing = () => {
   const navigate = useNavigate();
+
+  const [portal, setPortal] = useState<{
+    active: boolean;
+    x: number;
+    y: number;
+    dest: string;
+  }>({ active: false, x: 0, y: 0, dest: "" });
+
+  const handleNavigate = useCallback(
+    (dest: string, e: React.MouseEvent) => {
+      if (portal.active) return;
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      setPortal({ active: true, x, y, dest });
+    },
+    [portal.active]
+  );
+
+  const handlePortalComplete = useCallback(() => {
+    navigate(portal.dest);
+    setPortal((p) => ({ ...p, active: false }));
+  }, [navigate, portal.dest]);
+
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#050a18]">
+      {/* Dimension Portal Transition */}
+      <DimensionPortal
+        active={portal.active}
+        originX={portal.x}
+        originY={portal.y}
+        onComplete={handlePortalComplete}
+      />
+
       {/* Full-page 3D Canvas */}
       <div className="absolute inset-0 z-0">
         <Canvas
@@ -61,10 +94,17 @@ const Landing = () => {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate("/auth")} className="text-white hover:bg-white/10">
+            <Button
+              variant="ghost"
+              onClick={(e) => handleNavigate("/auth", e)}
+              className="text-white hover:bg-white/10 transition-transform active:scale-95"
+            >
               Sign in
             </Button>
-            <Button onClick={() => navigate("/talk-to-us")} className="bg-white text-slate-900 hover:bg-white/90">
+            <Button
+              onClick={(e) => handleNavigate("/talk-to-us", e)}
+              className="bg-white text-slate-900 hover:bg-white/90 transition-transform active:scale-95"
+            >
               Talk to us
             </Button>
           </div>
@@ -85,8 +125,8 @@ const Landing = () => {
 
             <Button
               size="lg"
-              onClick={() => navigate("/talk-to-us")}
-              className="bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 text-xs sm:text-base md:text-lg px-4 sm:px-8 py-3 sm:py-5 md:py-6 h-auto shadow-[0_0_30px_rgba(100,150,255,0.2)]"
+              onClick={(e) => handleNavigate("/talk-to-us", e)}
+              className="bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 text-xs sm:text-base md:text-lg px-4 sm:px-8 py-3 sm:py-5 md:py-6 h-auto shadow-[0_0_30px_rgba(100,150,255,0.2)] transition-transform active:scale-95"
             >
               Talk to us
             </Button>
