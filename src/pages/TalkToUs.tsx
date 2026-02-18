@@ -143,7 +143,7 @@ const TalkToUs = () => {
       />
 
       {/* Header */}
-      <header className="relative z-10 container mx-auto px-4 py-6">
+      <header className="relative z-10 container mx-auto px-4 py-6 pointer-events-auto">
         <Button
           variant="ghost"
           onClick={() => navigate("/")}
@@ -155,8 +155,8 @@ const TalkToUs = () => {
       </header>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 py-8 flex items-center justify-center min-h-[calc(100vh-88px)]">
-        <div className="max-w-md mx-auto w-full">
+      <div className="relative z-10 container mx-auto px-4 py-8 flex items-center justify-center min-h-[calc(100vh-88px)] pointer-events-none">
+        <div className="max-w-md mx-auto w-full pointer-events-auto">
           {/* Info Section */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center mb-4">

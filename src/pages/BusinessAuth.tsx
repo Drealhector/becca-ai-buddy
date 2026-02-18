@@ -146,8 +146,8 @@ const BusinessAuth = () => {
       </div>
 
       {/* Auth Form */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 pointer-events-none">
+        <div className="w-full max-w-md pointer-events-auto">
           {/* Logo */}
           <div className="flex justify-center mb-8">
             <div
