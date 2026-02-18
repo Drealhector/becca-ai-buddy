@@ -371,42 +371,55 @@ const FloatingVapiAssistant = ({
             background: 'radial-gradient(circle at 38% 35%, #dbeafe 0%, #93c5fd 20%, #3b82f6 45%, #1e3a8a 72%, #0f1e4a 100%)'
           }} />
 
-          {/* === CREAMY CLOUD LAYER 1 — slow drift, large blobs === */}
-          <div className="absolute inset-0 cloud-layer-1" style={{ opacity: 0.82 }}>
-            <div style={{
-              position: 'absolute', width: '110%', height: '110%', top: '-5%', left: '-5%',
-              background: 'radial-gradient(ellipse 65% 48% at 55% 42%, rgba(255,253,245,0.96) 0%, rgba(254,247,230,0.72) 40%, transparent 75%)',
-              filter: 'blur(3px)',
-            }} />
-            <div style={{
-              position: 'absolute', width: '90%', height: '90%', top: '10%', left: '-10%',
-              background: 'radial-gradient(ellipse 50% 40% at 30% 60%, rgba(255,251,240,0.88) 0%, rgba(253,244,220,0.55) 50%, transparent 80%)',
-              filter: 'blur(4px)',
-            }} />
-          </div>
+          {/* === MILK BLOB 1 — large dominant mass, slow rolling slosh === */}
+          <div className="milk-blob-1" style={{
+            position: 'absolute',
+            width: '80%', height: '75%',
+            top: '10%', left: '5%',
+            background: 'radial-gradient(ellipse 60% 55% at 50% 50%, rgba(255,254,250,0.98) 0%, rgba(255,251,240,0.85) 45%, rgba(253,246,225,0.50) 72%, transparent 100%)',
+            filter: 'blur(4px)',
+            borderRadius: '60% 40% 55% 45% / 50% 60% 40% 55%',
+          }} />
 
-          {/* === CREAMY CLOUD LAYER 2 — counter-rotate, wispy === */}
-          <div className="absolute inset-0 cloud-layer-2" style={{ opacity: 0.70 }}>
-            <div style={{
-              position: 'absolute', width: '100%', height: '100%',
-              background: 'radial-gradient(ellipse 55% 38% at 65% 55%, rgba(255,253,245,0.90) 0%, rgba(252,240,210,0.60) 45%, transparent 75%)',
-              filter: 'blur(5px)',
-            }} />
-            <div style={{
-              position: 'absolute', width: '85%', height: '85%', top: '15%', left: '5%',
-              background: 'radial-gradient(ellipse 42% 32% at 20% 30%, rgba(255,250,235,0.78) 0%, rgba(255,246,220,0.45) 55%, transparent 80%)',
-              filter: 'blur(3px)',
-            }} />
-          </div>
+          {/* === MILK BLOB 2 — secondary mass, offset phase, rolling behind === */}
+          <div className="milk-blob-2" style={{
+            position: 'absolute',
+            width: '65%', height: '60%',
+            top: '20%', left: '18%',
+            background: 'radial-gradient(ellipse 55% 50% at 45% 52%, rgba(255,253,248,0.92) 0%, rgba(254,249,235,0.70) 50%, rgba(252,243,215,0.35) 75%, transparent 100%)',
+            filter: 'blur(5px)',
+            borderRadius: '45% 55% 40% 60% / 55% 45% 60% 40%',
+          }} />
 
-          {/* === CREAMY CLOUD LAYER 3 — fast wisps === */}
-          <div className="absolute inset-0 cloud-layer-3" style={{ opacity: 0.55 }}>
-            <div style={{
-              position: 'absolute', width: '115%', height: '115%', top: '-7%', left: '-7%',
-              background: 'radial-gradient(ellipse 60% 30% at 45% 70%, rgba(255,252,240,0.80) 0%, rgba(251,240,200,0.45) 50%, transparent 78%)',
-              filter: 'blur(6px)',
-            }} />
-          </div>
+          {/* === MILK BLOB 3 — small wispy trail, faster === */}
+          <div className="milk-blob-3" style={{
+            position: 'absolute',
+            width: '50%', height: '45%',
+            top: '30%', left: '25%',
+            background: 'radial-gradient(ellipse 50% 45% at 52% 48%, rgba(255,252,245,0.88) 0%, rgba(254,247,228,0.60) 55%, transparent 85%)',
+            filter: 'blur(6px)',
+            borderRadius: '55% 45% 50% 50% / 40% 60% 45% 55%',
+          }} />
+
+          {/* === MILK BLOB 4 — thin surface film wrapping the top === */}
+          <div className="milk-blob-4" style={{
+            position: 'absolute',
+            width: '90%', height: '35%',
+            top: '0%', left: '5%',
+            background: 'radial-gradient(ellipse 70% 80% at 50% 20%, rgba(255,255,255,0.55) 0%, rgba(255,252,240,0.28) 55%, transparent 85%)',
+            filter: 'blur(5px)',
+            borderRadius: '50% 50% 60% 40% / 70% 70% 30% 30%',
+          }} />
+
+          {/* === MILK BLOB 5 — bottom sloshing tail === */}
+          <div className="milk-blob-5" style={{
+            position: 'absolute',
+            width: '70%', height: '55%',
+            top: '35%', left: '10%',
+            background: 'radial-gradient(ellipse 55% 50% at 48% 60%, rgba(255,251,238,0.75) 0%, rgba(253,244,218,0.45) 55%, transparent 85%)',
+            filter: 'blur(7px)',
+            borderRadius: '40% 60% 55% 45% / 60% 40% 55% 45%',
+          }} />
 
           {/* === DEPTH SHADOW — bottom darkening for spherical feel === */}
           <div className="absolute inset-0 rounded-full" style={{
@@ -493,34 +506,70 @@ const FloatingVapiAssistant = ({
 
       <style>{`
         @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          33%       { transform: translateY(-7px) rotate(1deg); }
-          66%       { transform: translateY(-4px) rotate(-1deg); }
+          0%,100% { transform: translateY(0px) rotate(0deg); }
+          33%      { transform: translateY(-7px) rotate(1deg); }
+          66%      { transform: translateY(-4px) rotate(-1deg); }
         }
-        .animate-float {
-          animation: float 4s ease-in-out infinite;
-        }
+        .animate-float { animation: float 4s ease-in-out infinite; }
 
-        /* Cloud layer 1 — slow drift, slightly tilted orbit */
-        @keyframes cloud1 {
-          0%   { transform: rotate(0deg)   translateX(6%) rotate(0deg); }
-          100% { transform: rotate(360deg) translateX(6%) rotate(-360deg); }
-        }
-        .cloud-layer-1 { animation: cloud1 22s linear infinite; transform-origin: center; }
+        /* =====================================================
+           MILK BLOBS — organic slosh inside a glass sphere
+           Each blob: translates along a rolling elliptical path
+           + morphs border-radius to simulate fluid deformation
+           + opacity breathes for depth
+           ===================================================== */
 
-        /* Cloud layer 2 — reverse, different radius */
-        @keyframes cloud2 {
-          0%   { transform: rotate(0deg)    translateX(-8%) rotate(0deg); }
-          100% { transform: rotate(-360deg) translateX(-8%) rotate(360deg); }
+        @keyframes milk1 {
+          0%   { transform: translate(0%,   0%)   rotate(0deg);   border-radius: 60% 40% 55% 45% / 50% 60% 40% 55%; opacity: 0.90; }
+          12%  { transform: translate(12%, -8%)   rotate(18deg);  border-radius: 50% 50% 45% 55% / 60% 40% 55% 45%; opacity: 0.82; }
+          25%  { transform: translate(18%, 5%)    rotate(35deg);  border-radius: 40% 60% 55% 45% / 55% 45% 50% 50%; opacity: 0.88; }
+          37%  { transform: translate(8%,  18%)   rotate(50deg);  border-radius: 55% 45% 42% 58% / 48% 52% 58% 42%; opacity: 0.78; }
+          50%  { transform: translate(-8%, 12%)   rotate(70deg);  border-radius: 45% 55% 60% 40% / 52% 48% 42% 58%; opacity: 0.92; }
+          62%  { transform: translate(-16%, 0%)   rotate(85deg);  border-radius: 58% 42% 48% 52% / 40% 60% 52% 48%; opacity: 0.80; }
+          75%  { transform: translate(-10%,-12%)  rotate(100deg); border-radius: 50% 50% 55% 45% / 55% 45% 50% 50%; opacity: 0.86; }
+          88%  { transform: translate(4%,  -16%)  rotate(120deg); border-radius: 42% 58% 45% 55% / 58% 42% 55% 45%; opacity: 0.84; }
+          100% { transform: translate(0%,   0%)   rotate(135deg); border-radius: 60% 40% 55% 45% / 50% 60% 40% 55%; opacity: 0.90; }
         }
-        .cloud-layer-2 { animation: cloud2 16s linear infinite; transform-origin: center; }
+        .milk-blob-1 { animation: milk1 8s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
 
-        /* Cloud layer 3 — faster wisps */
-        @keyframes cloud3 {
-          0%   { transform: rotate(0deg)   translateX(4%) rotate(0deg); }
-          100% { transform: rotate(360deg) translateX(4%) rotate(-360deg); }
+        @keyframes milk2 {
+          0%   { transform: translate(0%,   0%)   rotate(0deg);   border-radius: 45% 55% 40% 60% / 55% 45% 60% 40%; opacity: 0.78; }
+          15%  { transform: translate(-14%, 6%)   rotate(-22deg); border-radius: 55% 45% 50% 50% / 48% 52% 45% 55%; opacity: 0.88; }
+          30%  { transform: translate(-8%, 18%)   rotate(-40deg); border-radius: 48% 52% 58% 42% / 60% 40% 48% 52%; opacity: 0.72; }
+          45%  { transform: translate(10%, 14%)   rotate(-58deg); border-radius: 60% 40% 45% 55% / 42% 58% 55% 45%; opacity: 0.85; }
+          60%  { transform: translate(16%, -4%)   rotate(-75deg); border-radius: 42% 58% 52% 48% / 55% 45% 42% 58%; opacity: 0.75; }
+          75%  { transform: translate(6%, -18%)   rotate(-95deg); border-radius: 52% 48% 60% 40% / 45% 55% 52% 48%; opacity: 0.88; }
+          90%  { transform: translate(-8%, -12%)  rotate(-115deg);border-radius: 50% 50% 44% 56% / 58% 42% 50% 50%; opacity: 0.80; }
+          100% { transform: translate(0%,   0%)   rotate(-130deg);border-radius: 45% 55% 40% 60% / 55% 45% 60% 40%; opacity: 0.78; }
         }
-        .cloud-layer-3 { animation: cloud3 10s linear infinite; transform-origin: center; }
+        .milk-blob-2 { animation: milk2 11s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
+
+        @keyframes milk3 {
+          0%   { transform: translate(0%,   0%)   rotate(0deg);   border-radius: 55% 45% 50% 50% / 40% 60% 45% 55%; opacity: 0.70; }
+          20%  { transform: translate(10%, 14%)   rotate(28deg);  border-radius: 42% 58% 55% 45% / 52% 48% 58% 42%; opacity: 0.80; }
+          40%  { transform: translate(-6%, 20%)   rotate(55deg);  border-radius: 60% 40% 44% 56% / 48% 52% 42% 58%; opacity: 0.65; }
+          60%  { transform: translate(-18%, 4%)   rotate(82deg);  border-radius: 48% 52% 58% 42% / 58% 42% 52% 48%; opacity: 0.78; }
+          80%  { transform: translate(-6%, -16%)  rotate(108deg); border-radius: 52% 48% 45% 55% / 44% 56% 58% 42%; opacity: 0.72; }
+          100% { transform: translate(0%,   0%)   rotate(135deg); border-radius: 55% 45% 50% 50% / 40% 60% 45% 55%; opacity: 0.70; }
+        }
+        .milk-blob-3 { animation: milk3 7s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
+
+        @keyframes milk4 {
+          0%   { transform: translate(0%,0%)    scaleX(1)    scaleY(1);    opacity: 0.50; }
+          25%  { transform: translate(8%,-5%)   scaleX(1.15) scaleY(0.88); opacity: 0.42; }
+          50%  { transform: translate(-5%,8%)   scaleX(0.90) scaleY(1.12); opacity: 0.55; }
+          75%  { transform: translate(-10%,-4%) scaleX(1.10) scaleY(0.92); opacity: 0.44; }
+          100% { transform: translate(0%,0%)    scaleX(1)    scaleY(1);    opacity: 0.50; }
+        }
+        .milk-blob-4 { animation: milk4 14s ease-in-out infinite; }
+
+        @keyframes milk5 {
+          0%   { transform: translate(0%,  0%)  rotate(0deg);   border-radius: 40% 60% 55% 45% / 60% 40% 55% 45%; opacity: 0.65; }
+          33%  { transform: translate(14%, 10%) rotate(-45deg); border-radius: 55% 45% 42% 58% / 48% 52% 60% 40%; opacity: 0.75; }
+          66%  { transform: translate(-10%,16%) rotate(-90deg); border-radius: 48% 52% 58% 42% / 55% 45% 40% 60%; opacity: 0.60; }
+          100% { transform: translate(0%,  0%)  rotate(-135deg);border-radius: 40% 60% 55% 45% / 60% 40% 55% 45%; opacity: 0.65; }
+        }
+        .milk-blob-5 { animation: milk5 9s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
       `}</style>
     </div>
   );
