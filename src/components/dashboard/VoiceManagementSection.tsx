@@ -169,7 +169,7 @@ const VoiceManagementSection = () => {
                     {selectedVoice === voice.id && (
                       <span className="text-xs text-primary font-semibold">Selected</span>
                     )}
-                    <span className="text-xs text-green-500 font-semibold">Functional</span>
+                    <span className="text-xs font-semibold" style={{color:"rgb(0,220,255)"}}>Functional</span>
                   </div>
                 </div>
               ))
@@ -220,7 +220,7 @@ const VoiceManagementSection = () => {
               
               {selectedFile && (
                 <Button
-                  className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  className="w-full gap-2 text-white" style={{backgroundColor:"rgb(0,190,220)"}} onMouseEnter={e=>(e.currentTarget.style.backgroundColor="rgb(0,160,200)")} onMouseLeave={e=>(e.currentTarget.style.backgroundColor="rgb(0,190,220)")}
                   onClick={handleVoiceUpload}
                   disabled={loading}
                 >
