@@ -162,6 +162,7 @@ const BusinessAuth = () => {
               }}
             >
               <span
+                className="animate-b-glow"
                 style={{
                   fontSize: "4.5rem",
                   fontFamily:
@@ -170,12 +171,7 @@ const BusinessAuth = () => {
                   lineHeight: 1,
                   color: "#ffffff",
                   WebkitTextStroke: "1.5px #2c4a6f",
-                  textShadow: `
-                    -3px -3px 0 #5dd5ed,
-                    -6px -6px 0 #5dd5ed,
-                    -9px -9px 0 #70dff0,
-                    0 3px 12px rgba(0,0,0,0.4)
-                  `,
+                  display: "inline-block",
                 }}
               >
                 B
