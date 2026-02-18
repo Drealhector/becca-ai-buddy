@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
 import FloatingVapiAssistant from "@/components/dashboard/FloatingVapiAssistant";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
+import NeuralBrain from "@/components/3d/NeuralBrain";
 
 const TalkToUs = () => {
   const navigate = useNavigate();
@@ -104,10 +107,41 @@ const TalkToUs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-700 via-slate-600 to-slate-500 relative overflow-hidden">
-      {/* Background overlay with nature image */}
-      <div className="absolute inset-0 bg-[url('/nature-background.jpg')] bg-cover bg-center opacity-30 brightness-50"></div>
-      
+    <div className="min-h-screen relative overflow-hidden bg-[#050a18]">
+      {/* Full-page 3D Neural Brain Background */}
+      <div className="absolute inset-0 z-0">
+        <Canvas
+          camera={{ position: [0, 0.5, 6], fov: 55 }}
+          gl={{ antialias: true, alpha: true }}
+          dpr={[1, 2]}
+        >
+          <color attach="background" args={['#050a18']} />
+          <fog attach="fog" args={['#050a18', 8, 18]} />
+          <ambientLight intensity={0.15} />
+          <pointLight position={[5, 5, 5]} intensity={0.3} color="#4488ff" />
+          <pointLight position={[-5, -3, 3]} intensity={0.2} color="#8844ff" />
+          <Suspense fallback={null}>
+            <NeuralBrain />
+          </Suspense>
+          <OrbitControls
+            enableZoom={false}
+            enablePan={false}
+            autoRotate={false}
+            maxPolarAngle={Math.PI / 1.8}
+            minPolarAngle={Math.PI / 2.5}
+          />
+        </Canvas>
+      </div>
+
+      {/* Vignette overlay for readability */}
+      <div
+        className="absolute inset-0 z-[1] pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 70% at 50% 50%, transparent 20%, rgba(5,10,24,0.65) 80%, rgba(5,10,24,0.92) 100%)",
+        }}
+      />
+
       {/* Header */}
       <header className="relative z-10 container mx-auto px-4 py-6">
         <Button
@@ -134,16 +168,11 @@ const TalkToUs = () => {
                 lineHeight: 1,
                 display: 'inline-block'
               }}>
-                <span style={{
+                <span className="animate-b-glow" style={{
                   color: '#ffffff',
                   WebkitTextStroke: '1.5px #2c4a6f',
-                  textShadow: `
-                    -3px -3px 0 #5dd5ed,
-                    -6px -6px 0 #5dd5ed,
-                    -9px -9px 0 #70dff0,
-                    0 4px 12px rgba(0,0,0,0.4)
-                  `,
-                  fontWeight: 900
+                  fontWeight: 900,
+                  display: 'inline-block',
                 }}>B</span>
                 <span style={{
                   color: '#ffffff',
@@ -185,10 +214,10 @@ const TalkToUs = () => {
           )}
 
           {/* Form */}
-          <div className="bg-white backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg">
+          <div className="rounded-2xl p-6 border border-white/10 shadow-lg" style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(20px)', boxShadow: '0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
             <form onSubmit={handleSubmit} id="contactForm" className="space-y-4">
               <div>
-                <Label htmlFor="fullName" className="text-sm font-medium text-slate-900">
+                <Label htmlFor="fullName" className="text-sm font-medium text-white/80">
                   Full Name
                 </Label>
                 <Input
@@ -197,12 +226,12 @@ const TalkToUs = () => {
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   required
-                  className="mt-1.5 border-slate-300 focus:border-slate-400"
+                  className="mt-1.5 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-cyan-500/50"
                 />
               </div>
 
               <div>
-                <Label htmlFor="email" className="text-sm font-medium text-slate-900">
+                <Label htmlFor="email" className="text-sm font-medium text-white/80">
                   Email
                 </Label>
                 <Input
@@ -212,12 +241,12 @@ const TalkToUs = () => {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
-                  className="mt-1.5 border-slate-300 focus:border-slate-400"
+                  className="mt-1.5 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-cyan-500/50"
                 />
               </div>
 
               <div>
-                <Label htmlFor="phoneNumber" className="text-sm font-medium text-slate-900">
+                <Label htmlFor="phoneNumber" className="text-sm font-medium text-white/80">
                   Phone Number
                 </Label>
                 <div className="flex gap-2 mt-1.5">
@@ -225,7 +254,7 @@ const TalkToUs = () => {
                     value={formData.countryCode}
                     onValueChange={(value) => setFormData({ ...formData, countryCode: value })}
                   >
-                    <SelectTrigger className="w-32 border-slate-300">
+                    <SelectTrigger className="w-32 bg-white/5 border-white/10 text-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px]">
@@ -310,13 +339,13 @@ const TalkToUs = () => {
                     value={formData.phoneNumber}
                     onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                     required
-                    className="flex-1 border-slate-300 focus:border-slate-400"
+                    className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-cyan-500/50"
                   />
                 </div>
               </div>
 
               <div>
-                <Label className="text-sm font-medium text-slate-900 mb-2 block">
+                <Label className="text-sm font-medium text-white/80 mb-2 block">
                   Role
                 </Label>
                 <RadioGroup
@@ -326,9 +355,9 @@ const TalkToUs = () => {
                   required
                 >
                   {["CXO", "VP", "Director", "Other"].map((role) => (
-                    <div key={role} className="flex items-center space-x-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <div key={role} className="flex items-center space-x-2 bg-white/5 p-3 rounded-lg border border-white/10">
                       <RadioGroupItem value={role} id={`role-${role}`} />
-                      <Label htmlFor={`role-${role}`} className="cursor-pointer flex-1 text-sm text-slate-900">
+                      <Label htmlFor={`role-${role}`} className="cursor-pointer flex-1 text-sm text-white/80">
                         {role}
                       </Label>
                     </div>
@@ -337,7 +366,7 @@ const TalkToUs = () => {
               </div>
 
               <div>
-                <Label className="text-sm font-medium text-slate-900 mb-2 block">
+                <Label className="text-sm font-medium text-white/80 mb-2 block">
                   Number of Support Calls (Monthly)
                 </Label>
                 <RadioGroup
@@ -347,9 +376,9 @@ const TalkToUs = () => {
                   required
                 >
                   {["<50,000", "50,001-100,000", "100,001-500,000", "500,001-1,000,000", ">1,000,000"].map((range) => (
-                    <div key={range} className="flex items-center space-x-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <div key={range} className="flex items-center space-x-2 bg-white/5 p-3 rounded-lg border border-white/10">
                       <RadioGroupItem value={range} id={`calls-${range}`} />
-                      <Label htmlFor={`calls-${range}`} className="cursor-pointer flex-1 text-sm text-slate-900">
+                      <Label htmlFor={`calls-${range}`} className="cursor-pointer flex-1 text-sm text-white/80">
                         {range}
                       </Label>
                     </div>
@@ -358,7 +387,7 @@ const TalkToUs = () => {
               </div>
 
               <div>
-                <Label htmlFor="customFunction" className="text-sm font-medium text-slate-900">
+                <Label htmlFor="customFunction" className="text-sm font-medium text-white/80">
                   Custom Function for Becca to Automate
                 </Label>
                 <Textarea
@@ -367,7 +396,7 @@ const TalkToUs = () => {
                   onChange={(e) => setFormData({ ...formData, customFunction: e.target.value })}
                   placeholder="what you need automated in your business"
                   rows={5}
-                  className="mt-1.5 border-slate-300 focus:border-slate-400 resize-none"
+                  className="mt-1.5 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-cyan-500/50 resize-none"
                 />
               </div>
 
@@ -376,7 +405,7 @@ const TalkToUs = () => {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-slate-600 text-white hover:bg-slate-700 h-11"
+                  className="w-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 h-11 shadow-[0_0_20px_rgba(93,213,237,0.15)] transition-transform active:scale-95"
                 >
                   {loading ? "Submitting..." : "Submit"}
                 </Button>
@@ -391,7 +420,7 @@ const TalkToUs = () => {
                   setShowBecca(true);
                   setBeccaTrigger(prev => prev + 1);
                 }}
-                className="w-full bg-green-500 text-white hover:bg-green-600 border-0 h-11 font-medium"
+                className="w-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 hover:bg-emerald-500/30 h-11 font-medium transition-transform active:scale-95"
               >
                 Talk to Becca
               </Button>
