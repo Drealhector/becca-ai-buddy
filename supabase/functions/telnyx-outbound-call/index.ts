@@ -84,17 +84,10 @@ For this call:
         to: toNumber,
         from: TELNYX_PHONE_NUMBER,
         from_display_name: "BECCA AI",
-        // Pass purpose via custom headers for TeXML webhook to pick up
-        custom_headers: [
-          { name: "X-Call-Purpose", value: purpose },
-          { name: "X-Call-Type", value: "outbound" },
-        ],
-        // Webhook URL for this call's TeXML instructions
         webhook_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/telnyx-webhook`,
-        // Pass the blended system prompt as a SIP header for TeXML AI tag
-        sip_headers: [
-          { name: "X-System-Prompt", value: encodeURIComponent(outboundSystemPrompt.substring(0, 2000)) },
-        ],
+        webhook_url_method: "POST",
+        // Store purpose in client_state (base64 encoded) for webhook to pick up
+        client_state: btoa(JSON.stringify({ purpose, systemPrompt: outboundSystemPrompt.substring(0, 500) })),
       }),
     });
 
