@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
-const FONT_SIZE = 16;
-const COL_GAP = 18;        // tighter columns = denser grid
+const FONT_SIZE = 20;      // bigger = clearer digits
+const COL_GAP = 22;        // tight columns for more lines
 const CHARS = "01";
 
 interface Drop {
@@ -63,11 +63,11 @@ const MatrixBackground = () => {
     const draw = () => {
       rafRef.current = requestAnimationFrame(draw);
 
-      // Semi-transparent overlay fades old chars (controls trail length)
-      ctx.fillStyle = "rgba(4, 10, 20, 0.25)";
+      // Lower alpha = slower fade = longer visible trails = more chars on screen
+      ctx.fillStyle = "rgba(4, 10, 20, 0.15)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.font = `bold ${FONT_SIZE}px 'Courier New', monospace`;
+      ctx.font = `900 ${FONT_SIZE}px 'Courier New', monospace`;
 
       const mx = mouseRef.current.x;
       const my = mouseRef.current.y;
@@ -97,17 +97,21 @@ const MatrixBackground = () => {
           const headFactor = Math.max(0, 1 - i / drop.length);
 
           if (i === 0) {
-            // Glowing head — white-green, extra bright near mouse
-            const r = Math.round(180 + 75 * drop.brightness);
-            ctx.fillStyle = `rgba(${r}, 255, ${Math.round(180 + 50 * drop.brightness)}, 1)`;
-            ctx.shadowColor = `rgba(80, 255, 120, ${0.8 + 0.2 * drop.brightness})`;
-            ctx.shadowBlur = 14 + drop.brightness * 22;
+            // Head — pure white-green, maximum brightness
+            ctx.fillStyle = `rgba(200, 255, 200, 1)`;
+            ctx.shadowColor = `rgba(0, 255, 80, 0.9)`;
+            ctx.shadowBlur = 18 + drop.brightness * 24;
+          } else if (i <= 3) {
+            // Near-head — very bright lime green, fully opaque
+            const alpha = 0.95 - i * 0.05;
+            ctx.fillStyle = `rgba(20, 255, 60, ${alpha})`;
+            ctx.shadowColor = "transparent";
+            ctx.shadowBlur = 0;
           } else {
-            // Trail — bright green body, fades toward tail
-            const alpha = headFactor * 0.85 + drop.brightness * 0.15;
-            const green = Math.round(160 + 80 * headFactor + 15 * drop.brightness);
-            const red = Math.round(0 + 30 * drop.brightness * headFactor);
-            ctx.fillStyle = `rgba(${red}, ${green}, 50, ${alpha})`;
+            // Tail — solid green, still clearly readable
+            const alpha = Math.max(0.55, headFactor * 0.9);
+            const green = Math.round(200 + 55 * headFactor);
+            ctx.fillStyle = `rgba(0, ${green}, 40, ${alpha})`;
             ctx.shadowColor = "transparent";
             ctx.shadowBlur = 0;
           }
