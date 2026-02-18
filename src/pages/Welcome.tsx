@@ -70,8 +70,7 @@ const Welcome = () => {
           <OrbitControls
             enableZoom={false}
             enablePan={false}
-            autoRotate
-            autoRotateSpeed={0.3}
+            autoRotate={false}
             maxPolarAngle={Math.PI / 1.8}
             minPolarAngle={Math.PI / 2.5}
           />

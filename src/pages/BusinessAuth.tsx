@@ -119,8 +119,7 @@ const BusinessAuth = () => {
           <OrbitControls
             enableZoom={false}
             enablePan={false}
-            autoRotate
-            autoRotateSpeed={0.4}
+            autoRotate={false}
             maxPolarAngle={Math.PI / 1.6}
             minPolarAngle={Math.PI / 2.8}
           />
