@@ -186,9 +186,9 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
           <div className="text-center py-4 px-6">
             {isSpeaking && (
               <div className="flex items-center justify-center gap-1">
-                <div className="w-1 h-4 bg-green-500 rounded-full animate-[bounce_0.6s_ease-in-out_infinite]" />
-                <div className="w-1 h-6 bg-green-500 rounded-full animate-[bounce_0.6s_ease-in-out_0.1s_infinite]" />
-                <div className="w-1 h-4 bg-green-500 rounded-full animate-[bounce_0.6s_ease-in-out_0.2s_infinite]" />
+                <div className="w-1 h-4 rounded-full animate-[bounce_0.6s_ease-in-out_infinite]" style={{backgroundColor:"rgb(0,220,255)"}} />
+                <div className="w-1 h-6 rounded-full animate-[bounce_0.6s_ease-in-out_0.1s_infinite]" style={{backgroundColor:"rgb(0,220,255)"}} />
+                <div className="w-1 h-4 rounded-full animate-[bounce_0.6s_ease-in-out_0.2s_infinite]" style={{backgroundColor:"rgb(0,220,255)"}} />
               </div>
             )}
           </div>

@@ -306,7 +306,7 @@ const PhoneCallSection = () => {
             <p className="text-xl text-muted-foreground mb-8 animate-pulse">Calling...</p>
           ) : (
             <>
-              <p className="text-xl text-green-500 mb-4">Connected</p>
+              <p className="text-xl mb-4" style={{color:"rgb(0,220,255)"}}>Connected</p>
               <p className="text-4xl font-mono font-bold mb-8">{formatCallDuration(callDuration)}</p>
             </>
           )}
@@ -348,7 +348,7 @@ const PhoneCallSection = () => {
             <Button
               onClick={() => setShowMakeCall(!showMakeCall)}
               size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white gap-1 flex-1 sm:flex-initial"
+              className="text-white gap-1 flex-1 sm:flex-initial" style={{backgroundColor:"rgb(0,190,220)"}}
             >
               <Phone className="w-3 h-3" />
               Make Call
@@ -487,7 +487,7 @@ const PhoneCallSection = () => {
         {/* Incoming Calls */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <PhoneIncoming className="h-5 w-5 text-green-600" />
+            <PhoneIncoming className="h-5 w-5" style={{color:"rgb(0,220,255)"}} />
             <h4 className="font-medium">Incoming Calls</h4>
           </div>
           <div className="space-y-2 max-h-64 overflow-y-auto">

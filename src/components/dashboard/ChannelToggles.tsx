@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { MessageCircle, Instagram, Facebook, Send } from "lucide-react";
 
 const channels = [
-  { key: "whatsapp_on", label: "WhatsApp", icon: MessageCircle, color: "text-green-600" },
+  { key: "whatsapp_on", label: "WhatsApp", icon: MessageCircle, color: "text-cyan-400" },
   { key: "instagram_on", label: "Instagram", icon: Instagram, color: "text-pink-600" },
   { key: "facebook_on", label: "Facebook", icon: Facebook, color: "text-blue-600" },
   { key: "telegram_on", label: "Telegram", icon: Send, color: "text-sky-600" },
