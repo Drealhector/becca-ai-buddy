@@ -168,3 +168,29 @@ All colors MUST be HSL.
   animation: glow-pulse-sub 4s ease-in-out infinite;
   animation-delay: 0.5s;
 }
+
+@keyframes b-glow {
+  0%, 100% {
+    text-shadow:
+      -3px -3px 0 #5dd5ed,
+      -6px -6px 0 #5dd5ed,
+      -9px -9px 0 #70dff0,
+      0 4px 12px rgba(0,0,0,0.4),
+      0 0 12px rgba(93,213,237,0.2),
+      0 0 24px rgba(93,213,237,0.1);
+  }
+  50% {
+    text-shadow:
+      -3px -3px 0 #5dd5ed,
+      -6px -6px 0 #5dd5ed,
+      -9px -9px 0 #70dff0,
+      0 4px 12px rgba(0,0,0,0.4),
+      0 0 20px rgba(93,213,237,0.6),
+      0 0 40px rgba(93,213,237,0.35),
+      0 0 60px rgba(80,180,255,0.2);
+  }
+}
+
+.animate-b-glow {
+  animation: b-glow 3s ease-in-out infinite;
+}
