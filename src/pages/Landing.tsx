@@ -114,30 +114,14 @@ const Landing = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="container mx-auto px-4 text-center max-w-5xl pointer-events-auto">
             <h1
-              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 md:mb-8 leading-tight px-2 flex flex-col items-center"
-              style={{
-                textShadow: `
-                  0 1px 0 rgba(255,255,255,0.6),
-                  0 2px 0 rgba(200,220,255,0.4),
-                  0 4px 0 rgba(150,180,255,0.25),
-                  0 6px 0 rgba(100,140,255,0.15),
-                  0 8px 0 rgba(80,120,255,0.08),
-                  0 12px 20px rgba(60,100,255,0.3),
-                  0 20px 40px rgba(40,80,255,0.15)
-                `,
-              }}
+              className="animate-glow-pulse text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 md:mb-8 leading-tight px-2 flex flex-col items-center"
             >
               <span className="text-center">AI that talks like a human.</span>
               <span className="text-center">Handles millions of calls.</span>
               <span className="text-center">Integrates into any platform.</span>
             </h1>
 
-            <p
-              className="text-sm sm:text-lg md:text-xl lg:text-2xl text-white/80 mb-6 md:mb-12 px-4"
-              style={{
-                textShadow: "0 2px 8px rgba(100,150,255,0.3), 0 4px 16px rgba(60,100,255,0.15)",
-              }}
-            >
+            <p className="animate-glow-pulse-sub text-sm sm:text-lg md:text-xl lg:text-2xl text-white/80 mb-6 md:mb-12 px-4">
               AI brain for enterprise support
             </p>
 
