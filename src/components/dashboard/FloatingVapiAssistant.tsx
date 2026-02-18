@@ -356,82 +356,119 @@ const FloatingVapiAssistant = ({
 
         {/* Main sphere with B */}
         <div className={`relative w-full h-full rounded-full overflow-hidden transition-all duration-500 ${
-          isLoading ? 'scale-105 shadow-xl shadow-blue-400/60' : isActive ? 'scale-110 shadow-2xl shadow-blue-500/50' : 'scale-100 shadow-lg'
+          isLoading ? 'scale-105' : isActive ? 'scale-110' : 'scale-100'
         }`}
         style={{
-          boxShadow: isLoading 
-            ? 'inset 0 -20px 40px rgba(96, 165, 250, 0.5), inset 0 20px 40px rgba(255, 255, 255, 0.7), 0 10px 30px rgba(96, 165, 250, 0.6)'
-            : 'inset 0 -20px 40px rgba(59, 130, 246, 0.3), inset 0 20px 40px rgba(255, 255, 255, 0.5), 0 10px 30px rgba(59, 130, 246, 0.4)'
+          /* Deep outer shadow + inner rim lighting for a glass-sphere look */
+          boxShadow: isActive
+            ? '0 0 0 1.5px rgba(93,213,237,0.55), 0 8px 32px rgba(37,99,235,0.55), 0 2px 8px rgba(0,0,0,0.7), inset 0 2px 8px rgba(255,255,255,0.55), inset 0 -10px 24px rgba(30,80,180,0.35)'
+            : isLoading
+            ? '0 0 0 1.5px rgba(96,165,250,0.7), 0 8px 32px rgba(96,165,250,0.6), 0 2px 8px rgba(0,0,0,0.7), inset 0 2px 8px rgba(255,255,255,0.55), inset 0 -10px 24px rgba(30,80,180,0.35)'
+            : '0 0 0 1px rgba(93,213,237,0.25), 0 6px 24px rgba(30,60,160,0.5), 0 2px 6px rgba(0,0,0,0.7), inset 0 2px 6px rgba(255,255,255,0.45), inset 0 -8px 20px rgba(20,50,140,0.3)',
         }}>
-          {/* Deep 3D gradient base */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white via-blue-50 to-blue-200" />
-          
-          {/* Rotating cloud layer 1 - slow */}
-          <div className="absolute inset-0 opacity-60 animate-[cloud-rotate_20s_linear_infinite]">
-            <div className="absolute inset-0 bg-gradient-radial from-white/90 via-blue-100/60 to-transparent" 
-                 style={{ transform: 'translate(10%, 10%) scale(1.2)' }} />
-            <div className="absolute inset-0 bg-gradient-radial from-blue-200/40 via-white/50 to-transparent" 
-                 style={{ transform: 'translate(-15%, 5%) scale(1.3)' }} />
+          {/* === BASE: deep ocean-blue core === */}
+          <div className="absolute inset-0" style={{
+            background: 'radial-gradient(circle at 38% 35%, #dbeafe 0%, #93c5fd 20%, #3b82f6 45%, #1e3a8a 72%, #0f1e4a 100%)'
+          }} />
+
+          {/* === CREAMY CLOUD LAYER 1 — slow drift, large blobs === */}
+          <div className="absolute inset-0 cloud-layer-1" style={{ opacity: 0.82 }}>
+            <div style={{
+              position: 'absolute', width: '110%', height: '110%', top: '-5%', left: '-5%',
+              background: 'radial-gradient(ellipse 65% 48% at 55% 42%, rgba(255,253,245,0.96) 0%, rgba(254,247,230,0.72) 40%, transparent 75%)',
+              filter: 'blur(3px)',
+            }} />
+            <div style={{
+              position: 'absolute', width: '90%', height: '90%', top: '10%', left: '-10%',
+              background: 'radial-gradient(ellipse 50% 40% at 30% 60%, rgba(255,251,240,0.88) 0%, rgba(253,244,220,0.55) 50%, transparent 80%)',
+              filter: 'blur(4px)',
+            }} />
           </div>
 
-          {/* Rotating cloud layer 2 - medium */}
-          <div className="absolute inset-0 opacity-50 animate-[cloud-rotate_15s_linear_infinite_reverse]">
-            <div className="absolute inset-0 bg-gradient-radial from-transparent via-blue-100/70 to-white/60" 
-                 style={{ transform: 'translate(-10%, -10%) scale(1.4)' }} />
-            <div className="absolute inset-0 bg-gradient-radial from-white/80 via-transparent to-blue-200/50" 
-                 style={{ transform: 'translate(20%, -5%) scale(1.2)' }} />
+          {/* === CREAMY CLOUD LAYER 2 — counter-rotate, wispy === */}
+          <div className="absolute inset-0 cloud-layer-2" style={{ opacity: 0.70 }}>
+            <div style={{
+              position: 'absolute', width: '100%', height: '100%',
+              background: 'radial-gradient(ellipse 55% 38% at 65% 55%, rgba(255,253,245,0.90) 0%, rgba(252,240,210,0.60) 45%, transparent 75%)',
+              filter: 'blur(5px)',
+            }} />
+            <div style={{
+              position: 'absolute', width: '85%', height: '85%', top: '15%', left: '5%',
+              background: 'radial-gradient(ellipse 42% 32% at 20% 30%, rgba(255,250,235,0.78) 0%, rgba(255,246,220,0.45) 55%, transparent 80%)',
+              filter: 'blur(3px)',
+            }} />
           </div>
 
-          {/* Rotating cloud layer 3 - fast */}
-          <div className="absolute inset-0 opacity-40 animate-[cloud-rotate_10s_linear_infinite]">
-            <div className="absolute inset-0 bg-gradient-radial from-blue-300/50 via-white/70 to-transparent" 
-                 style={{ transform: 'translate(5%, -15%) scale(1.5)' }} />
-            <div className="absolute inset-0 bg-gradient-radial from-transparent via-blue-100/60 to-white/40" 
-                 style={{ transform: 'translate(-20%, 10%) scale(1.3)' }} />
+          {/* === CREAMY CLOUD LAYER 3 — fast wisps === */}
+          <div className="absolute inset-0 cloud-layer-3" style={{ opacity: 0.55 }}>
+            <div style={{
+              position: 'absolute', width: '115%', height: '115%', top: '-7%', left: '-7%',
+              background: 'radial-gradient(ellipse 60% 30% at 45% 70%, rgba(255,252,240,0.80) 0%, rgba(251,240,200,0.45) 50%, transparent 78%)',
+              filter: 'blur(6px)',
+            }} />
           </div>
 
-          {/* Swirling mist effect */}
-          <div className="absolute inset-0 opacity-30 animate-[swirl_25s_ease-in-out_infinite]">
-            <div className="absolute inset-0 bg-gradient-conic from-white via-blue-200 to-white blur-md" />
-          </div>
+          {/* === DEPTH SHADOW — bottom darkening for spherical feel === */}
+          <div className="absolute inset-0 rounded-full" style={{
+            background: 'radial-gradient(circle at 50% 110%, rgba(10,20,80,0.65) 0%, transparent 65%)',
+            mixBlendMode: 'multiply',
+          }} />
 
-          {/* 3D highlight effect */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent" 
-               style={{ clipPath: 'circle(45% at 30% 30%)' }} />
+          {/* === GLASS RIM — thin bright ring on edge === */}
+          <div className="absolute inset-0 rounded-full" style={{
+            boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,0.18)',
+            background: 'transparent',
+          }} />
 
-          {/* B Letter with depth - matching hero section */}
+          {/* === PRIMARY SPECULAR HIGHLIGHT — large soft shine top-left === */}
+          <div className="absolute" style={{
+            width: '55%', height: '40%', top: '6%', left: '8%',
+            background: 'radial-gradient(ellipse at 40% 40%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.50) 45%, transparent 75%)',
+            filter: 'blur(2px)',
+            borderRadius: '50%',
+          }} />
+
+          {/* === SECONDARY SPECULAR — small sharp pinpoint === */}
+          <div className="absolute" style={{
+            width: '18%', height: '14%', top: '10%', left: '16%',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.99) 0%, rgba(255,255,255,0.60) 50%, transparent 80%)',
+            borderRadius: '50%',
+          }} />
+
+          {/* === B Letter — embossed, glowing === */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className={`text-4xl font-bold transition-all duration-300 relative ${
-              isLoading ? 'animate-pulse' : ''
-            }`}
-            style={{
-              color: '#ffffff',
-              WebkitTextStroke: isLoading ? '1.5px #60a5fa' : isActive ? '1.5px #2563eb' : '1.5px #2c4a6f',
-              textShadow: isLoading
-                ? '-2px -2px 0 #60a5fa, -4px -4px 0 #60a5fa, -6px -6px 0 #93c5fd, 0 4px 12px rgba(0,0,0,0.5), 0 0 30px rgba(96, 165, 250, 0.8)'
-                : isActive 
-                ? '-2px -2px 0 #5dd5ed, -4px -4px 0 #5dd5ed, -6px -6px 0 #70dff0, 0 4px 12px rgba(0,0,0,0.4), 0 0 20px rgba(37, 99, 235, 0.6)'
-                : '-2px -2px 0 #5dd5ed, -4px -4px 0 #5dd5ed, -6px -6px 0 #70dff0, 0 4px 12px rgba(0,0,0,0.4)',
-              fontWeight: 900
-            }}>
-              B
-            </span>
+            <span
+              className={`transition-all duration-300 ${isLoading ? 'animate-pulse' : ''}`}
+              style={{
+                fontSize: '2.4rem',
+                fontWeight: 900,
+                fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                color: '#ffffff',
+                WebkitTextStroke: isLoading ? '1.5px #60a5fa' : isActive ? '1.5px #2563eb' : '1.5px #1e3a8a',
+                textShadow: isActive
+                  ? '-2px -2px 0 #5dd5ed, -4px -4px 0 #5dd5ed, 0 6px 18px rgba(0,0,0,0.6), 0 0 28px rgba(93,213,237,0.9)'
+                  : isLoading
+                  ? '-2px -2px 0 #60a5fa, -4px -4px 0 #93c5fd, 0 6px 18px rgba(0,0,0,0.6), 0 0 28px rgba(96,165,250,0.9)'
+                  : '-2px -2px 0 #5dd5ed, -4px -4px 0 #5dd5ed, 0 5px 14px rgba(0,0,0,0.55)',
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
+              }}
+            >B</span>
           </div>
 
-          {/* Speaking pulse overlay */}
+          {/* === SPEAKING pulse overlay === */}
           {isSpeaking && (
             <div className="absolute inset-0">
-              <div className="absolute inset-0 bg-blue-400/30 rounded-full animate-[pulse_0.8s_ease-in-out_infinite]" />
-              <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-[ping_1s_ease-out_infinite]" />
+              <div className="absolute inset-0 bg-blue-400/25 rounded-full animate-[pulse_0.8s_ease-in-out_infinite]" />
+              <div className="absolute inset-0 bg-blue-500/15 rounded-full animate-[ping_1s_ease-out_infinite]" />
             </div>
           )}
 
-          {/* Loading/Active state border glow */}
+          {/* === LOADING border spin === */}
           {isLoading && (
-            <div className="absolute inset-0 rounded-full border-2 border-blue-300/70 animate-[spin_0.8s_linear_infinite]" />
+            <div className="absolute inset-0 rounded-full border-2 border-blue-300/60 animate-[spin_0.9s_linear_infinite]" />
           )}
           {isActive && !isLoading && (
-            <div className="absolute inset-0 rounded-full border-2 border-blue-400/50 animate-[spin_3s_linear_infinite]" />
+            <div className="absolute inset-0 rounded-full border border-cyan-400/40 animate-[spin_4s_linear_infinite]" />
           )}
         </div>
 
@@ -455,31 +492,35 @@ const FloatingVapiAssistant = ({
       </div>
 
       <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
         @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-        @keyframes cloud-rotate {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes swirl {
-          0%, 100% { transform: rotate(0deg) scale(1); }
-          50% { transform: rotate(180deg) scale(1.1); }
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          33%       { transform: translateY(-7px) rotate(1deg); }
+          66%       { transform: translateY(-4px) rotate(-1deg); }
         }
         .animate-float {
-          animation: float 3s ease-in-out infinite;
+          animation: float 4s ease-in-out infinite;
         }
-        .bg-gradient-radial {
-          background: radial-gradient(circle, var(--tw-gradient-stops));
+
+        /* Cloud layer 1 — slow drift, slightly tilted orbit */
+        @keyframes cloud1 {
+          0%   { transform: rotate(0deg)   translateX(6%) rotate(0deg); }
+          100% { transform: rotate(360deg) translateX(6%) rotate(-360deg); }
         }
-        .bg-gradient-conic {
-          background: conic-gradient(var(--tw-gradient-stops));
+        .cloud-layer-1 { animation: cloud1 22s linear infinite; transform-origin: center; }
+
+        /* Cloud layer 2 — reverse, different radius */
+        @keyframes cloud2 {
+          0%   { transform: rotate(0deg)    translateX(-8%) rotate(0deg); }
+          100% { transform: rotate(-360deg) translateX(-8%) rotate(360deg); }
         }
+        .cloud-layer-2 { animation: cloud2 16s linear infinite; transform-origin: center; }
+
+        /* Cloud layer 3 — faster wisps */
+        @keyframes cloud3 {
+          0%   { transform: rotate(0deg)   translateX(4%) rotate(0deg); }
+          100% { transform: rotate(360deg) translateX(4%) rotate(-360deg); }
+        }
+        .cloud-layer-3 { animation: cloud3 10s linear infinite; transform-origin: center; }
       `}</style>
     </div>
   );
