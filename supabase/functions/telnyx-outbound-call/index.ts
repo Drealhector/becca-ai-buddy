@@ -13,7 +13,7 @@ serve(async (req) => {
 
   const TELNYX_API_KEY = Deno.env.get("TELNYX_API_KEY");
   const TELNYX_PHONE_NUMBER = Deno.env.get("TELNYX_PHONE_NUMBER");
-  const TELNYX_TEXML_APP_ID = Deno.env.get("TELNYX_TEXML_APP_ID");
+  const TELNYX_CALL_CONTROL_APP_ID = Deno.env.get("TELNYX_CALL_CONTROL_APP_ID");
 
   if (!TELNYX_API_KEY) {
     return new Response(JSON.stringify({ error: "TELNYX_API_KEY not configured" }), {
@@ -27,8 +27,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-  if (!TELNYX_TEXML_APP_ID) {
-    return new Response(JSON.stringify({ error: "TELNYX_TEXML_APP_ID not configured" }), {
+  if (!TELNYX_CALL_CONTROL_APP_ID) {
+    return new Response(JSON.stringify({ error: "TELNYX_CALL_CONTROL_APP_ID not configured" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -80,7 +80,7 @@ For this call:
         "Authorization": `Bearer ${TELNYX_API_KEY}`,
       },
       body: JSON.stringify({
-        connection_id: TELNYX_TEXML_APP_ID,
+        connection_id: TELNYX_CALL_CONTROL_APP_ID,
         to: toNumber,
         from: TELNYX_PHONE_NUMBER,
         from_display_name: "BECCA AI",
