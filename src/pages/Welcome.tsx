@@ -86,27 +86,32 @@ const Welcome = () => {
         }}
       />
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="text-center max-w-2xl animate-fade-in">
-          {/* B Icon */}
+      {/* Content — pointer-events-none so drags pass through to canvas */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 pointer-events-none">
+        <div className="text-center max-w-2xl animate-fade-in pointer-events-auto">
+          {/* B Icon with ring */}
           <div className="mb-6 md:mb-8 flex justify-center">
-            <span style={{
-              fontSize: 'clamp(2.5rem, 12vw, 6rem)',
-              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-              fontWeight: 900,
-              lineHeight: 1,
-            }}>
+            <div
+              className="w-28 h-28 rounded-full flex items-center justify-center shadow-2xl"
+              style={{
+                background: "radial-gradient(circle at 35% 35%, rgba(68,136,255,0.3), rgba(2,4,15,0.9) 80%)",
+                border: "1px solid rgba(93,213,237,0.25)",
+                boxShadow: "0 0 40px rgba(68,136,255,0.2), 0 0 80px rgba(93,213,237,0.08)",
+              }}
+            >
               <span
                 className="animate-b-glow"
                 style={{
-                  color: '#ffffff',
-                  WebkitTextStroke: '2px #2c4a6f',
+                  fontSize: "4.5rem",
+                  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
                   fontWeight: 900,
-                  display: 'inline-block',
+                  lineHeight: 1,
+                  color: "#ffffff",
+                  WebkitTextStroke: "1.5px #2c4a6f",
+                  display: "inline-block",
                 }}
               >B</span>
-            </span>
+            </div>
           </div>
 
           <h1 className="text-white text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-4 px-2">
