@@ -80,10 +80,9 @@ const Landing = () => {
               lineHeight: 1,
               display: 'inline-block'
             }}>
-              <span style={{
+              <span className="animate-glow-pulse" style={{
                 color: '#ffffff',
                 WebkitTextStroke: '1.5px #2c4a6f',
-                textShadow: `-3px -3px 0 #5dd5ed, -6px -6px 0 #5dd5ed, -9px -9px 0 #70dff0, 0 4px 12px rgba(0,0,0,0.4)`,
                 fontWeight: 900
               }}>B</span>
               <span style={{
@@ -114,14 +113,14 @@ const Landing = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="container mx-auto px-4 text-center max-w-5xl pointer-events-auto">
             <h1
-              className="animate-glow-pulse text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 md:mb-8 leading-tight px-2 flex flex-col items-center"
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 md:mb-8 leading-tight px-2 flex flex-col items-center"
             >
               <span className="text-center">AI that talks like a human.</span>
               <span className="text-center">Handles millions of calls.</span>
               <span className="text-center">Integrates into any platform.</span>
             </h1>
 
-            <p className="animate-glow-pulse-sub text-sm sm:text-lg md:text-xl lg:text-2xl text-white/80 mb-6 md:mb-12 px-4">
+            <p className="text-sm sm:text-lg md:text-xl lg:text-2xl text-white/80 mb-6 md:mb-12 px-4">
               AI brain for enterprise support
             </p>
 
