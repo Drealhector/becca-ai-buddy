@@ -172,22 +172,24 @@ All colors MUST be HSL.
 @keyframes b-glow {
   0%, 100% {
     text-shadow:
-      -3px -3px 0 #5dd5ed,
-      -6px -6px 0 #5dd5ed,
-      -9px -9px 0 #70dff0,
-      0 4px 12px rgba(0,0,0,0.4),
-      0 0 12px rgba(93,213,237,0.2),
-      0 0 24px rgba(93,213,237,0.1);
+      -3px  -3px 0 2px #5dd5ed,
+      -6px  -6px 0 2px #5dd5ed,
+      -9px  -9px 0 3px #70dff0,
+      -3px  -3px 6px rgba(93,213,237,0.25),
+      -6px  -6px 10px rgba(93,213,237,0.15),
+      -9px  -9px 14px rgba(112,223,240,0.1),
+      0 4px 12px rgba(0,0,0,0.4);
   }
   50% {
     text-shadow:
-      -3px -3px 0 #5dd5ed,
-      -6px -6px 0 #5dd5ed,
-      -9px -9px 0 #70dff0,
-      0 4px 12px rgba(0,0,0,0.4),
-      0 0 20px rgba(93,213,237,0.6),
-      0 0 40px rgba(93,213,237,0.35),
-      0 0 60px rgba(80,180,255,0.2);
+      -3px  -3px 0 3px #7ee8f7,
+      -6px  -6px 0 3px #7ee8f7,
+      -9px  -9px 0 4px #90eeff,
+      -3px  -3px 14px rgba(93,213,237,0.75),
+      -6px  -6px 20px rgba(93,213,237,0.55),
+      -9px  -9px 28px rgba(112,223,240,0.4),
+      -12px -12px 36px rgba(80,200,255,0.2),
+      0 4px 12px rgba(0,0,0,0.4);
   }
 }
 
