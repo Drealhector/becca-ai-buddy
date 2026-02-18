@@ -123,6 +123,48 @@ All colors MUST be HSL.
     background-attachment: fixed;
     min-height: 100vh;
   }
+}
 
+@keyframes glow-pulse {
+  0%, 100% {
+    text-shadow:
+      0 1px 0 rgba(255,255,255,0.6),
+      0 2px 0 rgba(200,220,255,0.35),
+      0 4px 0 rgba(150,180,255,0.2),
+      0 6px 0 rgba(100,140,255,0.12),
+      0 8px 0 rgba(80,120,255,0.06),
+      0 12px 20px rgba(60,100,255,0.2),
+      0 20px 40px rgba(40,80,255,0.08);
+  }
+  50% {
+    text-shadow:
+      0 1px 0 rgba(255,255,255,0.9),
+      0 2px 0 rgba(210,230,255,0.6),
+      0 4px 0 rgba(160,195,255,0.45),
+      0 6px 0 rgba(110,155,255,0.3),
+      0 8px 0 rgba(90,130,255,0.18),
+      0 12px 28px rgba(70,120,255,0.55),
+      0 24px 50px rgba(50,100,255,0.3),
+      0 0 80px rgba(93,213,237,0.12);
+  }
+}
 
+@keyframes glow-pulse-sub {
+  0%, 100% {
+    text-shadow: 0 2px 8px rgba(100,150,255,0.15), 0 4px 16px rgba(60,100,255,0.08);
+    opacity: 0.75;
+  }
+  50% {
+    text-shadow: 0 2px 12px rgba(100,160,255,0.45), 0 6px 24px rgba(70,120,255,0.25), 0 0 40px rgba(93,213,237,0.12);
+    opacity: 0.95;
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 4s ease-in-out infinite;
+}
+
+.animate-glow-pulse-sub {
+  animation: glow-pulse-sub 4s ease-in-out infinite;
+  animation-delay: 0.5s;
 }
