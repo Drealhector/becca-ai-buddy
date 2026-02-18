@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef } from "react";
 
 interface DimensionPortalProps {
   onComplete: () => void;
@@ -16,7 +16,7 @@ const DimensionPortal: React.FC<DimensionPortalProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
-  const DURATION = 1200; // ms
+  const DURATION = 900; // ms — snappy but smooth
 
   useEffect(() => {
     if (!active) return;
@@ -34,140 +34,61 @@ const DimensionPortal: React.FC<DimensionPortalProps> = ({
     const cx = originX;
     const cy = originY;
 
-    // Particles for the vortex
-    const particles: {
-      angle: number;
-      radius: number;
-      speed: number;
-      size: number;
-      color: string;
-      opacity: number;
-    }[] = [];
-
-    const COLORS = [
-      "93,213,237",   // cyan
-      "88,130,255",   // blue
-      "180,100,255",  // purple
-      "255,255,255",  // white
-      "120,200,255",  // light blue
-    ];
-
-    for (let i = 0; i < 220; i++) {
-      particles.push({
-        angle: Math.random() * Math.PI * 2,
-        radius: 60 + Math.random() * 500,
-        speed: 0.04 + Math.random() * 0.08,
-        size: 1 + Math.random() * 3,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        opacity: 0.4 + Math.random() * 0.6,
-      });
-    }
+    // Max radius to cover the entire screen from the click point
+    const maxR = Math.sqrt(
+      Math.max(cx, canvas.width - cx) ** 2 +
+      Math.max(cy, canvas.height - cy) ** 2
+    ) * 1.1;
 
     const draw = (now: number) => {
       const elapsed = now - startTimeRef.current;
-      const t = Math.min(elapsed / DURATION, 1); // 0→1
+      const t = Math.min(elapsed / DURATION, 1);
+
+      // Ease in-out cubic — smooth acceleration then deceleration
+      const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Easing: fast suck at end
-      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      // Phase 1 (0→0.6): Dark vignette expands inward from the click point
+      // Phase 2 (0.6→1): Full black swallows the screen
+      if (ease < 0.92) {
+        // Radial gradient: black hole growing from click origin outward
+        const innerR = 0;
+        const outerR = maxR * ease * 1.1;
 
-      // --- Background darkening + warp overlay ---
-      const bgAlpha = ease * 0.97;
-      ctx.fillStyle = `rgba(2,4,15,${bgAlpha})`;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const grd = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
+        grd.addColorStop(0,    `rgba(2,4,15,${Math.min(ease * 1.6, 1)})`);
+        grd.addColorStop(0.35, `rgba(2,4,15,${Math.min(ease * 1.2, 0.95)})`);
+        grd.addColorStop(0.65, `rgba(2,4,15,${Math.min(ease * 0.85, 0.7)})`);
+        grd.addColorStop(1,    `rgba(2,4,15,0)`);
 
-      // --- Portal ring glow ---
-      const portalRadius = Math.max(0, 280 * (1 - ease * 1.1));
-      if (portalRadius > 0) {
-        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, portalRadius);
-        grd.addColorStop(0, `rgba(93,213,237,${0.9 * (1 - ease)})`);
-        grd.addColorStop(0.3, `rgba(88,130,255,${0.7 * (1 - ease)})`);
-        grd.addColorStop(0.7, `rgba(130,60,255,${0.4 * (1 - ease)})`);
-        grd.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.beginPath();
-        ctx.arc(cx, cy, portalRadius, 0, Math.PI * 2);
         ctx.fillStyle = grd;
-        ctx.fill();
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Spinning outer ring
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(ease * Math.PI * 6);
-        const rings = 3;
-        for (let r = 0; r < rings; r++) {
-          const rr = portalRadius * (0.6 + r * 0.2);
-          // ring stroke only, no gradient fill needed
+        // Subtle bright rim at the collapsing edge — very faint cyan ring
+        const rimR = outerR * 0.78;
+        const rimAlpha = Math.sin(ease * Math.PI) * 0.12;
+        if (rimR > 0 && rimAlpha > 0) {
           ctx.beginPath();
-          ctx.arc(0, 0, rr, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(${r === 0 ? "93,213,237" : r === 1 ? "88,130,255" : "180,80,255"},${0.5 * (1 - ease)})`;
-          ctx.lineWidth = 2 - r * 0.4;
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-
-      // --- Vortex particles spiraling inward ---
-      particles.forEach((p) => {
-        // Spiral inward as t increases
-        const inwardFactor = 1 - ease * 0.98;
-        const currentRadius = p.radius * inwardFactor;
-        const spin = p.angle + ease * Math.PI * 8 * p.speed * 15;
-        const px = cx + Math.cos(spin) * currentRadius;
-        const py = cy + Math.sin(spin) * currentRadius * 0.55; // flatten into ellipse
-
-        const alpha = p.opacity * (1 - ease * 0.7);
-        ctx.beginPath();
-        ctx.arc(px, py, p.size * (1 - ease * 0.5), 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${p.color},${alpha})`;
-        ctx.fill();
-
-        // Trail
-        ctx.beginPath();
-        ctx.moveTo(px, py);
-        const trailSpin = spin - 0.15 * p.speed * 10;
-        const tx2 = cx + Math.cos(trailSpin) * currentRadius;
-        const ty2 = cy + Math.sin(trailSpin) * currentRadius * 0.55;
-        ctx.lineTo(tx2, ty2);
-        ctx.strokeStyle = `rgba(${p.color},${alpha * 0.4})`;
-        ctx.lineWidth = p.size * 0.6;
-        ctx.stroke();
-      });
-
-      // --- Chromatic aberration / lens distortion lines radiating in ---
-      if (ease > 0.3) {
-        const lensAlpha = (ease - 0.3) / 0.7;
-        for (let i = 0; i < 12; i++) {
-          const a = (i / 12) * Math.PI * 2 + ease * 2;
-          const len = 300 * ease;
-          const lx1 = cx + Math.cos(a) * len * 1.5;
-          const ly1 = cy + Math.sin(a) * len * 0.8;
-          const grad = ctx.createLinearGradient(lx1, ly1, cx, cy);
-          grad.addColorStop(0, `rgba(93,213,237,0)`);
-          grad.addColorStop(1, `rgba(93,213,237,${lensAlpha * 0.6})`);
-          ctx.beginPath();
-          ctx.moveTo(lx1, ly1);
-          ctx.lineTo(cx, cy);
-          ctx.strokeStyle = grad;
+          ctx.arc(cx, cy, rimR, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(93,213,237,${rimAlpha})`;
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
-      }
-
-      // --- Final flash to white/void ---
-      if (t > 0.85) {
-        const flashT = (t - 0.85) / 0.15;
-        ctx.fillStyle = `rgba(2,4,15,${flashT})`;
+      } else {
+        // Final fill — full black sweep
+        const finalT = (ease - 0.92) / 0.08;
+        const alpha = Math.min(finalT * 2, 1);
+        ctx.fillStyle = `rgba(2,4,15,${alpha})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
       if (t < 1) {
         animFrameRef.current = requestAnimationFrame(draw);
       } else {
-        // Hold full black then navigate
         ctx.fillStyle = "rgb(2,4,15)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        setTimeout(onComplete, 60);
+        setTimeout(onComplete, 50);
       }
     };
 
