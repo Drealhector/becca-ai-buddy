@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
-const FONT_SIZE = 14;
+const FONT_SIZE = 16;
+const COL_GAP = 18;        // tighter columns = denser grid
 const CHARS = "01";
 
 interface Drop {
@@ -8,7 +9,7 @@ interface Drop {
   y: number;
   speed: number;
   length: number;
-  brightness: number; // 0-1, boosted by mouse proximity
+  brightness: number;
 }
 
 const MatrixBackground = () => {
@@ -23,84 +24,90 @@ const MatrixBackground = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      initDrops();
-    };
-
-    const initDrops = () => {
-      const cols = Math.floor(canvas.width / FONT_SIZE);
+    const initDrops = (w: number, h: number) => {
+      const cols = Math.floor(w / COL_GAP) + 1;
       dropsRef.current = Array.from({ length: cols }, (_, i) => ({
-        x: i * FONT_SIZE,
-        y: Math.random() * -canvas.height,
-        speed: 0.6 + Math.random() * 1.4,
-        length: 8 + Math.floor(Math.random() * 24),
+        x: i * COL_GAP,
+        y: Math.random() * -h,          // stagger start positions
+        speed: 3 + Math.random() * 4,   // fast: 3–7 px/frame at 60fps
+        length: 12 + Math.floor(Math.random() * 20),
         brightness: 0,
       }));
     };
 
-    const onMouseMove = (e: MouseEvent) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      initDrops(canvas.width, canvas.height);
     };
 
-    const onMouseLeave = () => {
-      mouseRef.current = { x: -9999, y: -9999 };
+    // ── Mouse tracking ──────────────────────────────────────────────────────
+    const setMouse = (x: number, y: number) => {
+      mouseRef.current = { x, y };
     };
 
-    let lastTime = 0;
-    const FRAME_INTERVAL = 1000 / 30; // 30fps for matrix feel
+    const onMouseMove = (e: MouseEvent) => setMouse(e.clientX, e.clientY);
+    const onMouseLeave = () => setMouse(-9999, -9999);
 
-    const draw = (timestamp: number) => {
+    // Touch support for mobile
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        setMouse(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+    const onTouchEnd = () => setMouse(-9999, -9999);
+
+    // ── Draw loop ───────────────────────────────────────────────────────────
+    const MOUSE_RADIUS = 220; // how wide the glow zone is
+
+    const draw = () => {
       rafRef.current = requestAnimationFrame(draw);
-      const delta = timestamp - lastTime;
-      if (delta < FRAME_INTERVAL) return;
-      lastTime = timestamp - (delta % FRAME_INTERVAL);
 
-      // Dark fade trail — maintain current dark navy background hue
-      ctx.fillStyle = "rgba(4, 10, 20, 0.18)";
+      // Semi-transparent overlay fades old chars (controls trail length)
+      ctx.fillStyle = "rgba(4, 10, 20, 0.25)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.font = `${FONT_SIZE}px 'Courier New', monospace`;
+      ctx.font = `bold ${FONT_SIZE}px 'Courier New', monospace`;
 
       const mx = mouseRef.current.x;
       const my = mouseRef.current.y;
-      const MOUSE_RADIUS = 180;
 
       dropsRef.current.forEach((drop) => {
-        // Mouse proximity boost
-        const dx = drop.x - mx;
-        const dy = drop.y - my;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const proximity = Math.max(0, 1 - dist / MOUSE_RADIUS);
+        // ── Mouse reactivity: use only X distance ──
+        // This means ANY column near the cursor lights up, regardless of
+        // where the drop head currently is.
+        const dx = Math.abs(drop.x - mx);
+        const xProx = Math.max(0, 1 - dx / MOUSE_RADIUS);
 
-        // Smoothly blend brightness
-        const targetBrightness = proximity;
-        drop.brightness += (targetBrightness - drop.brightness) * 0.12;
+        // Also add mild y-softening so it's not a hard vertical band
+        const dy = Math.abs(drop.y - my);
+        const yProx = Math.max(0, 1 - dy / (canvas.height * 0.6));
 
-        // Draw the column of chars
+        const targetBrightness = xProx * (0.5 + yProx * 0.5);
+        // Snap brightness up fast, decay slowly — snappy feel
+        const blendRate = targetBrightness > drop.brightness ? 0.35 : 0.08;
+        drop.brightness += (targetBrightness - drop.brightness) * blendRate;
+
+        // ── Draw column chars from head downward ──
         for (let i = 0; i < drop.length; i++) {
           const charY = drop.y - i * FONT_SIZE;
           if (charY < -FONT_SIZE || charY > canvas.height + FONT_SIZE) continue;
 
           const char = CHARS[Math.floor(Math.random() * CHARS.length)];
-
-          // Head char: bright white-green, tail fades to dim green
-          const headFactor = i === 0 ? 1 : Math.max(0, 1 - i / drop.length);
+          const headFactor = Math.max(0, 1 - i / drop.length);
 
           if (i === 0) {
-            // Glowing head
-            const boost = drop.brightness * 0.7;
-            ctx.fillStyle = `rgba(${180 + Math.round(75 * boost)}, 255, ${180 + Math.round(75 * boost)}, ${0.95 + boost * 0.05})`;
-            ctx.shadowColor = drop.brightness > 0.3
-              ? `rgba(100, 255, 150, ${0.9 * drop.brightness})`
-              : "rgba(0, 255, 70, 0.8)";
-            ctx.shadowBlur = 10 + drop.brightness * 20;
+            // Glowing head — white-green, extra bright near mouse
+            const r = Math.round(180 + 75 * drop.brightness);
+            ctx.fillStyle = `rgba(${r}, 255, ${Math.round(180 + 50 * drop.brightness)}, 1)`;
+            ctx.shadowColor = `rgba(80, 255, 120, ${0.8 + 0.2 * drop.brightness})`;
+            ctx.shadowBlur = 14 + drop.brightness * 22;
           } else {
-            // Trail — dimmer green, mouse makes it brighter
-            const alpha = headFactor * (0.15 + 0.6 * headFactor) + drop.brightness * 0.3 * headFactor;
-            const green = Math.round(140 + 80 * headFactor + 35 * drop.brightness);
-            ctx.fillStyle = `rgba(0, ${green}, 40, ${alpha})`;
+            // Trail — bright green body, fades toward tail
+            const alpha = headFactor * 0.85 + drop.brightness * 0.15;
+            const green = Math.round(160 + 80 * headFactor + 15 * drop.brightness);
+            const red = Math.round(0 + 30 * drop.brightness * headFactor);
+            ctx.fillStyle = `rgba(${red}, ${green}, 50, ${alpha})`;
             ctx.shadowColor = "transparent";
             ctx.shadowBlur = 0;
           }
@@ -108,23 +115,23 @@ const MatrixBackground = () => {
           ctx.fillText(char, drop.x, charY);
         }
 
-        // Reset shadow
         ctx.shadowBlur = 0;
 
-        // Advance drop
+        // ── Advance drop ──
         drop.y += drop.speed;
 
-        // Reset when out of screen
         if (drop.y - drop.length * FONT_SIZE > canvas.height) {
-          drop.y = Math.random() * -120;
-          drop.speed = 0.6 + Math.random() * 1.4;
-          drop.length = 8 + Math.floor(Math.random() * 24);
+          drop.y = -FONT_SIZE * 2 - Math.random() * 60;
+          drop.speed = 3 + Math.random() * 4;
+          drop.length = 12 + Math.floor(Math.random() * 20);
         }
       });
     };
 
-    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mousemove", onMouseMove, { passive: true });
     window.addEventListener("mouseleave", onMouseLeave);
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchend", onTouchEnd);
     window.addEventListener("resize", resize);
 
     resize();
@@ -134,6 +141,8 @@ const MatrixBackground = () => {
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseleave", onMouseLeave);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("resize", resize);
     };
   }, []);
