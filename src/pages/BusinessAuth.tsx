@@ -110,10 +110,9 @@ const BusinessAuth = () => {
           <color attach="background" args={['#02040f']} />
           <fog attach="fog" args={['#02040f', 10, 20]} />
           <ambientLight intensity={0.1} />
-          {/* Shifted to warmer magenta/violet lights vs landing's blue */}
-          <pointLight position={[4, 4, 4]} intensity={0.35} color="#aa44ff" />
-          <pointLight position={[-4, -2, 3]} intensity={0.25} color="#ff44aa" />
-          <pointLight position={[0, -5, 2]} intensity={0.15} color="#4444ff" />
+          <pointLight position={[4, 4, 4]} intensity={0.35} color="#4488ff" />
+          <pointLight position={[-4, -2, 3]} intensity={0.25} color="#8844ff" />
+          <pointLight position={[0, -5, 2]} intensity={0.15} color="#44aaff" />
           <Suspense fallback={null}>
             <NeuralBrain />
           </Suspense>
@@ -156,10 +155,10 @@ const BusinessAuth = () => {
               className="w-28 h-28 rounded-full flex items-center justify-center shadow-2xl"
               style={{
                 background:
-                  "radial-gradient(circle at 35% 35%, rgba(170,68,255,0.35), rgba(2,4,15,0.9) 80%)",
-                border: "1px solid rgba(170,68,255,0.3)",
+                  "radial-gradient(circle at 35% 35%, rgba(68,136,255,0.3), rgba(2,4,15,0.9) 80%)",
+                border: "1px solid rgba(93,213,237,0.25)",
                 boxShadow:
-                  "0 0 40px rgba(170,68,255,0.25), 0 0 80px rgba(170,68,255,0.1)",
+                  "0 0 40px rgba(68,136,255,0.2), 0 0 80px rgba(93,213,237,0.08)",
               }}
             >
               <span
@@ -170,11 +169,12 @@ const BusinessAuth = () => {
                   fontWeight: 900,
                   lineHeight: 1,
                   color: "#ffffff",
-                  WebkitTextStroke: "1.5px #5c2a8f",
+                  WebkitTextStroke: "1.5px #2c4a6f",
                   textShadow: `
-                    -3px -3px 0 #aa44ff,
-                    -6px -6px 0 #cc66ff,
-                    0 3px 12px rgba(170,68,255,0.5)
+                    -3px -3px 0 #5dd5ed,
+                    -6px -6px 0 #5dd5ed,
+                    -9px -9px 0 #70dff0,
+                    0 3px 12px rgba(0,0,0,0.4)
                   `,
                 }}
               >
@@ -185,8 +185,8 @@ const BusinessAuth = () => {
 
           <h1
             className="text-white text-3xl font-bold text-center mb-2"
-            style={{
-              textShadow: "0 0 30px rgba(170,68,255,0.4)",
+          style={{
+              textShadow: "0 0 30px rgba(68,136,255,0.4)",
             }}
           >
             Log in to BECCA
@@ -201,7 +201,7 @@ const BusinessAuth = () => {
               className="rounded-2xl p-8"
               style={{
                 background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(170,68,255,0.2)",
+                border: "1px solid rgba(93,213,237,0.15)",
                 backdropFilter: "blur(20px)",
                 boxShadow:
                   "0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)",
@@ -221,7 +221,7 @@ const BusinessAuth = () => {
                     placeholder="Enter your business name"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-purple-500/50 focus:ring-purple-500/20 h-11"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-cyan-500/50 focus:ring-cyan-500/20 h-11"
                     required
                   />
                 </div>
@@ -239,7 +239,7 @@ const BusinessAuth = () => {
                     placeholder="Enter your business key"
                     value={businessKey}
                     onChange={(e) => setBusinessKey(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-purple-500/50 focus:ring-purple-500/20 h-11"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-cyan-500/50 focus:ring-cyan-500/20 h-11"
                     required
                   />
                 </div>
@@ -250,12 +250,11 @@ const BusinessAuth = () => {
                   className="w-full h-12 font-semibold text-sm transition-all active:scale-95"
                   disabled={loading || portal.active}
                   style={{
-                    background:
-                      "linear-gradient(135deg, rgba(170,68,255,0.9), rgba(88,44,255,0.9))",
-                    border: "1px solid rgba(170,68,255,0.4)",
+                    background: "rgba(255,255,255,0.9)",
+                    border: "1px solid rgba(255,255,255,0.3)",
                     boxShadow:
-                      "0 0 20px rgba(170,68,255,0.3), 0 4px 15px rgba(0,0,0,0.4)",
-                    color: "#fff",
+                      "0 0 20px rgba(93,213,237,0.25), 0 4px 15px rgba(0,0,0,0.4)",
+                    color: "#0a0a1a",
                   }}
                 >
                   {loading ? (
@@ -264,7 +263,7 @@ const BusinessAuth = () => {
                       Verifying...
                     </span>
                   ) : (
-                    "Enter the dimension →"
+                    "Access"
                   )}
                 </Button>
               </div>
