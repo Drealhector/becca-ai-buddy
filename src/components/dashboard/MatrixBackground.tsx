@@ -130,11 +130,9 @@ const MatrixBackground = () => {
             const alpha = 1 - i * 0.08 + col.brightness * 0.08;
             ctx.fillStyle = `rgba(0, 230, 255, ${Math.min(1, alpha)})`;
           } else {
-            // Tail — solid cyan fading, never below 0.5 alpha so always readable
+            // Tail — pure cyan (0, 230, 255), only alpha fades — no green tint ever
             const alpha = Math.max(0.5, fade * 0.88 + col.brightness * 0.12);
-            const g = Math.round(155 + 75 * fade);
-            const b = Math.round(210 + 45 * fade);
-            ctx.fillStyle = `rgba(0, ${g}, ${b}, ${alpha})`;
+            ctx.fillStyle = `rgba(0, 230, 255, ${alpha})`;
           }
 
           ctx.fillText(char, col.x, y);
