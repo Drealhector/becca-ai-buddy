@@ -71,7 +71,21 @@ export const AIPersonalitySection = () => {
         console.log("Call Hector assistant updated with new personality");
       } catch (assistantError) {
         console.error("Error updating Call Hector assistant:", assistantError);
-        // Don't fail the whole operation if assistant update fails
+      }
+
+      // Sync personality to Telnyx
+      try {
+        const { error: telnyxError } = await supabase.functions.invoke("telnyx-update-personality", {
+          body: { personality }
+        });
+        if (telnyxError) {
+          console.warn("Telnyx personality sync warning:", telnyxError);
+        } else {
+          console.log("Personality synced to Telnyx successfully");
+        }
+      } catch (telnyxErr) {
+        console.warn("Telnyx personality sync error:", telnyxErr);
+        // Don't fail — personality is saved in DB and used at call time
       }
 
       toast.success("AI personality updated successfully!");

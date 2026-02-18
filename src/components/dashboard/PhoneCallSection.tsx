@@ -143,7 +143,7 @@ const PhoneCallSection = () => {
 
   const handleMakeCall = async () => {
     if (!callTopic || !callNumber) {
-      toast.error("Please enter both topic and number");
+      toast.error("Please enter both a purpose and a phone number");
       return;
     }
 
@@ -151,31 +151,31 @@ const PhoneCallSection = () => {
     setCallStatus("calling");
     setShowMakeCall(false);
 
-    // Simulate connecting for 3 seconds then auto-fail
-    setTimeout(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("telnyx-outbound-call", {
+        body: {
+          toNumber: callNumber,
+          purpose: callTopic,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        setCallStatus("connected");
+        setCallStartTime(new Date());
+        toast.success(`Outbound call initiated to ${callNumber}`);
+      } else {
+        throw new Error(data?.error || "Call failed");
+      }
+    } catch (error: any) {
+      console.error("Error making Telnyx call:", error);
       setIsInCall(false);
       setCallStatus(null);
-      
-      // Record failed call in database
-      try {
-        await supabase.from("call_history").insert({
-          type: "outgoing",
-          number: callNumber,
-          topic: callTopic,
-          duration_minutes: 0,
-          timestamp: new Date().toISOString(),
-          conversation_id: null,
-        });
-        
-        toast.error('Call limit reached - connect routing number');
-      } catch (error) {
-        console.error('Error saving failed call:', error);
-      }
-      
-      // Reset states
       setCallTopic("");
       setCallNumber("");
-    }, 3000);
+      toast.error(`Call failed: ${error.message || "Unable to connect. Check Telnyx configuration."}`);
+    }
   };
 
   const handleScheduleCall = () => {
