@@ -53,10 +53,9 @@ const DimensionPortal: React.FC<DimensionPortalProps> = ({
       // Phase 2 (0.6→1): Full black swallows the screen
       if (ease < 0.92) {
         // Radial gradient: black hole growing from click origin outward
-        const innerR = 0;
-        const outerR = maxR * ease * 1.1;
+        const outerR = Math.max(2, maxR * ease * 1.1);
 
-        const grd = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
+        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, outerR);
         grd.addColorStop(0,    `rgba(2,4,15,${Math.min(ease * 1.6, 1)})`);
         grd.addColorStop(0.35, `rgba(2,4,15,${Math.min(ease * 1.2, 0.95)})`);
         grd.addColorStop(0.65, `rgba(2,4,15,${Math.min(ease * 0.85, 0.7)})`);
@@ -68,7 +67,7 @@ const DimensionPortal: React.FC<DimensionPortalProps> = ({
         // Subtle bright rim at the collapsing edge — very faint cyan ring
         const rimR = outerR * 0.78;
         const rimAlpha = Math.sin(ease * Math.PI) * 0.12;
-        if (rimR > 0 && rimAlpha > 0) {
+        if (rimR > 2 && rimAlpha > 0) {
           ctx.beginPath();
           ctx.arc(cx, cy, rimR, 0, Math.PI * 2);
           ctx.strokeStyle = `rgba(93,213,237,${rimAlpha})`;
