@@ -23,6 +23,7 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
   
   // New character fields
   const [newDescription, setNewDescription] = useState("");
+  const [newBusinessName, setNewBusinessName] = useState("");
   const [generatedCharacter, setGeneratedCharacter] = useState("");
   
   // Human character fields
@@ -45,6 +46,7 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
     setStep("choose");
     setCharacterType(null);
     setNewDescription("");
+    setNewBusinessName("");
     setGeneratedCharacter("");
     setHumanName("");
     setHumanContext("");
@@ -138,6 +140,10 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
       toast.error("Please describe the character");
       return;
     }
+    if (!newBusinessName.trim()) {
+      toast.error("Please enter your business name");
+      return;
+    }
 
     setLoading(true);
     setUploadingFiles(true);
@@ -150,6 +156,7 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
           type: "generate_new", 
           input: { 
             description: newDescription,
+            businessName: newBusinessName.trim(),
             uploadedFiles: parsedFiles
           } 
         }
@@ -326,6 +333,16 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
                 placeholder="e.g., A friendly and professional sales assistant who loves helping customers find the perfect product. Should be enthusiastic but not pushy..."
                 className="min-h-[150px]"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Business Name <span className="text-destructive">*</span></Label>
+              <Input
+                value={newBusinessName}
+                onChange={(e) => setNewBusinessName(e.target.value)}
+                placeholder="e.g., Mavins Real Estate, TechCo Solutions..."
+              />
+              <p className="text-xs text-muted-foreground">Required — used in greetings and AI Brain identity.</p>
             </div>
             
             <div className="space-y-2">
