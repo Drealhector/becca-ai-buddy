@@ -64,7 +64,7 @@ const CustomizationPanel = () => {
 
   return (
     <Card className="p-6 shadow-elegant hover:shadow-hover transition-all">
-      <h3 className="text-lg font-semibold mb-6">AI Assistant Configuration</h3>
+      <h3 className="text-lg font-semibold mb-6">AI Brain Configuration</h3>
       <div className="space-y-6">
         <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
           <h4 className="font-medium text-sm">Social Media Links</h4>
@@ -200,7 +200,7 @@ const CustomizationPanel = () => {
         </div>
 
         <div>
-          <label className="text-sm font-medium mb-1 block">Assistant Personality</label>
+          <label className="text-sm font-medium mb-1 block">AI Brain Personality</label>
           <Input
             value={customization.assistant_personality || ""}
             onChange={(e) =>

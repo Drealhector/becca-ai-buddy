@@ -52,11 +52,11 @@ const ConnectionStatus = () => {
       
       if (error) throw error;
       
-      toast.success("Vapi configuration saved successfully");
+      toast.success("AI Brain configuration saved successfully");
       fetchConnections();
     } catch (error) {
       console.error("Error saving Vapi config:", error);
-      toast.error("Failed to save Vapi configuration");
+      toast.error("Failed to save AI Brain configuration");
     } finally {
       setIsSaving(false);
     }
@@ -72,12 +72,12 @@ const ConnectionStatus = () => {
       
       {/* Vapi Configuration */}
       <div className="mb-6 p-4 border rounded-lg bg-muted/50">
-        <h4 className="font-medium mb-3">Vapi Voice Assistant</h4>
+        <h4 className="font-medium mb-3">AI Brain Voice Configuration</h4>
         <div className="space-y-3">
           <div>
             <Label className="text-sm mb-2">Assistant ID</Label>
             <Input
-              placeholder="Enter Vapi Assistant ID"
+              placeholder="Enter AI Brain ID"
               value={vapiAssistantId}
               onChange={(e) => setVapiAssistantId(e.target.value)}
             />
@@ -85,7 +85,7 @@ const ConnectionStatus = () => {
           <div>
             <Label className="text-sm mb-2">Public Key</Label>
             <Input
-              placeholder="Enter Vapi Public Key"
+              placeholder="Enter Public Key"
               value={vapiPublicKey}
               onChange={(e) => setVapiPublicKey(e.target.value)}
               type="password"
