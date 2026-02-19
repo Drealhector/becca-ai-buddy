@@ -24,6 +24,7 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
   // New character fields
   const [newDescription, setNewDescription] = useState("");
   const [newBusinessName, setNewBusinessName] = useState("");
+  const [newAssistantName, setNewAssistantName] = useState("");
   const [generatedCharacter, setGeneratedCharacter] = useState("");
   
   // Human character fields
@@ -32,10 +33,14 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
   const [humanInfo, setHumanInfo] = useState("");
   const [humanConfirmed, setHumanConfirmed] = useState(false);
   
+  // Human character extra fields
+  const [humanBusinessName, setHumanBusinessName] = useState("");
+  
   // Refine fields
   const [refineTask, setRefineTask] = useState("");
   const [refineLink, setRefineLink] = useState("");
   const [refineBusinessInfo, setRefineBusinessInfo] = useState("");
+  const [refineBusinessName, setRefineBusinessName] = useState("");
   
   // File uploads
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -47,14 +52,17 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
     setCharacterType(null);
     setNewDescription("");
     setNewBusinessName("");
+    setNewAssistantName("");
     setGeneratedCharacter("");
     setHumanName("");
     setHumanContext("");
     setHumanInfo("");
     setHumanConfirmed(false);
+    setHumanBusinessName("");
     setRefineTask("");
     setRefineLink("");
     setRefineBusinessInfo("");
+    setRefineBusinessName("");
     setUploadedFiles([]);
     setRefineUploadedFiles([]);
   };
@@ -144,6 +152,10 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
       toast.error("Please enter your business name");
       return;
     }
+    if (!newAssistantName.trim()) {
+      toast.error("Please enter the assistant name");
+      return;
+    }
 
     setLoading(true);
     setUploadingFiles(true);
@@ -157,6 +169,7 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
           input: { 
             description: newDescription,
             businessName: newBusinessName.trim(),
+            assistantName: newAssistantName.trim(),
             uploadedFiles: parsedFiles
           } 
         }
@@ -216,7 +229,7 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
       const { data, error } = await supabase.functions.invoke("create-character", {
         body: { 
           type: "create_human_character", 
-          input: { name: humanName, info: humanInfo } 
+          input: { name: humanName, info: humanInfo, businessName: humanBusinessName.trim() } 
         }
       });
 
@@ -253,6 +266,7 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
             task: refineTask,
             link: refineLink,
             businessInfo: refineBusinessInfo,
+            businessName: refineBusinessName.trim(),
             uploadedFiles: parsedFiles
           } 
         }
@@ -333,6 +347,16 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
                 placeholder="e.g., A friendly and professional sales assistant who loves helping customers find the perfect product. Should be enthusiastic but not pushy..."
                 className="min-h-[150px]"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Assistant Name <span className="text-destructive">*</span></Label>
+              <Input
+                value={newAssistantName}
+                onChange={(e) => setNewAssistantName(e.target.value)}
+                placeholder="e.g., Becca, Alex, Nova..."
+              />
+              <p className="text-xs text-muted-foreground">Required — the name your AI Brain will use to introduce itself.</p>
             </div>
 
             <div className="space-y-2">
@@ -437,6 +461,15 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
                 />
               </div>
             )}
+            <div className="space-y-2">
+              <Label>Business Name <span className="text-destructive">*</span></Label>
+              <Input
+                value={humanBusinessName}
+                onChange={(e) => setHumanBusinessName(e.target.value)}
+                placeholder="e.g., Mavins Real Estate, TechCo Solutions..."
+              />
+              <p className="text-xs text-muted-foreground">Required — used in the greeting message.</p>
+            </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setStep("choose")}>Back</Button>
               <Button onClick={handleSearchHuman} disabled={loading}>
@@ -509,6 +542,15 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
                 onChange={(e) => setRefineLink(e.target.value)}
                 placeholder="https://example.com"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Business Name <span className="text-destructive">*</span></Label>
+              <Input
+                value={refineBusinessName}
+                onChange={(e) => setRefineBusinessName(e.target.value)}
+                placeholder="e.g., Mavins Real Estate, TechCo Solutions..."
+              />
+              <p className="text-xs text-muted-foreground">Required — used in the greeting message.</p>
             </div>
             <div className="space-y-2">
               <Label>Business Information</Label>

@@ -182,13 +182,8 @@ CRITICAL RULES:
 - Use appropriate greetings: "hey", "what's up", "how's it going", "nice to hear from you"
 - Each greeting must be completely different in style, energy, and structure
 - IMPORTANT: You have access to a voice call link at becca.live/callhector - ONLY share this link when someone explicitly requests a call or voice conversation. Never mention it otherwise.`;
-      userPrompt = `Create an AI personality prompt for: ${input.description}
+      userPrompt = `Create an AI personality prompt for: ${input.description}\n\nAssistant Name: ${input.assistantName || 'Not specified'}\nBusiness Name: ${input.businessName || 'Not specified'}\n\n${uploadedDocsContent}\n\nUse directive format throughout (You are, Use, Keep, etc.). Be specific and actionable. Ensure responses are brief, natural, and avoid hyphens. Generate 8-10 varied greeting examples.\nIMPORTANT: The character's name is "${input.assistantName || 'the assistant'}" and they work for "${input.businessName || 'the business'}" — include BOTH in the identity section. Start with "You are ${input.assistantName || '[Name]'}. You work for ${input.businessName || '[Business]'}."`;
 
-Business Name: ${input.businessName || 'Not specified'}
-
-${uploadedDocsContent}
-
-Use directive format throughout (You are, Use, Keep, etc.). Be specific and actionable. Ensure responses are brief, natural, and avoid hyphens. Generate 8-10 varied greeting examples. IMPORTANT: The character works for "${input.businessName || 'the business'}" — include this in the identity section.`;
     } else if (type === "search_human") {
       if (!searchResults || searchResults.trim().length === 0) {
         // Fallback to AI's built-in knowledge if no web results
@@ -773,6 +768,8 @@ You maintain this person's authentic personality while:
 
 ${input.info}
 
+Business Name: ${input.businessName || 'Not specified'}
+
 ${uploadedDocsContent}
 
 **CREATE A COMPLETE DIRECTIVE PERSONALITY PROMPT:**
@@ -782,6 +779,7 @@ ${uploadedDocsContent}
 1. **IDENTITY:** Begin with direct identity statements:
    - You are [Full Name].
    - You are a [Profession/Role].
+   - You work for ${input.businessName || '[Business Name]'}.
    - [Brief background and expertise]
 
 2. **EXTRACT WORD USAGE WITH CONTEXT:** For EVERY recurring expression:
@@ -868,7 +866,8 @@ Use the same structure as the base personality. Add business details to relevant
       userPrompt = `${input.basePersonality ? `**BASE PERSONALITY TO PRESERVE COMPLETELY:**\n${input.basePersonality}\n\n` : ''}**BUSINESS CONTEXT TO ADD:**
 
 Task: ${input.task}
-Business: ${input.businessInfo}
+Business Name: ${input.businessName || 'Not specified'}
+Business Info: ${input.businessInfo}
 ${input.link ? `Link: ${input.link}\n` : ''}
 
 ${uploadedDocsContent}
