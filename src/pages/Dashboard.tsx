@@ -13,6 +13,7 @@ import PhoneCallSection from "@/components/dashboard/PhoneCallSection";
 import LogoCustomization from "@/components/dashboard/LogoCustomization";
 import VoiceManagementSection from "@/components/dashboard/VoiceManagementSection";
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
+import { InventorySection } from "@/components/dashboard/InventorySection";
 import { PhoneConnectionDialog } from "@/components/dashboard/PhoneConnectionDialog";
 import FloatingVapiAssistant from "@/components/dashboard/FloatingVapiAssistant";
 import MatrixBackground from "@/components/dashboard/MatrixBackground";
@@ -110,6 +111,7 @@ const Dashboard = () => {
     { id: "master-switch", label: "Master Switch", icon: Settings },
     { id: "channels", label: "Channels", icon: MessageSquare },
     { id: "conversations", label: "Conversations", icon: MessageSquare },
+    { id: "inventory", label: "Inventory", icon: MessageSquare },
     { id: "logo-voice", label: "Logo & Voice", icon: Mic },
     { id: "ai-personality", label: "AI Personality", icon: MessageSquare },
     { id: "links", label: "Shareable Links", icon: LinkIcon },
@@ -305,6 +307,11 @@ const Dashboard = () => {
         {/* Conversations */}
         <div id="conversations">
           <ConversationsSection />
+        </div>
+
+        {/* Inventory */}
+        <div id="inventory">
+          <InventorySection />
         </div>
 
         {/* Logo & Voice Management */}
