@@ -133,10 +133,12 @@ serve(async (req) => {
         });
 
         if (allResults.length > 0) {
-          searchResults = allResults.map((result: any, index: number) => 
-            `Result ${index + 1}:\nTitle: ${result.title}\nContent: ${result.content}\nURL: ${result.url}\n`
+          // Truncate to max 30 results to avoid prompt size issues
+          const limitedResults = allResults.slice(0, 30);
+          searchResults = limitedResults.map((result: any, index: number) => 
+            `Result ${index + 1}:\nTitle: ${result.title}\nContent: ${(result.content || '').slice(0, 500)}\nURL: ${result.url}\n`
           ).join('\n---\n');
-          console.log(`Found total of ${allResults.length} personality-focused search results`);
+          console.log(`Found total of ${allResults.length} results, using ${limitedResults.length}`);
         } else {
           console.warn("No personality data found in searches");
         }
@@ -182,9 +184,11 @@ CRITICAL RULES:
 - IMPORTANT: You have access to a voice call link at becca.live/callhector - ONLY share this link when someone explicitly requests a call or voice conversation. Never mention it otherwise.`;
       userPrompt = `Create an AI personality prompt for: ${input.description}
 
+Business Name: ${input.businessName || 'Not specified'}
+
 ${uploadedDocsContent}
 
-Use directive format throughout (You are, Use, Keep, etc.). Be specific and actionable. Ensure responses are brief, natural, and avoid hyphens. Generate 8-10 varied greeting examples.`;
+Use directive format throughout (You are, Use, Keep, etc.). Be specific and actionable. Ensure responses are brief, natural, and avoid hyphens. Generate 8-10 varied greeting examples. IMPORTANT: The character works for "${input.businessName || 'the business'}" — include this in the identity section.`;
     } else if (type === "search_human") {
       if (!searchResults || searchResults.trim().length === 0) {
         // Fallback to AI's built-in knowledge if no web results

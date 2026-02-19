@@ -5,7 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Mic, RefreshCw, Volume2, Square, Circle, Play, Pause, Check } from "lucide-react";
+import { Mic, RefreshCw, Volume2, Square, Circle, Play, Pause, Check, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface VoiceItem {
   id: string;
@@ -22,6 +32,8 @@ const VoiceManagementSection = () => {
   const [loading, setLoading] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
   const [syncingVoice, setSyncingVoice] = useState(false);
+  const [deletingVoice, setDeletingVoice] = useState<string | null>(null);
+  const [voiceToDelete, setVoiceToDelete] = useState<VoiceItem | null>(null);
 
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -51,7 +63,6 @@ const VoiceManagementSection = () => {
       if (error) throw error;
       setVoices(data?.voices || []);
 
-      // Fetch custom voices from DB
       const { data: customData } = await supabase
         .from("customizations")
         .select("custom_voices, vapi_voices")
@@ -83,7 +94,6 @@ const VoiceManagementSection = () => {
       setSelectedVoice(voiceId);
       setSyncingVoice(true);
 
-      // Save selection to DB
       const { data: customData } = await supabase
         .from("customizations").select("id").limit(1).single();
       if (!customData) throw new Error("Customization not found");
@@ -94,7 +104,6 @@ const VoiceManagementSection = () => {
         .eq("id", customData.id);
       if (error) throw error;
 
-      // Push the voice to Vapi assistant
       const { data: syncData, error: syncError } = await supabase.functions.invoke("update-vapi-voice", {
         body: { voiceId, voiceName },
       });
@@ -102,12 +111,47 @@ const VoiceManagementSection = () => {
       if (syncError) throw syncError;
       if (!syncData?.success) throw new Error(syncData?.error || 'Failed to sync voice');
 
-      toast.success(`Voice "${voiceName}" applied to your AI agent`);
+      toast.success(`Voice "${voiceName}" applied to your AI Brain`);
     } catch (error) {
       console.error("Error selecting voice:", error);
-      toast.error("Failed to sync voice with agent");
+      toast.error("Failed to sync voice with AI Brain");
     } finally {
       setSyncingVoice(false);
+    }
+  };
+
+  const handleDeleteVoice = async (voice: VoiceItem) => {
+    setDeletingVoice(voice.id);
+    try {
+      // Delete from ElevenLabs
+      const { data, error } = await supabase.functions.invoke("delete-elevenlabs-voice", {
+        body: { voiceId: voice.id },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Delete failed');
+
+      // Remove from customizations DB
+      const { data: customData } = await supabase
+        .from("customizations").select("id, custom_voices").limit(1).single();
+      if (customData) {
+        const existing = Array.isArray(customData.custom_voices) ? customData.custom_voices as any[] : [];
+        const updated = existing.filter((v: any) => (v.id || v.voice_id) !== voice.id);
+        await supabase.from("customizations")
+          .update({ custom_voices: updated })
+          .eq("id", customData.id);
+      }
+
+      setCustomVoices(prev => prev.filter(v => v.id !== voice.id));
+      if (selectedVoice === voice.id) setSelectedVoice(null);
+
+      toast.success(`Voice "${voice.name}" deleted`);
+    } catch (error) {
+      console.error("Error deleting voice:", error);
+      toast.error("Failed to delete voice");
+    } finally {
+      setDeletingVoice(null);
+      setVoiceToDelete(null);
     }
   };
 
@@ -173,7 +217,6 @@ const VoiceManagementSection = () => {
         reader.readAsDataURL(recordedBlob);
       });
 
-      // Clone on ElevenLabs AND set as active on Vapi
       const { data, error } = await supabase.functions.invoke("clone-voice", {
         body: { name: newVoiceName.trim(), audio: base64, setAsActive: true },
       });
@@ -188,7 +231,6 @@ const VoiceManagementSection = () => {
         description: 'Cloned voice',
       };
 
-      // Save to customizations
       const { data: customData } = await supabase
         .from("customizations").select("id, custom_voices").limit(1).single();
       if (customData) {
@@ -207,7 +249,7 @@ const VoiceManagementSection = () => {
       setRecordedBlob(null);
       setRecordingTime(0);
       
-      const syncMsg = data.vapi_synced ? " and applied to your AI agent" : "";
+      const syncMsg = data.vapi_synced ? " and applied to your AI Brain" : "";
       toast.success(`Voice "${newVoiceName}" cloned successfully${syncMsg}!`);
       
       fetchVoices();
@@ -235,6 +277,12 @@ const VoiceManagementSection = () => {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Combine voices: cloned first, then regular
+  const allVoices = [
+    ...customVoices.map(v => ({ ...v, category: 'cloned' as const })),
+    ...voices.filter(v => !customVoices.some(cv => cv.id === v.id)),
+  ];
+
   return (
     <Card className="p-6 shadow-elegant hover:shadow-hover transition-all">
       <div className="flex items-center justify-between mb-6">
@@ -249,16 +297,16 @@ const VoiceManagementSection = () => {
       </div>
 
       <div className="space-y-6">
-        {/* Available Voices */}
+        {/* All Voices - cloned first */}
         <div>
           <Label className="text-sm font-semibold mb-2 block">
-            Available Voices ({voices.length})
+            Voices ({allVoices.length})
           </Label>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
+          <div className="space-y-2 max-h-64 overflow-y-auto">
             {loading ? (
               <p className="text-sm text-muted-foreground">Loading voices...</p>
-            ) : voices.length > 0 ? (
-              voices.map((voice) => (
+            ) : allVoices.length > 0 ? (
+              allVoices.map((voice) => (
                 <div
                   key={voice.id}
                   onClick={() => handleSelectVoice(voice.id, voice.name)}
@@ -287,6 +335,15 @@ const VoiceManagementSection = () => {
                         {playingPreview === voice.id ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                       </Button>
                     )}
+                    {voice.category === 'cloned' && (
+                      <Button
+                        size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); setVoiceToDelete(voice); }}
+                        disabled={deletingVoice === voice.id}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    )}
                     {selectedVoice === voice.id && (
                       <div className="flex items-center gap-1">
                         <Check className="w-4 h-4 text-primary" />
@@ -301,41 +358,9 @@ const VoiceManagementSection = () => {
             )}
           </div>
           {syncingVoice && (
-            <p className="text-xs text-primary mt-2 animate-pulse">Syncing voice with your AI agent...</p>
+            <p className="text-xs text-primary mt-2 animate-pulse">Syncing voice with your AI Brain...</p>
           )}
         </div>
-
-        {/* Custom Cloned Voices */}
-        {customVoices.length > 0 && (
-          <div>
-            <Label className="text-sm font-semibold mb-2 block">Custom Cloned Voices</Label>
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {customVoices.map((voice) => (
-                <div
-                  key={voice.id}
-                  onClick={() => handleSelectVoice(voice.id, voice.name)}
-                  className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all ${
-                    selectedVoice === voice.id
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:bg-muted/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Mic className="w-4 h-4 text-accent" />
-                    <span className="font-medium">{voice.name}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground">Cloned</span>
-                  </div>
-                  {selectedVoice === voice.id && (
-                    <div className="flex items-center gap-1">
-                      <Check className="w-4 h-4 text-primary" />
-                      <span className="text-xs text-primary font-semibold">Active</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Voice Cloning Section */}
         <div className="border-t pt-4">
@@ -398,12 +423,30 @@ const VoiceManagementSection = () => {
                 disabled={isCloning}
               >
                 <Mic className="w-4 h-4" />
-                {isCloning ? "Cloning & Syncing..." : `Clone "${newVoiceName}" & Apply to Agent`}
+                {isCloning ? "Cloning & Syncing..." : `Clone "${newVoiceName}" & Apply to AI Brain`}
               </Button>
             )}
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!voiceToDelete} onOpenChange={(open) => !open && setVoiceToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Voice</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{voiceToDelete?.name}" from ElevenLabs. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => voiceToDelete && handleDeleteVoice(voiceToDelete)}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
