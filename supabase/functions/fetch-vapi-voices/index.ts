@@ -11,65 +11,33 @@ serve(async (req) => {
   }
 
   try {
-    const VAPI_API_KEY = Deno.env.get('VAPI_API_KEY');
-    if (!VAPI_API_KEY) {
-      throw new Error('VAPI_API_KEY is not configured');
+    const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+    if (!ELEVENLABS_API_KEY) {
+      throw new Error('ELEVENLABS_API_KEY is not configured');
     }
 
-    // Fetch voices from the user's Vapi account
-    const response = await fetch('https://api.vapi.ai/voice', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${VAPI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
+    // Fetch voices directly from ElevenLabs (since Vapi syncs with ElevenLabs)
+    const elResponse = await fetch('https://api.elevenlabs.io/v1/voices', {
+      headers: { 'xi-api-key': ELEVENLABS_API_KEY },
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Vapi API error:', response.status, errorText);
-      
-      // If Vapi doesn't have a /voice endpoint, fall back to ElevenLabs voices
-      const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
-      if (ELEVENLABS_API_KEY) {
-        console.log('Falling back to ElevenLabs voices...');
-        const elResponse = await fetch('https://api.elevenlabs.io/v1/voices', {
-          headers: { 'xi-api-key': ELEVENLABS_API_KEY },
-        });
-
-        if (elResponse.ok) {
-          const elData = await elResponse.json();
-          const voices = (elData.voices || []).map((v: any) => ({
-            id: v.voice_id,
-            name: v.name,
-            provider: 'elevenlabs',
-            description: v.labels ? Object.values(v.labels).join(', ') : 'ElevenLabs voice',
-            category: v.category || 'premade',
-            preview_url: v.preview_url || null,
-          }));
-
-          return new Response(JSON.stringify({ voices, source: 'elevenlabs' }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-      }
-
-      throw new Error(`Vapi API error: ${response.status}`);
+    if (!elResponse.ok) {
+      const errorText = await elResponse.text();
+      console.error('ElevenLabs API error:', elResponse.status, errorText);
+      throw new Error(`ElevenLabs API error: ${elResponse.status}`);
     }
 
-    const data = await response.json();
-    
-    // Normalize Vapi voice data
-    const voices = (Array.isArray(data) ? data : data.voices || []).map((v: any) => ({
-      id: v.id || v.voice_id || v.voiceId,
-      name: v.name || 'Unnamed Voice',
-      provider: v.provider || 'vapi',
-      description: v.description || '',
-      category: v.category || 'default',
-      preview_url: v.previewUrl || v.preview_url || null,
+    const elData = await elResponse.json();
+    const voices = (elData.voices || []).map((v: any) => ({
+      id: v.voice_id,
+      name: v.name,
+      provider: 'elevenlabs',
+      description: v.labels ? Object.values(v.labels).join(', ') : 'ElevenLabs voice',
+      category: v.category || 'premade',
+      preview_url: v.preview_url || null,
     }));
 
-    return new Response(JSON.stringify({ voices, source: 'vapi' }), {
+    return new Response(JSON.stringify({ voices, source: 'elevenlabs' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

@@ -152,7 +152,7 @@ const PhoneCallSection = () => {
     setShowMakeCall(false);
 
     try {
-      const { data, error } = await supabase.functions.invoke("telnyx-outbound-call", {
+      const { data, error } = await supabase.functions.invoke("vapi-outbound-call", {
         body: {
           toNumber: callNumber,
           purpose: callTopic,
@@ -169,12 +169,12 @@ const PhoneCallSection = () => {
         throw new Error(data?.error || "Call failed");
       }
     } catch (error: any) {
-      console.error("Error making Telnyx call:", error);
+      console.error("Error making Vapi call:", error);
       setIsInCall(false);
       setCallStatus(null);
       setCallTopic("");
       setCallNumber("");
-      toast.error(`Call failed: ${error.message || "Unable to connect. Check Telnyx configuration."}`);
+      toast.error(`Call failed: ${error.message || "Unable to connect. Check Vapi configuration."}`);
     }
   };
 

@@ -16,31 +16,35 @@ serve(async (req) => {
       throw new Error('ELEVENLABS_API_KEY is not configured');
     }
 
+    const VAPI_API_KEY = Deno.env.get('VAPI_API_KEY');
+    const VAPI_ASSISTANT_ID = Deno.env.get('VAPI_WEB_ASSISTANT_ID');
+
     const contentType = req.headers.get('content-type') || '';
     
     let voiceName: string;
     let audioBlob: Blob;
+    let setAsActive = false;
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
       voiceName = formData.get('name') as string;
       const audioFile = formData.get('audio') as File;
+      setAsActive = formData.get('setAsActive') === 'true';
       
       if (!voiceName || !audioFile) {
         throw new Error('Missing voice name or audio file');
       }
       audioBlob = audioFile;
     } else {
-      // JSON with base64 audio
       const body = await req.json();
       voiceName = body.name;
       const audioBase64 = body.audio;
+      setAsActive = body.setAsActive || false;
       
       if (!voiceName || !audioBase64) {
         throw new Error('Missing voice name or audio data');
       }
 
-      // Decode base64 to binary
       const binaryString = atob(audioBase64.split(',').pop() || audioBase64);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
@@ -51,7 +55,7 @@ serve(async (req) => {
 
     console.log(`Cloning voice "${voiceName}" on ElevenLabs...`);
 
-    // Clone voice on ElevenLabs
+    // Step 1: Clone voice on ElevenLabs
     const formData = new FormData();
     formData.append('name', voiceName);
     formData.append('files', audioBlob, `${voiceName}.webm`);
@@ -75,11 +79,44 @@ serve(async (req) => {
 
     console.log(`Voice cloned successfully! Voice ID: ${voiceId}`);
 
+    // Step 2: Push cloned voice to Vapi assistant if requested
+    let vapiSynced = false;
+    if (setAsActive && VAPI_API_KEY && VAPI_ASSISTANT_ID) {
+      try {
+        console.log(`Updating Vapi assistant ${VAPI_ASSISTANT_ID} with voice ${voiceId}...`);
+        
+        const updateResponse = await fetch(`https://api.vapi.ai/assistant/${VAPI_ASSISTANT_ID}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${VAPI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            voice: {
+              provider: "11labs",
+              voiceId: voiceId,
+            },
+          }),
+        });
+
+        if (updateResponse.ok) {
+          console.log('✅ Vapi assistant voice updated successfully');
+          vapiSynced = true;
+        } else {
+          const errText = await updateResponse.text();
+          console.error('Vapi update error:', updateResponse.status, errText);
+        }
+      } catch (vapiError) {
+        console.error('Error updating Vapi assistant:', vapiError);
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       voice_id: voiceId,
       name: voiceName,
       provider: 'elevenlabs',
+      vapi_synced: vapiSynced,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
