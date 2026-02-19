@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.telnyx-update-personality]
 verify_jwt = false
+
+[functions.clone-voice]
+verify_jwt = false
