@@ -187,7 +187,7 @@ const WebChat = ({ slug, customization }: WebChatProps) => {
           <h2 className="font-semibold">
             {customization?.business_name || "BECCA"}
           </h2>
-          <p className="text-xs text-muted-foreground">AI Assistant</p>
+          <p className="text-xs text-muted-foreground">AI Brain</p>
         </div>
       </div>
 
