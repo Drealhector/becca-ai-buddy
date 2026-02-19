@@ -174,7 +174,7 @@ const PhoneCallSection = () => {
       setCallStatus(null);
       setCallTopic("");
       setCallNumber("");
-      toast.error(`Call failed: ${error.message || "Unable to connect. Check Vapi configuration."}`);
+      toast.error(`Call failed: ${error.message || "Unable to connect. Check your AI Brain configuration."}`);
     }
   };
 

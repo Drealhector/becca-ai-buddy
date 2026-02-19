@@ -252,7 +252,7 @@ const VoiceManagementSection = () => {
         {/* Available Voices */}
         <div>
           <Label className="text-sm font-semibold mb-2 block">
-            ElevenLabs Voices ({voices.length})
+            Available Voices ({voices.length})
           </Label>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {loading ? (
@@ -297,7 +297,7 @@ const VoiceManagementSection = () => {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">No voices found. Check your ElevenLabs API key.</p>
+              <p className="text-sm text-muted-foreground">No voices found. Check your voice API configuration.</p>
             )}
           </div>
           {syncingVoice && (
@@ -388,7 +388,7 @@ const VoiceManagementSection = () => {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Record at least 30 seconds of clear speech. The voice will be cloned on ElevenLabs and automatically applied to your Vapi AI agent.
+              Record at least 30 seconds of clear speech. The voice will be cloned and automatically applied to your AI Brain.
             </p>
 
             {recordedBlob && newVoiceName.trim() && (

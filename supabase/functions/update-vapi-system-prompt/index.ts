@@ -44,7 +44,14 @@ serve(async (req) => {
 
 ${inventoryNote}
 
-=== IMPORTANT INSTRUCTIONS ===
+=== MANDATORY INVENTORY INSTRUCTIONS ===
+If a caller asks about product availability, price, stock, or category,
+you MUST call the check_inventory tool before responding.
+Never guess prices or availability.
+If no result is returned, say the item is currently unavailable.
+Keep responses short and conversational.
+
+=== ADDITIONAL INSTRUCTIONS ===
 - When someone asks "what do you have?", "what's available?", "do you have X?", or anything about products/items/inventory, ALWAYS call the check_inventory tool first before answering.
 - Provide accurate pricing and details from the inventory data.
 - If an item is not in inventory, let the customer know it's not currently available.`;
