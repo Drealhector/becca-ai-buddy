@@ -5,50 +5,75 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Available Vapi voice providers and their voices
-const VAPI_VOICES = [
-  // ElevenLabs voices
-  { id: 'elevenlabs-rachel', name: 'Rachel', provider: 'elevenlabs', description: 'Warm, friendly female voice' },
-  { id: 'elevenlabs-adam', name: 'Adam', provider: 'elevenlabs', description: 'Clear, professional male voice' },
-  { id: 'elevenlabs-charlie', name: 'Charlie', provider: 'elevenlabs', description: 'Natural, conversational male voice' },
-  { id: 'elevenlabs-emily', name: 'Emily', provider: 'elevenlabs', description: 'Expressive, engaging female voice' },
-  
-  // PlayHT voices
-  { id: 'playht-jennifer', name: 'Jennifer', provider: 'playht', description: 'Professional female voice' },
-  { id: 'playht-matthew', name: 'Matthew', provider: 'playht', description: 'Professional male voice' },
-  
-  // Azure voices  
-  { id: 'azure-aria', name: 'Aria', provider: 'azure', description: 'Natural, expressive female voice' },
-  { id: 'azure-guy', name: 'Guy', provider: 'azure', description: 'Natural male voice' },
-  
-  // Deepgram voices
-  { id: 'deepgram-aura-asteria', name: 'Asteria', provider: 'deepgram', description: 'Clear, articulate female voice' },
-  { id: 'deepgram-aura-luna', name: 'Luna', provider: 'deepgram', description: 'Warm, friendly female voice' },
-  { id: 'deepgram-aura-stella', name: 'Stella', provider: 'deepgram', description: 'Professional female voice' },
-  { id: 'deepgram-aura-athena', name: 'Athena', provider: 'deepgram', description: 'Authoritative female voice' },
-  { id: 'deepgram-aura-hera', name: 'Hera', provider: 'deepgram', description: 'Confident female voice' },
-  { id: 'deepgram-aura-orion', name: 'Orion', provider: 'deepgram', description: 'Strong male voice' },
-  { id: 'deepgram-aura-arcas', name: 'Arcas', provider: 'deepgram', description: 'Clear male voice' },
-  { id: 'deepgram-aura-perseus', name: 'Perseus', provider: 'deepgram', description: 'Professional male voice' },
-  { id: 'deepgram-aura-angus', name: 'Angus', provider: 'deepgram', description: 'Natural male voice' },
-  { id: 'deepgram-aura-orpheus', name: 'Orpheus', provider: 'deepgram', description: 'Expressive male voice' },
-  { id: 'deepgram-aura-helios', name: 'Helios', provider: 'deepgram', description: 'Warm male voice' },
-  { id: 'deepgram-aura-zeus', name: 'Zeus', provider: 'deepgram', description: 'Authoritative male voice' },
-];
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Returning available Vapi voices...');
+    const VAPI_API_KEY = Deno.env.get('VAPI_API_KEY');
+    if (!VAPI_API_KEY) {
+      throw new Error('VAPI_API_KEY is not configured');
+    }
 
-    return new Response(JSON.stringify({ voices: VAPI_VOICES }), {
+    // Fetch voices from the user's Vapi account
+    const response = await fetch('https://api.vapi.ai/voice', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${VAPI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Vapi API error:', response.status, errorText);
+      
+      // If Vapi doesn't have a /voice endpoint, fall back to ElevenLabs voices
+      const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+      if (ELEVENLABS_API_KEY) {
+        console.log('Falling back to ElevenLabs voices...');
+        const elResponse = await fetch('https://api.elevenlabs.io/v1/voices', {
+          headers: { 'xi-api-key': ELEVENLABS_API_KEY },
+        });
+
+        if (elResponse.ok) {
+          const elData = await elResponse.json();
+          const voices = (elData.voices || []).map((v: any) => ({
+            id: v.voice_id,
+            name: v.name,
+            provider: 'elevenlabs',
+            description: v.labels ? Object.values(v.labels).join(', ') : 'ElevenLabs voice',
+            category: v.category || 'premade',
+            preview_url: v.preview_url || null,
+          }));
+
+          return new Response(JSON.stringify({ voices, source: 'elevenlabs' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
+      throw new Error(`Vapi API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Normalize Vapi voice data
+    const voices = (Array.isArray(data) ? data : data.voices || []).map((v: any) => ({
+      id: v.id || v.voice_id || v.voiceId,
+      name: v.name || 'Unnamed Voice',
+      provider: v.provider || 'vapi',
+      description: v.description || '',
+      category: v.category || 'default',
+      preview_url: v.previewUrl || v.preview_url || null,
+    }));
+
+    return new Response(JSON.stringify({ voices, source: 'vapi' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching Vapi voices:', error);
+    console.error('Error fetching voices:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ error: errorMessage, voices: [] }), {
       status: 500,
