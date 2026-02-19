@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Mic, RefreshCw, Volume2, Square, Circle, Trash2, Play, Pause } from "lucide-react";
+import { Mic, RefreshCw, Volume2, Square, Circle, Play, Pause, Check } from "lucide-react";
 
 interface VoiceItem {
   id: string;
@@ -21,6 +21,7 @@ const VoiceManagementSection = () => {
   const [customVoices, setCustomVoices] = useState<VoiceItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
+  const [syncingVoice, setSyncingVoice] = useState(false);
 
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -77,21 +78,36 @@ const VoiceManagementSection = () => {
     }
   };
 
-  const handleSelectVoice = async (voiceId: string) => {
+  const handleSelectVoice = async (voiceId: string, voiceName: string) => {
     try {
       setSelectedVoice(voiceId);
+      setSyncingVoice(true);
+
+      // Save selection to DB
       const { data: customData } = await supabase
         .from("customizations").select("id").limit(1).single();
       if (!customData) throw new Error("Customization not found");
+      
       const { error } = await supabase
         .from("customizations")
         .update({ vapi_voices: [voiceId] })
         .eq("id", customData.id);
       if (error) throw error;
-      toast.success("Voice selected successfully");
+
+      // Push the voice to Vapi assistant
+      const { data: syncData, error: syncError } = await supabase.functions.invoke("update-vapi-voice", {
+        body: { voiceId, voiceName },
+      });
+
+      if (syncError) throw syncError;
+      if (!syncData?.success) throw new Error(syncData?.error || 'Failed to sync voice');
+
+      toast.success(`Voice "${voiceName}" applied to your AI agent`);
     } catch (error) {
       console.error("Error selecting voice:", error);
-      toast.error("Failed to select voice");
+      toast.error("Failed to sync voice with agent");
+    } finally {
+      setSyncingVoice(false);
     }
   };
 
@@ -150,7 +166,6 @@ const VoiceManagementSection = () => {
 
     setIsCloning(true);
     try {
-      // Convert blob to base64
       const reader = new FileReader();
       const base64 = await new Promise<string>((resolve, reject) => {
         reader.onloadend = () => resolve(reader.result as string);
@@ -158,8 +173,9 @@ const VoiceManagementSection = () => {
         reader.readAsDataURL(recordedBlob);
       });
 
+      // Clone on ElevenLabs AND set as active on Vapi
       const { data, error } = await supabase.functions.invoke("clone-voice", {
-        body: { name: newVoiceName.trim(), audio: base64 },
+        body: { name: newVoiceName.trim(), audio: base64, setAsActive: true },
       });
 
       if (error) throw error;
@@ -178,17 +194,22 @@ const VoiceManagementSection = () => {
       if (customData) {
         const existing = Array.isArray(customData.custom_voices) ? customData.custom_voices as any[] : [];
         await supabase.from("customizations")
-          .update({ custom_voices: [...existing, { id: data.voice_id, name: newVoiceName.trim(), provider: 'elevenlabs', voice_id: data.voice_id }] })
+          .update({
+            custom_voices: [...existing, { id: data.voice_id, name: newVoiceName.trim(), provider: 'elevenlabs', voice_id: data.voice_id }],
+            vapi_voices: [data.voice_id],
+          })
           .eq("id", customData.id);
       }
 
       setCustomVoices(prev => [...prev, newVoice]);
+      setSelectedVoice(data.voice_id);
       setNewVoiceName("");
       setRecordedBlob(null);
       setRecordingTime(0);
-      toast.success(`Voice "${newVoiceName}" cloned successfully!`);
       
-      // Refresh voices to show the new cloned voice
+      const syncMsg = data.vapi_synced ? " and applied to your AI agent" : "";
+      toast.success(`Voice "${newVoiceName}" cloned successfully${syncMsg}!`);
+      
       fetchVoices();
     } catch (error) {
       console.error("Error cloning voice:", error);
@@ -228,10 +249,10 @@ const VoiceManagementSection = () => {
       </div>
 
       <div className="space-y-6">
-        {/* Available Voices from account */}
+        {/* Available Voices */}
         <div>
           <Label className="text-sm font-semibold mb-2 block">
-            Available Voices ({voices.length})
+            ElevenLabs Voices ({voices.length})
           </Label>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {loading ? (
@@ -240,7 +261,7 @@ const VoiceManagementSection = () => {
               voices.map((voice) => (
                 <div
                   key={voice.id}
-                  onClick={() => handleSelectVoice(voice.id)}
+                  onClick={() => handleSelectVoice(voice.id, voice.name)}
                   className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all ${
                     selectedVoice === voice.id
                       ? 'border-primary bg-primary/10'
@@ -267,15 +288,21 @@ const VoiceManagementSection = () => {
                       </Button>
                     )}
                     {selectedVoice === voice.id && (
-                      <span className="text-xs text-primary font-semibold">Selected</span>
+                      <div className="flex items-center gap-1">
+                        <Check className="w-4 h-4 text-primary" />
+                        <span className="text-xs text-primary font-semibold">Active</span>
+                      </div>
                     )}
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">No voices found. Check your API keys.</p>
+              <p className="text-sm text-muted-foreground">No voices found. Check your ElevenLabs API key.</p>
             )}
           </div>
+          {syncingVoice && (
+            <p className="text-xs text-primary mt-2 animate-pulse">Syncing voice with your AI agent...</p>
+          )}
         </div>
 
         {/* Custom Cloned Voices */}
@@ -286,7 +313,7 @@ const VoiceManagementSection = () => {
               {customVoices.map((voice) => (
                 <div
                   key={voice.id}
-                  onClick={() => handleSelectVoice(voice.id)}
+                  onClick={() => handleSelectVoice(voice.id, voice.name)}
                   className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all ${
                     selectedVoice === voice.id
                       ? 'border-primary bg-primary/10'
@@ -299,7 +326,10 @@ const VoiceManagementSection = () => {
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground">Cloned</span>
                   </div>
                   {selectedVoice === voice.id && (
-                    <span className="text-xs text-primary font-semibold">Selected</span>
+                    <div className="flex items-center gap-1">
+                      <Check className="w-4 h-4 text-primary" />
+                      <span className="text-xs text-primary font-semibold">Active</span>
+                    </div>
                   )}
                 </div>
               ))}
@@ -318,7 +348,6 @@ const VoiceManagementSection = () => {
               onChange={(e) => setNewVoiceName(e.target.value)}
             />
 
-            {/* Recording Controls */}
             <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30">
               {!isRecording ? (
                 <Button
@@ -359,7 +388,7 @@ const VoiceManagementSection = () => {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Record at least 30 seconds of clear speech for best cloning results. The voice will be cloned on ElevenLabs and available for your AI agent.
+              Record at least 30 seconds of clear speech. The voice will be cloned on ElevenLabs and automatically applied to your Vapi AI agent.
             </p>
 
             {recordedBlob && newVoiceName.trim() && (
@@ -369,7 +398,7 @@ const VoiceManagementSection = () => {
                 disabled={isCloning}
               >
                 <Mic className="w-4 h-4" />
-                {isCloning ? "Cloning Voice..." : `Clone "${newVoiceName}" Voice`}
+                {isCloning ? "Cloning & Syncing..." : `Clone "${newVoiceName}" & Apply to Agent`}
               </Button>
             )}
           </div>
