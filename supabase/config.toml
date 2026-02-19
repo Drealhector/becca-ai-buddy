@@ -89,3 +89,9 @@ verify_jwt = false
 
 [functions.update-vapi-voice]
 verify_jwt = false
+
+[functions.get-inventory]
+verify_jwt = false
+
+[functions.update-vapi-system-prompt]
+verify_jwt = false

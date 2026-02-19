@@ -418,6 +418,65 @@ export type Database = {
           },
         ]
       }
+      inventory: {
+        Row: {
+          business_id: string | null
+          business_type: string
+          colors: string[] | null
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          id: string
+          is_available: boolean | null
+          location: string | null
+          name: string
+          price: number | null
+          quantity: number | null
+          specs: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          business_type?: string
+          colors?: string[] | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          is_available?: boolean | null
+          location?: string | null
+          name: string
+          price?: number | null
+          quantity?: number | null
+          specs?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          business_type?: string
+          colors?: string[] | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          is_available?: boolean | null
+          location?: string | null
+          name?: string
+          price?: number | null
+          quantity?: number | null
+          specs?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           business_id: string | null
