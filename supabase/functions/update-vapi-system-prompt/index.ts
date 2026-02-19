@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { personality } = await req.json();
+    const { personality, firstMessage } = await req.json();
     
     const VAPI_API_KEY = Deno.env.get('VAPI_API_KEY');
     const VAPI_ASSISTANT_ID = Deno.env.get('VAPI_WEB_ASSISTANT_ID');
@@ -66,6 +66,7 @@ Keep responses short and conversational.
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        firstMessage: firstMessage || "Hello, how are you doing today?",
         model: {
           provider: 'openai',
           model: 'gpt-4o',
