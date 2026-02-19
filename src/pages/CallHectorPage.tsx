@@ -11,7 +11,7 @@ const CallHectorPage = () => {
       <div className="text-center space-y-8 px-4">
         <div className="space-y-4">
           <h1 className="text-5xl font-bold text-white">Talk to DREALHECTOR</h1>
-          <p className="text-xl text-gray-300">Start a voice call with our AI assistant</p>
+          <p className="text-xl text-gray-300">Start a voice call with our AI Brain</p>
         </div>
 
         <Button

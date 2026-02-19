@@ -108,7 +108,7 @@ const Onboarding = () => {
             <Sparkles className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold mb-2">Welcome to BECCA</h1>
-          <p className="text-muted-foreground">Let's set up your AI assistant</p>
+          <p className="text-muted-foreground">Let's set up your AI Brain</p>
           <div className="flex justify-center gap-2 mt-4">
             {[1, 2, 3].map((step) => (
               <div
@@ -218,7 +218,7 @@ const Onboarding = () => {
                 id="greeting"
                 value={formData.greeting}
                 onChange={(e) => setFormData({ ...formData, greeting: e.target.value })}
-                placeholder="Hi! I'm your AI assistant. How can I help?"
+                placeholder="Hi! I'm your AI Brain. How can I help?"
               />
             </div>
             <div>

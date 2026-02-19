@@ -169,7 +169,7 @@ const PublicHub = () => {
             {customization?.business_name || "Business Name"}
           </h1>
           <p className="text-white/90 text-xl">
-            {customization?.greeting || "Welcome to our AI assistant!"}
+            {customization?.greeting || "Welcome to our AI Brain!"}
           </p>
         </div>
 

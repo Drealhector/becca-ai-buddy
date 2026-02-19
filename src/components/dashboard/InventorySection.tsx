@@ -277,7 +277,7 @@ export const InventorySection = () => {
       </div>
 
       <p className="text-sm text-muted-foreground mb-4">
-        Your AI assistant uses this inventory to answer availability questions.
+        Your AI Brain uses this inventory to answer availability questions.
       </p>
 
       <ScrollArea className="max-h-[400px]">

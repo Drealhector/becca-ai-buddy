@@ -49,10 +49,10 @@ export const AIPersonalitySection = () => {
 
       if (error) throw error;
 
-      // Generate greeting based on personality
+      // Generate greeting based on personality (truncate to avoid 500 errors)
       try {
         await supabase.functions.invoke("generate-greeting", {
-          body: { personality }
+          body: { personality: personality.slice(0, 2000) }
         });
       } catch (greetingError) {
         console.error("Error generating greeting:", greetingError);
@@ -115,7 +115,7 @@ export const AIPersonalitySection = () => {
       <Textarea
         value={personality}
         onChange={(e) => setPersonality(e.target.value)}
-        placeholder="e.g., You are a helpful and friendly AI assistant. Be warm, engaging, and professional in all your responses."
+        placeholder="e.g., You are a helpful and friendly AI Brain. Be warm, engaging, and professional in all your responses."
         className="min-h-[120px] mb-4"
       />
       <div className="flex flex-wrap gap-2">

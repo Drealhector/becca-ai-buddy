@@ -89,7 +89,7 @@ const Auth = () => {
             <Mail className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold mb-2">Welcome to BECCA</h1>
-          <p className="text-muted-foreground">Your AI Assistant Platform</p>
+          <p className="text-muted-foreground">Your AI Brain Platform</p>
         </div>
 
         <form onSubmit={handleEmailAuth} className="space-y-4 mb-4">
