@@ -35,6 +35,27 @@ export const AIPersonalitySection = () => {
     }
   };
 
+  // Extract assistant name from personality text
+  const extractName = (text: string): string => {
+    const nameMatch = text.match(/You are ([A-Z][a-zA-Z]+(?:\s[A-Z][a-zA-Z]+)*)/);
+    return nameMatch ? nameMatch[1].split('\n')[0].trim().replace(/[.,]$/, '') : "BECCA";
+  };
+
+  // Extract business name from personality text
+  const extractBusinessName = (text: string): string => {
+    const bizMatch = text.match(/(?:from|for|at|of|built|founded|runs?|manages?|owns?)\s+([A-Z][a-zA-Z]+(?:\s[A-Z][a-zA-Z]+)*)/i);
+    return bizMatch ? bizMatch[1].trim().replace(/[.,]$/, '') : "";
+  };
+
+  const generateFirstMessage = (text: string): string => {
+    const name = extractName(text);
+    const business = extractBusinessName(text);
+    if (business) {
+      return `Hello, this is ${name} from ${business}, how are you doing today?`;
+    }
+    return `Hello, this is ${name}, how are you doing today?`;
+  };
+
   const handleSave = async () => {
     if (!personality.trim()) {
       toast.error("Personality cannot be empty");
@@ -49,20 +70,32 @@ export const AIPersonalitySection = () => {
 
       if (error) throw error;
 
-      // Generate greeting based on personality (truncate to avoid 500 errors)
+      // Generate a simple first message from the personality
+      const firstMessage = generateFirstMessage(personality);
+
+      // Save the greeting to customizations
       try {
-        await supabase.functions.invoke("generate-greeting", {
-          body: { personality: personality.slice(0, 2000) }
-        });
-      } catch (greetingError) {
-        console.error("Error generating greeting:", greetingError);
+        const { data: existing } = await supabase
+          .from("customizations")
+          .select("id")
+          .limit(1)
+          .single();
+
+        if (existing) {
+          await supabase
+            .from("customizations")
+            .update({ greeting: firstMessage })
+            .eq("id", existing.id);
+        }
+      } catch (greetingErr) {
+        console.error("Error saving greeting:", greetingErr);
       }
 
-      // Auto-sync personality to AI Brain system prompt
+      // Auto-sync personality to AI Brain system prompt (includes firstMessage)
       let synced = false;
       try {
         const { data, error: syncError } = await supabase.functions.invoke("update-vapi-system-prompt", {
-          body: { personality }
+          body: { personality, firstMessage }
         });
         if (syncError) throw syncError;
         console.log("✅ AI Brain synced:", data);
