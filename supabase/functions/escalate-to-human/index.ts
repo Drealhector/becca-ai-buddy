@@ -20,20 +20,33 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Parse request - Vapi sends function call args in message.functionCall.parameters
+    // Parse request — handle Vapi persisted tool call format
     let itemRequested = "";
     let callerContext = "";
+    let toolCallId = "";
 
     try {
       const body = await req.json();
       console.log("📞 Escalation request:", JSON.stringify(body));
 
-      if (body.message?.functionCall?.parameters) {
+      const message = body.message || body;
+      const toolCalls = message.toolCalls || message.tool_calls || [];
+
+      if (toolCalls.length > 0) {
+        const toolCall = toolCalls[0];
+        toolCallId = toolCall.id || "";
+        const args = toolCall.function?.arguments || toolCall.arguments || {};
+        const parsed = typeof args === "string" ? JSON.parse(args) : args;
+        itemRequested = parsed.item_requested || "";
+        callerContext = parsed.caller_context || "";
+      } else if (body.message?.functionCall?.parameters) {
+        // Legacy inline tool format
         itemRequested = body.message.functionCall.parameters.item_requested || "";
         callerContext = body.message.functionCall.parameters.caller_context || "";
       } else {
         itemRequested = body.item_requested || "";
         callerContext = body.caller_context || "";
+        toolCallId = body.toolCallId || "direct";
       }
     } catch {
       throw new Error("Invalid request body");
@@ -47,13 +60,15 @@ serve(async (req) => {
       .maybeSingle();
 
     if (!custData?.owner_phone) {
+      const noPhoneResult = "No human support number configured. Unable to check with the team.";
+      if (toolCallId) {
+        return new Response(
+          JSON.stringify({ results: [{ toolCallId, result: noPhoneResult }] }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       return new Response(
-        JSON.stringify({
-          results: {
-            available: null,
-            notes: "No human support number configured. Unable to check with the team."
-          }
-        }),
+        JSON.stringify({ results: { available: null, notes: noPhoneResult } }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -68,31 +83,30 @@ serve(async (req) => {
         number: custData.owner_phone,
       },
       assistantOverrides: {
-        firstMessage: `Hi, this is the AI assistant for ${businessName}. I have a customer on the line asking about "${itemRequested}". ${callerContext ? `They mentioned: ${callerContext}.` : ''} Do you have this available or can you help with this request?`,
+        firstMessage: `Hi, I'm the AI assistant for ${businessName}. A customer is on the line asking about "${itemRequested}". ${callerContext ? `Context: ${callerContext}.` : ''} Do you have this item available or can you help? Please speak — I'm listening and will relay your response back to the customer.`,
         model: {
           provider: 'openai',
           model: 'gpt-4o',
           messages: [
             {
               role: 'system',
-              content: `You are an AI assistant making an inquiry call on behalf of ${businessName}. A customer is currently on hold asking about "${itemRequested}".
+              content: `You are a relay AI calling the business owner on behalf of ${businessName}. A customer is on hold asking about: "${itemRequested}". ${callerContext ? `Caller context: "${callerContext}".` : ''}
 
-YOUR ROLE:
-- Politely explain that a customer is asking about this item
-- Listen to the owner's full response — they may explain details, availability, pricing, alternatives, etc.
-- Take note of everything they say so you can relay it back accurately
-- Do NOT rush or cut them off. Let the owner speak freely and end the call when THEY are ready.
+YOUR ONLY JOB:
+1. Listen carefully to everything the owner says about this item.
+2. Let them speak WITHOUT interrupting. They may give availability, pricing, alternatives, etc.
+3. Do NOT say anything unless they ask you a question or go silent for more than 8 seconds.
+4. If they ask "who is this?" or similar, say: "I'm the AI system for ${businessName}. A customer is asking about ${itemRequested}."
+5. After the owner finishes speaking, say ONLY: "Thank you, I'll relay that to the customer." Then end the call.
 
-IF THE OWNER SAYS THEY WANT TO HANDLE THE CALL DIRECTLY:
-- If the owner says anything like "let me talk to them", "transfer the call to me", "I'll handle it", "put them through", etc.
-- Respond: "Absolutely, I'll transfer the customer to you right now."
-- Then use the transferCall tool to connect the original caller to this number.
+IF THE OWNER SAYS THEY WANT TO HANDLE THE CALL DIRECTLY (anything like "put them through", "transfer the call", "I'll talk to them", "let me speak to them"):
+- Say: "Sure, transferring now."
+- Use the transferCall tool immediately.
 
 IMPORTANT:
-- Do NOT end the call yourself. The owner controls when the call ends.
-- Be a good listener. Capture all details the owner shares.
-- Stay professional and concise in your own responses.
-- If the owner asks questions about the customer, share any context you have: "${callerContext || 'No additional context provided.'}"`
+- Be SILENT and let the owner talk. Do not fill silences immediately.
+- If the owner says "hello?" or seems confused, just say: "I'm listening, please go ahead."
+- End the call naturally after getting the information.`
             }
           ],
           tools: [
@@ -134,13 +148,15 @@ IMPORTANT:
 
     if (!callResponse.ok) {
       console.error('❌ Escalation call error:', callResponse.status, JSON.stringify(callData));
+      const errMsg = "Could not reach the team right now. Please try again later.";
+      if (toolCallId) {
+        return new Response(
+          JSON.stringify({ results: [{ toolCallId, result: errMsg }] }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       return new Response(
-        JSON.stringify({
-          results: {
-            available: null,
-            notes: "Could not reach the team right now. Please try again later."
-          }
-        }),
+        JSON.stringify({ results: { available: null, notes: errMsg } }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -157,11 +173,20 @@ IMPORTANT:
       conversation_id: callData.id,
     });
 
+    const successMsg = `I've contacted the team about "${itemRequested}". They'll look into it and get back to you shortly. Is there anything else I can help you with while you wait?`;
+
+    if (toolCallId) {
+      return new Response(
+        JSON.stringify({ results: [{ toolCallId, result: successMsg }] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(
       JSON.stringify({
         results: {
           available: true,
-          notes: `Team has been contacted about "${itemRequested}". They've been notified and will confirm availability.`
+          notes: successMsg
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

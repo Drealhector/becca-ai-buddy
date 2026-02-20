@@ -307,6 +307,100 @@ serve(async (req) => {
       }
     }
 
+    // --- transferCall tool (Vapi native transfer type) ---
+    // This handles "speak to a human / manager / person / representative" requests
+    let transferTool = existingTools.find((t: any) => t.type === "transferCall" || t.function?.name === "transferCall");
+    if (transferTool) {
+      console.log(`♻️ transferCall tool already exists: ${transferTool.id}, updating...`);
+      // Fetch owner phone for the transfer destination
+      const { data: transferCustData } = await supabase
+        .from('customizations')
+        .select('owner_phone')
+        .limit(1)
+        .maybeSingle();
+
+      const ownerPhone = transferCustData?.owner_phone;
+      if (ownerPhone) {
+        const updateRes = await fetch(`https://api.vapi.ai/tool/${transferTool.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${VAPI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            destinations: [
+              {
+                type: "number",
+                number: ownerPhone,
+                message: "Connecting you to a team member now. One moment please.",
+                description: "Human support team"
+              }
+            ],
+            function: {
+              name: "transferCall",
+              description: "Transfer the caller to a human team member. Use this immediately whenever the caller asks to speak to a person, human, manager, representative, agent, or anyone real — regardless of how they phrase it.",
+              parameters: { type: "object", properties: {} }
+            }
+          }),
+        });
+        const updated = await updateRes.json();
+        if (updateRes.ok) {
+          console.log('✅ transferCall updated:', updated.id);
+          toolIds.push(updated.id);
+        } else {
+          console.error('❌ Failed to update transferCall:', JSON.stringify(updated));
+        }
+      } else {
+        console.log('⏭️ Skipping transferCall update — no owner phone configured');
+        toolIds.push(transferTool.id);
+      }
+    } else if (hasOwnerPhone) {
+      console.log('🆕 Creating transferCall tool...');
+      const { data: transferCustData } = await supabase
+        .from('customizations')
+        .select('owner_phone')
+        .limit(1)
+        .maybeSingle();
+
+      const ownerPhone = transferCustData?.owner_phone;
+      if (ownerPhone) {
+        const createRes = await fetch('https://api.vapi.ai/tool', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${VAPI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: "transferCall",
+            destinations: [
+              {
+                type: "number",
+                number: ownerPhone,
+                message: "Connecting you to a team member now. One moment please.",
+                description: "Human support team"
+              }
+            ],
+            function: {
+              name: "transferCall",
+              description: "Transfer the caller to a human team member. Use this immediately whenever the caller asks to speak to a person, human, manager, representative, agent, or anyone real — regardless of how they phrase it.",
+              parameters: { type: "object", properties: {} }
+            }
+          }),
+        });
+        const created = await createRes.json();
+        if (createRes.ok) {
+          console.log('✅ transferCall created:', created.id);
+          toolIds.push(created.id);
+        } else {
+          console.error('❌ Failed to create transferCall:', JSON.stringify(created));
+        }
+      } else {
+        console.log('⏭️ Skipping transferCall creation — no owner phone configured');
+      }
+    } else {
+      console.log('⏭️ Skipping transferCall — no owner phone configured');
+    }
+
     // Step 2: Attach all tools via toolIds to assistant (NO model.tools)
     console.log(`🔗 Attaching ${toolIds.length} tools via toolIds:`, toolIds);
 
