@@ -33,11 +33,24 @@ serve(async (req) => {
       .eq('is_available', true)
       .order('name');
 
+    // Determine business type from inventory
+    const businessTypes = [...new Set((inventory || []).map((i: any) => i.business_type))];
+    const businessTypeLabel = businessTypes.length === 1 ? businessTypes[0] : businessTypes.join(', ') || 'general';
+
+    // Fetch owner phone for escalation
+    const { data: custData } = await supabase
+      .from('customizations')
+      .select('owner_phone')
+      .limit(1)
+      .maybeSingle();
+
+    const hasOwnerPhone = !!custData?.owner_phone;
+
     let inventoryNote = "";
     if (inventory && inventory.length > 0) {
-      inventoryNote = `\n\n=== CURRENT INVENTORY (${inventory.length} items) ===\nYou have access to a tool called "check_inventory" to look up real-time inventory. ALWAYS use this tool when someone asks about availability, pricing, what you have, or what's in stock. Never guess — always check.\n`;
+      inventoryNote = `\n\n=== CURRENT INVENTORY (${inventory.length} items) ===\nBusiness Type: ${businessTypeLabel}\nYou have access to a tool called "check_inventory" to look up real-time inventory. ALWAYS use this tool when someone asks about availability, pricing, what you have, or what's in stock. Never guess — always check.\n`;
     } else {
-      inventoryNote = `\n\nYou have access to a tool called "check_inventory" to look up real-time inventory. Use it when anyone asks about what's available. Currently the inventory may be empty.\n`;
+      inventoryNote = `\n\nBusiness Type: ${businessTypeLabel}\nYou have access to a tool called "check_inventory" to look up real-time inventory. Use it when anyone asks about what's available. Currently the inventory may be empty.\n`;
     }
 
     const memoryInstructions = `
@@ -63,6 +76,28 @@ STRICT RULES:
 - Always sound natural and conversational.
 - Use the memory to be helpful, not creepy.`;
 
+    const escalationInstructions = hasOwnerPhone ? `
+=== SMART ESCALATION ===
+Business Type: ${businessTypeLabel}
+You have access to a tool called "escalate_to_human". Use it ONLY when ALL of these conditions are met:
+1. The caller asked for a specific item that is NOT in the inventory (check_inventory returned no results)
+2. The requested item is RELEVANT to the business type "${businessTypeLabel}" (e.g., asking for an iPhone at a gadgets store = relevant; asking for an iPhone at a restaurant = NOT relevant)
+3. You have not already escalated for this same item in this conversation
+
+When escalating:
+- Tell the caller: "Let me check with the team on that for you."
+- Call the escalate_to_human tool with the item name and any context
+- The tool will call the business owner to ask about availability
+- After calling the tool, tell the caller you've notified the team and they'll look into it
+
+When NOT to escalate (item is irrelevant to business type):
+- Simply tell the caller: "I'm sorry, we don't carry that type of item. We're a ${businessTypeLabel} business."
+- Be natural and helpful about it
+` : `
+=== ESCALATION ===
+No human support number is configured. If a caller asks for something not in inventory, let them know it's currently unavailable and suggest they check back later.
+`;
+
     const systemPrompt = `${personality}
 
 ${inventoryNote}
@@ -71,13 +106,15 @@ ${inventoryNote}
 If a caller asks about product availability, price, stock, or category,
 you MUST call the check_inventory tool before responding.
 Never guess prices or availability.
-If no result is returned, say the item is currently unavailable.
+If no result is returned, evaluate whether the item is relevant to the business type before deciding to escalate.
 Keep responses short and conversational.
+
+${escalationInstructions}
 
 === ADDITIONAL INSTRUCTIONS ===
 - When someone asks "what do you have?", "what's available?", "do you have X?", or anything about products/items/inventory, ALWAYS call the check_inventory tool first before answering.
 - Provide accurate pricing and details from the inventory data.
-- If an item is not in inventory, let the customer know it's not currently available.
+- If an item is not in inventory, evaluate relevance to business type before responding.
 ${memoryInstructions}`;
 
     console.log('📝 Updating Vapi assistant system prompt...');
@@ -168,7 +205,32 @@ ${memoryInstructions}`;
               server: {
                 url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/save-customer-name`
               }
-            }
+            },
+            ...(hasOwnerPhone ? [{
+              type: "function",
+              function: {
+                name: "escalate_to_human",
+                description: "Call the business owner/manager to ask about an item that a customer is requesting but is NOT in the current inventory. ONLY use this when the requested item is relevant to the business type. Do NOT use for items irrelevant to the business.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    item_requested: {
+                      type: "string",
+                      description: "The specific item or product the customer is asking about"
+                    },
+                    caller_context: {
+                      type: "string",
+                      description: "Any additional context about what the caller needs (e.g., color, size, urgency)"
+                    }
+                  },
+                  required: ["item_requested"]
+                }
+              },
+              async: false,
+              server: {
+                url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/escalate-to-human`
+              }
+            }] : [])
           ]
         }
       })

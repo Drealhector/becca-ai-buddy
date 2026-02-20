@@ -369,6 +369,7 @@ export type Database = {
           instagram_username: string | null
           key_services: string | null
           logo_url: string | null
+          owner_phone: string | null
           setup_strength: string | null
           special_instructions: string | null
           target_audience: string | null
@@ -397,6 +398,7 @@ export type Database = {
           instagram_username?: string | null
           key_services?: string | null
           logo_url?: string | null
+          owner_phone?: string | null
           setup_strength?: string | null
           special_instructions?: string | null
           target_audience?: string | null
@@ -425,6 +427,7 @@ export type Database = {
           instagram_username?: string | null
           key_services?: string | null
           logo_url?: string | null
+          owner_phone?: string | null
           setup_strength?: string | null
           special_instructions?: string | null
           target_audience?: string | null

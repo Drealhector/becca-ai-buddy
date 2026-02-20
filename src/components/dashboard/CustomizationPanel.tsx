@@ -49,7 +49,8 @@ const CustomizationPanel = () => {
           instagram_username: customization.instagram_username,
           facebook_username: customization.facebook_username,
           telegram_username: customization.telegram_username,
-        })
+          owner_phone: customization.owner_phone,
+        } as any)
         .eq("id", customization.id);
 
       if (error) throw error;

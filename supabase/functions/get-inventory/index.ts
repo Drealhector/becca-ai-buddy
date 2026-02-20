@@ -67,6 +67,10 @@ serve(async (req) => {
       );
     }
 
+    // Determine the dominant business_type from inventory
+    const businessTypes = [...new Set((items || []).map((i: any) => i.business_type))];
+    const businessTypeLabel = businessTypes.length === 1 ? businessTypes[0] : businessTypes.join(', ') || 'general';
+
     // Format response for the AI to read naturally
     const formatted = filtered.map((item: any) => {
       let info = `- ${item.name}`;
@@ -81,9 +85,16 @@ serve(async (req) => {
       return info;
     });
 
+    // Fetch owner phone for escalation context
+    const { data: custData } = await supabase
+      .from('customizations')
+      .select('owner_phone')
+      .limit(1)
+      .maybeSingle();
+
     const resultText = filtered.length > 0
       ? `Here's what's currently available:\n${formatted.join('\n')}`
-      : "No items found matching that query. The inventory may be empty or the item is unavailable.";
+      : `ITEM_NOT_FOUND: No items found matching "${query || 'that query'}". The business type is "${businessTypeLabel}". ${custData?.owner_phone ? 'An owner phone is configured for escalation.' : 'No owner phone configured.'}`;
 
     // Return in Vapi-compatible format
     return new Response(
@@ -91,6 +102,8 @@ serve(async (req) => {
         results: resultText,
         items: filtered,
         count: filtered.length,
+        business_type: businessTypeLabel,
+        owner_phone: custData?.owner_phone || null,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
