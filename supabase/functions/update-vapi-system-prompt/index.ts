@@ -77,32 +77,36 @@ STRICT RULES:
 - Use the memory to be helpful, not creepy.`;
 
     const escalationInstructions = hasOwnerPhone ? `
-=== SMART ESCALATION (Case A — Inventory Miss, Relevant Category) ===
+=== HUMAN TRANSFER (Case B — HIGHEST PRIORITY) ===
+If the caller uses ANY of these phrases or anything similar, IMMEDIATELY call the transferCall tool WITHOUT saying "just a sec" first:
+- "speak to a human", "speak to a person", "talk to someone", "talk to a real person"
+- "speak to your manager", "speak to a representative", "speak to an agent"
+- "can I speak to someone?", "I want to talk to a person"
+- "transfer me", "put me through", "connect me to someone"
+- "is there a real person?", "can a human help me?"
+- ANY variation requesting a person, human, manager, rep, or real individual
+
+WHEN TRANSFERRING: Say "Sure, connecting you now!" then IMMEDIATELY call transferCall. Do NOT say "just a sec" repeatedly. Do NOT stall. One response, then call the tool.
+
+=== SMART ESCALATION (Case A — Inventory Miss for Relevant Item) ===
 Business Type: ${businessTypeLabel}
-You have access to a tool called "escalate_to_human". Use it ONLY when ALL of these conditions are met:
-1. The caller asked for a specific item that is NOT in the inventory (get_inventory returned no results)
-2. The requested item is RELEVANT to the business type "${businessTypeLabel}" (e.g., asking for an iPhone at a gadgets store = relevant; asking for an iPhone at a restaurant = NOT relevant)
-3. You have not already escalated for this same item in this conversation
-4. Never escalate more than once per call
+Use escalate_to_human ONLY when ALL these conditions are met:
+1. Caller asked about a specific item NOT found in inventory
+2. The item IS relevant to the business type "${businessTypeLabel}"
+3. You have NOT already escalated in this call (max once per call)
+4. The caller did NOT ask to speak to a human (that uses transferCall, not this)
 
 When escalating:
-- Tell the caller: "Let me check with the team on that for you."
-- Call the escalate_to_human tool with the item name and any context
-- After calling the tool, tell the caller you've notified the team and they'll look into it
+- Tell the caller: "Let me check with our team on that — give me just a moment."
+- Call escalate_to_human with the item name and context
+- After the tool responds, relay that message to the caller naturally
 
-When NOT to escalate (item is irrelevant to business type):
-- Simply tell the caller: "I'm sorry, we don't carry that type of item. We're a ${businessTypeLabel} business."
-- Be natural and helpful about it
-
-=== HUMAN TRANSFER (Case B — Caller Requests a Human) ===
-If the caller explicitly asks to speak with a human, manager, representative, or real person,
-use the transferCall tool IMMEDIATELY.
-Do NOT use escalate_to_human for this case — transferCall hands the call over directly.
-Say something like: "Sure, let me connect you to someone right away."
+When NOT to escalate:
+- If item is irrelevant to ${businessTypeLabel}: "I'm sorry, we don't carry that — we're a ${businessTypeLabel} business."
 ` : `
 === ESCALATION ===
-No human support number is configured. If a caller asks for something not in inventory, let them know it's currently unavailable and suggest they check back later.
-If a caller asks to speak to a human, apologize and let them know no one is available right now.
+No human support number is configured. If a caller asks for something not in inventory, let them know it's unavailable and suggest checking back later.
+If a caller asks to speak to a human, politely explain no one is available right now and offer further AI assistance.
 `;
 
     const systemPrompt = `${personality}
@@ -110,25 +114,26 @@ If a caller asks to speak to a human, apologize and let them know no one is avai
 ${inventoryNote}
 
 === MANDATORY INVENTORY INSTRUCTIONS ===
-If a caller asks about product availability, price, stock, or category,
-you MUST call the get_inventory tool before responding.
-Never guess prices or availability.
-If no result is returned, evaluate whether the item is relevant to the business type before deciding to escalate.
+If a caller asks about product availability, price, stock, or category, you MUST call the get_inventory tool before responding.
+Never guess prices or availability. When the tool returns results, read the "summary" field to get the inventory info.
+If item_found is false, evaluate whether the item is relevant to the business type before deciding to escalate.
 Keep responses short and conversational.
 
 === SPEECH RECOGNITION NOTE ===
-Callers may mispronounce brand names. Common examples:
-- "alien way" or "alien wear" = Alienware
-- "eye phone" = iPhone
-- "sam sung" = Samsung
-When you hear something that sounds like a product name, use the most likely correct spelling when calling get_inventory.
+Callers may mispronounce brand names. When calling get_inventory, always use the most likely correct product name spelling:
+- "alien way", "alien ware", "a real way", "alienway" → use "Alienware"
+- "eye phone", "i phone" → use "iPhone"
+- "sam sung" → use "Samsung"
+- "mac book" → use "MacBook"
+If unsure of pronunciation, still call get_inventory with your best guess — it has fuzzy matching built in.
 
 ${escalationInstructions}
 
 === ADDITIONAL INSTRUCTIONS ===
-- When someone asks "what do you have?", "what's available?", "do you have X?", or anything about products/items/inventory, ALWAYS call the get_inventory tool first before answering.
-- Provide accurate pricing and details from the inventory data.
-- If an item is not in inventory, evaluate relevance to business type before responding.
+- ALWAYS call get_inventory before answering any question about products, stock, availability, or pricing.
+- Never tell a caller an item is unavailable without first calling get_inventory to verify.
+- Provide accurate pricing and details from the inventory tool's response.
+- If an item is not in inventory (item_found is false), evaluate relevance to business type before responding.
 ${memoryInstructions}`;
 
     console.log('📝 Updating Vapi assistant system prompt (messages only, NO inline tools)...');

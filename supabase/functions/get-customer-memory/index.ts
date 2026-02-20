@@ -15,10 +15,11 @@ serve(async (req) => {
     const payload = await req.json();
     console.log("📞 get-customer-memory request:", JSON.stringify(payload));
 
-    // Extract phone_number and toolCallId from Vapi function call format
+    // Extract phone_number and toolCallId from Vapi persisted tool call format
+    // Vapi sends: { message: { type: "tool-calls", toolCalls: [{ id, function: { name, arguments } }], call: { customer: { number } } } }
     const message = payload.message || payload;
     const toolCalls = message.toolCalls || message.tool_calls || [];
-    
+
     let phoneNumber = "";
     let toolCallId = "";
 
@@ -26,17 +27,27 @@ serve(async (req) => {
       const toolCall = toolCalls[0];
       toolCallId = toolCall.id || "";
       const args = toolCall.function?.arguments || toolCall.arguments || {};
-      phoneNumber = typeof args === "string" ? JSON.parse(args).phone_number : args.phone_number;
+      const parsed = typeof args === "string" ? JSON.parse(args) : args;
+      phoneNumber = parsed.phone_number || "";
+
+      // If phone_number not passed as argument, try to get it from the call object
+      if (!phoneNumber) {
+        phoneNumber = message.call?.customer?.number || payload.call?.customer?.number || "";
+        console.log("📞 Phone number from call object:", phoneNumber);
+      }
     } else {
       // Direct call fallback
-      phoneNumber = payload.phone_number;
+      phoneNumber = payload.phone_number || message.phone_number || "";
       toolCallId = payload.toolCallId || "direct-call";
     }
 
+    console.log(`📞 Looking up memory for: ${phoneNumber}, toolCallId: ${toolCallId}`);
+
     if (!phoneNumber) {
+      console.warn("⚠️ No phone number provided");
       return new Response(
         JSON.stringify({
-          results: [{ toolCallId, result: "No phone number provided" }]
+          results: [{ toolCallId: toolCallId || "unknown", result: "No phone number provided. Cannot retrieve caller history." }]
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -62,7 +73,7 @@ serve(async (req) => {
       console.log("ℹ️ No prior record for:", phoneNumber);
       return new Response(
         JSON.stringify({
-          results: [{ toolCallId, result: "No prior record" }]
+          results: [{ toolCallId, result: "No prior record. This is a new caller." }]
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -76,14 +87,15 @@ serve(async (req) => {
 
     // Get last summary from call_history
     const callHistory = data.call_history as any[] || [];
-    const lastSummary = callHistory.length > 0
-      ? callHistory[callHistory.length - 1].summary
-      : null;
+    // Get last 2 summaries for richer context
+    const recentSummaries = callHistory.slice(-2).map((h: any) => h.summary).filter(Boolean);
+    const lastSummary = recentSummaries.length > 0 ? recentSummaries[recentSummaries.length - 1] : null;
 
     const result = {
-      name: data.name,
+      name: data.name || null,
       conversation_count: data.conversation_count,
       last_summary: lastSummary,
+      recent_history: recentSummaries,
       days_since_last_call: daysSinceLastCall,
     };
 

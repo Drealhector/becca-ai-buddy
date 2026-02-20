@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Common speech-to-text misinterpretations and their corrections
 const FUZZY_MAP: Record<string, string[]> = {
-  'alienware': ['alien way', 'alien ware', 'alien wear', 'alienwear', 'alien where', 'ailien ware', 'alien weir'],
+  'alienware': ['alien way', 'alien ware', 'alien wear', 'alienwear', 'alien where', 'ailien ware', 'alien weir', 'alienway', 'alian ware'],
   'iphone': ['i phone', 'eye phone', 'iphones', 'i phones'],
   'macbook': ['mac book', 'mackbook', 'mac boo'],
   'samsung': ['sam sung', 'samsang', 'samson'],
@@ -62,20 +62,36 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Parse request — handle both Vapi tool call format and direct calls
+    // Parse request — handle Vapi persisted tool call format AND direct calls
     let query = "";
     let category = "";
+    let toolCallId = "";
 
     try {
       const body = await req.json();
       console.log("📦 Inventory request body:", JSON.stringify(body));
 
-      if (body.message?.functionCall?.parameters) {
+      // Vapi persisted tool format: body.message.toolCalls[0]
+      const message = body.message || body;
+      const toolCalls = message.toolCalls || message.tool_calls || [];
+
+      if (toolCalls.length > 0) {
+        const toolCall = toolCalls[0];
+        toolCallId = toolCall.id || "";
+        const args = toolCall.function?.arguments || toolCall.arguments || {};
+        const parsed = typeof args === "string" ? JSON.parse(args) : args;
+        query = parsed.query || "";
+        category = parsed.category || "";
+        console.log(`🔧 Vapi tool call: id=${toolCallId}, query="${query}", category="${category}"`);
+      } else if (body.message?.functionCall?.parameters) {
+        // Legacy inline tool format
         query = body.message.functionCall.parameters.query || "";
         category = body.message.functionCall.parameters.category || "";
       } else {
+        // Direct call
         query = body.query || "";
         category = body.category || "";
+        toolCallId = body.toolCallId || "direct";
       }
     } catch {
       // No body is fine — return all inventory
@@ -169,7 +185,30 @@ serve(async (req) => {
       ? `Here's what's currently available:\n${formatted.join('\n')}`
       : `ITEM_NOT_FOUND: No items found matching "${originalQuery || 'that query'}". The business type is "${businessTypeLabel}". ${hasOwnerPhone ? 'Escalation is available — use escalate_to_human if the item is relevant to this business type.' : 'No escalation number configured.'}`;
 
-    // Return Vapi-compatible structured response
+    console.log(`✅ Inventory result: found=${itemFound}, items=${filtered.length}`);
+
+    // Return Vapi persisted tool format — results array with toolCallId
+    const resultPayload = {
+      item_found: itemFound,
+      items: filtered,
+      count: filtered.length,
+      business_type: businessTypeLabel,
+      owner_phone: custData?.owner_phone || null,
+      escalation_allowed: hasOwnerPhone && !itemFound,
+      summary: resultText,
+    };
+
+    if (toolCallId) {
+      // Vapi persisted tool response format
+      return new Response(
+        JSON.stringify({
+          results: [{ toolCallId, result: resultPayload }]
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fallback for direct/legacy calls
     return new Response(
       JSON.stringify({
         results: resultText,
