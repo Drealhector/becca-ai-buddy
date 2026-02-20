@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.delete-elevenlabs-voice]
 verify_jwt = false
+
+[functions.escalate-to-human]
+verify_jwt = false

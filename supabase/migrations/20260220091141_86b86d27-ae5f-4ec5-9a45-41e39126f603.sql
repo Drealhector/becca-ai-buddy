@@ -1,0 +1,1 @@
+ALTER TABLE public.customizations ADD COLUMN owner_phone text DEFAULT NULL;

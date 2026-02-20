@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Package, Plus, Trash2, Edit } from "lucide-react";
+import { Package, Plus, Trash2, Edit, Phone } from "lucide-react";
 
 type BusinessType = "gadgets" | "real_estate" | "restaurant";
 
@@ -41,6 +41,8 @@ export const InventorySection = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [loading, setLoading] = useState(false);
+  const [ownerPhone, setOwnerPhone] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -54,6 +56,7 @@ export const InventorySection = () => {
 
   useEffect(() => {
     fetchInventory();
+    fetchOwnerPhone();
 
     const channel = supabase
       .channel("inventory-changes")
@@ -78,6 +81,39 @@ export const InventorySection = () => {
       return;
     }
     setItems((data as any[]) || []);
+  };
+
+  const fetchOwnerPhone = async () => {
+    const { data } = await supabase
+      .from("customizations")
+      .select("owner_phone")
+      .limit(1)
+      .maybeSingle();
+    setOwnerPhone((data as any)?.owner_phone || "");
+  };
+
+  const handleSaveOwnerPhone = async () => {
+    setSavingPhone(true);
+    try {
+      const { data: existing } = await supabase
+        .from("customizations")
+        .select("id")
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        const { error } = await supabase
+          .from("customizations")
+          .update({ owner_phone: ownerPhone || null } as any)
+          .eq("id", existing.id);
+        if (error) throw error;
+      }
+      toast.success("Human support number saved");
+    } catch (error) {
+      console.error("Error saving owner phone:", error);
+      toast.error("Failed to save number");
+    } finally {
+      setSavingPhone(false);
+    }
   };
 
   const resetForm = () => {
@@ -352,6 +388,28 @@ export const InventorySection = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Human Support Section */}
+      <div className="mt-6 p-4 border border-border rounded-lg bg-muted/30">
+        <div className="flex items-center gap-2 mb-2">
+          <Phone className="h-4 w-4 text-primary" />
+          <h4 className="font-medium text-sm">Human Support</h4>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          When a caller asks for something not in inventory but relevant to your business, BECCA will call this number to check availability.
+        </p>
+        <div className="flex gap-2">
+          <Input
+            value={ownerPhone}
+            onChange={(e) => setOwnerPhone(e.target.value)}
+            placeholder="+1234567890 (with country code)"
+            className="flex-1"
+          />
+          <Button onClick={handleSaveOwnerPhone} disabled={savingPhone} size="sm">
+            {savingPhone ? "Saving..." : "Save"}
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 };
