@@ -13,10 +13,10 @@ serve(async (req) => {
 
   try {
     const { personality, firstMessage } = await req.json();
-    
+
     const VAPI_API_KEY = Deno.env.get('VAPI_API_KEY');
     const VAPI_ASSISTANT_ID = Deno.env.get('VAPI_WEB_ASSISTANT_ID');
-    
+
     if (!VAPI_API_KEY || !VAPI_ASSISTANT_ID) {
       throw new Error('VAPI_API_KEY or VAPI_WEB_ASSISTANT_ID not configured');
     }
@@ -48,9 +48,9 @@ serve(async (req) => {
 
     let inventoryNote = "";
     if (inventory && inventory.length > 0) {
-      inventoryNote = `\n\n=== CURRENT INVENTORY (${inventory.length} items) ===\nBusiness Type: ${businessTypeLabel}\nYou have access to a tool called "check_inventory" to look up real-time inventory. ALWAYS use this tool when someone asks about availability, pricing, what you have, or what's in stock. Never guess — always check.\n`;
+      inventoryNote = `\n\n=== CURRENT INVENTORY (${inventory.length} items) ===\nBusiness Type: ${businessTypeLabel}\nYou have access to a tool called "get_inventory" to look up real-time inventory. ALWAYS use this tool when someone asks about availability, pricing, what you have, or what's in stock. Never guess — always check.\n`;
     } else {
-      inventoryNote = `\n\nBusiness Type: ${businessTypeLabel}\nYou have access to a tool called "check_inventory" to look up real-time inventory. Use it when anyone asks about what's available. Currently the inventory may be empty.\n`;
+      inventoryNote = `\n\nBusiness Type: ${businessTypeLabel}\nYou have access to a tool called "get_inventory" to look up real-time inventory. Use it when anyone asks about what's available. Currently the inventory may be empty.\n`;
     }
 
     const memoryInstructions = `
@@ -80,7 +80,7 @@ STRICT RULES:
 === SMART ESCALATION (Case A — Inventory Miss, Relevant Category) ===
 Business Type: ${businessTypeLabel}
 You have access to a tool called "escalate_to_human". Use it ONLY when ALL of these conditions are met:
-1. The caller asked for a specific item that is NOT in the inventory (check_inventory returned no results)
+1. The caller asked for a specific item that is NOT in the inventory (get_inventory returned no results)
 2. The requested item is RELEVANT to the business type "${businessTypeLabel}" (e.g., asking for an iPhone at a gadgets store = relevant; asking for an iPhone at a restaurant = NOT relevant)
 3. You have not already escalated for this same item in this conversation
 4. Never escalate more than once per call
@@ -111,22 +111,30 @@ ${inventoryNote}
 
 === MANDATORY INVENTORY INSTRUCTIONS ===
 If a caller asks about product availability, price, stock, or category,
-you MUST call the check_inventory tool before responding.
+you MUST call the get_inventory tool before responding.
 Never guess prices or availability.
 If no result is returned, evaluate whether the item is relevant to the business type before deciding to escalate.
 Keep responses short and conversational.
 
+=== SPEECH RECOGNITION NOTE ===
+Callers may mispronounce brand names. Common examples:
+- "alien way" or "alien wear" = Alienware
+- "eye phone" = iPhone
+- "sam sung" = Samsung
+When you hear something that sounds like a product name, use the most likely correct spelling when calling get_inventory.
+
 ${escalationInstructions}
 
 === ADDITIONAL INSTRUCTIONS ===
-- When someone asks "what do you have?", "what's available?", "do you have X?", or anything about products/items/inventory, ALWAYS call the check_inventory tool first before answering.
+- When someone asks "what do you have?", "what's available?", "do you have X?", or anything about products/items/inventory, ALWAYS call the get_inventory tool first before answering.
 - Provide accurate pricing and details from the inventory data.
 - If an item is not in inventory, evaluate relevance to business type before responding.
 ${memoryInstructions}`;
 
-    console.log('📝 Updating Vapi assistant system prompt...');
+    console.log('📝 Updating Vapi assistant system prompt (messages only, NO inline tools)...');
 
-    // Update the Vapi assistant
+    // CRITICAL: Only update model.messages — NEVER write model.tools
+    // Tools are managed as persisted tools attached via toolIds
     const vapiResponse = await fetch(`https://api.vapi.ai/assistant/${VAPI_ASSISTANT_ID}`, {
       method: 'PATCH',
       headers: {
@@ -141,121 +149,7 @@ ${memoryInstructions}`;
           messages: [
             { role: 'system', content: systemPrompt }
           ],
-          tools: [
-            {
-              type: "function",
-              function: {
-                name: "check_inventory",
-                description: "Check what items are currently available in the business inventory. Use this whenever someone asks about availability, pricing, what's in stock, or what you sell.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    query: {
-                      type: "string",
-                      description: "Search term to look up specific items (e.g., 'iPhone', 'pizza', '3 bedroom'). Leave empty to get all available items."
-                    },
-                    category: {
-                      type: "string",
-                      description: "Business type category filter: 'gadgets', 'real_estate', or 'restaurant'. Optional.",
-                      enum: ["gadgets", "real_estate", "restaurant"]
-                    }
-                  }
-                }
-              },
-              async: false,
-              server: {
-                url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/get-inventory`
-              }
-            },
-            {
-              type: "function",
-              function: {
-                name: "get_customer_memory",
-                description: "Retrieve memory for a returning caller using their phone number. Call this at the START of every call to check if the caller has called before. Returns their name, conversation count, last call summary, and days since last call.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    phone_number: {
-                      type: "string",
-                      description: "The caller's phone number in E.164 format (e.g., +1234567890)"
-                    }
-                  },
-                  required: ["phone_number"]
-                }
-              },
-              async: false,
-              server: {
-                url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/get-customer-memory`
-              }
-            },
-            {
-              type: "function",
-              function: {
-                name: "save_customer_name",
-                description: "Save a customer's name after they provide it during conversation. Only call this once when the customer tells you their name.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    phone_number: {
-                      type: "string",
-                      description: "The caller's phone number in E.164 format"
-                    },
-                    name: {
-                      type: "string",
-                      description: "The customer's name as they provided it"
-                    }
-                  },
-                  required: ["phone_number", "name"]
-                }
-              },
-              async: false,
-              server: {
-                url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/save-customer-name`
-              }
-            },
-            ...(hasOwnerPhone ? [
-              {
-                type: "function",
-                function: {
-                  name: "escalate_to_human",
-                  description: "Call the business owner/manager to ask about an item that a customer is requesting but is NOT in the current inventory. ONLY use this when the requested item is relevant to the business type. Do NOT use for items irrelevant to the business. Do NOT use when a caller asks to speak to a human — use transferCall instead.",
-                  parameters: {
-                    type: "object",
-                    properties: {
-                      item_requested: {
-                        type: "string",
-                        description: "The specific item or product the customer is asking about"
-                      },
-                      caller_context: {
-                        type: "string",
-                        description: "Any additional context about what the caller needs (e.g., color, size, urgency)"
-                      }
-                    },
-                    required: ["item_requested"]
-                  }
-                },
-                async: false,
-                server: {
-                  url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/escalate-to-human`
-                }
-              },
-              {
-                type: "transferCall",
-                destinations: [],
-                function: {
-                  name: "transferCall",
-                  description: "Transfer the call directly to a human representative. Use this ONLY when the caller explicitly asks to speak with a human, manager, or representative. Do NOT use for inventory inquiries — use escalate_to_human instead.",
-                  parameters: {
-                    type: "object",
-                    properties: {}
-                  }
-                },
-                server: {
-                  url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/vapi-call-webhook`
-                }
-              }
-            ] : [])
-          ]
+          // DO NOT include "tools" here — persisted tools are attached via toolIds
         }
       })
     });
@@ -267,7 +161,7 @@ ${memoryInstructions}`;
     }
 
     const result = await vapiResponse.json();
-    console.log('✅ Vapi assistant system prompt updated:', result.id);
+    console.log('✅ Vapi assistant system prompt updated (no inline tools):', result.id);
 
     return new Response(
       JSON.stringify({ success: true, assistantId: result.id }),
