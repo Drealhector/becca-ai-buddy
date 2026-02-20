@@ -218,6 +218,44 @@ serve(async (req) => {
     if (memoryTool) {
       toolIds.push(memoryTool.id);
       console.log(`✅ get_customer_memory exists: ${memoryTool.id}`);
+    } else {
+      console.log('🆕 Creating get_customer_memory tool...');
+      const createRes = await fetch('https://api.vapi.ai/tool', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${VAPI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: "function",
+          async: false,
+          server: {
+            url: `${SUPABASE_URL}/functions/v1/get-customer-memory`,
+            timeoutSeconds: 20,
+          },
+          function: {
+            name: "get_customer_memory",
+            description: "Retrieve memory for a returning caller using their phone number. Call this at the START of every call to check if the caller has called before. Returns their name, conversation count, last call summary, and days since last call.",
+            parameters: {
+              type: "object",
+              properties: {
+                phone_number: {
+                  type: "string",
+                  description: "The caller's phone number in E.164 format (e.g., +1234567890)"
+                }
+              },
+              required: ["phone_number"]
+            }
+          }
+        }),
+      });
+      const created = await createRes.json();
+      if (createRes.ok) {
+        console.log('✅ get_customer_memory created:', created.id);
+        toolIds.push(created.id);
+      } else {
+        console.error('❌ Failed to create get_customer_memory:', JSON.stringify(created));
+      }
     }
 
     // --- save_customer_name tool ---
@@ -225,6 +263,48 @@ serve(async (req) => {
     if (saveTool) {
       toolIds.push(saveTool.id);
       console.log(`✅ save_customer_name exists: ${saveTool.id}`);
+    } else {
+      console.log('🆕 Creating save_customer_name tool...');
+      const createRes = await fetch('https://api.vapi.ai/tool', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${VAPI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: "function",
+          async: false,
+          server: {
+            url: `${SUPABASE_URL}/functions/v1/save-customer-name`,
+            timeoutSeconds: 20,
+          },
+          function: {
+            name: "save_customer_name",
+            description: "Save a customer's name after they provide it during conversation. Only call this once when the customer tells you their name.",
+            parameters: {
+              type: "object",
+              properties: {
+                phone_number: {
+                  type: "string",
+                  description: "The caller's phone number in E.164 format"
+                },
+                name: {
+                  type: "string",
+                  description: "The customer's name as they provided it"
+                }
+              },
+              required: ["phone_number", "name"]
+            }
+          }
+        }),
+      });
+      const created = await createRes.json();
+      if (createRes.ok) {
+        console.log('✅ save_customer_name created:', created.id);
+        toolIds.push(created.id);
+      } else {
+        console.error('❌ Failed to create save_customer_name:', JSON.stringify(created));
+      }
     }
 
     // Step 2: Attach all tools via toolIds to assistant (NO model.tools)
