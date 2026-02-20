@@ -77,25 +77,32 @@ STRICT RULES:
 - Use the memory to be helpful, not creepy.`;
 
     const escalationInstructions = hasOwnerPhone ? `
-=== SMART ESCALATION ===
+=== SMART ESCALATION (Case A — Inventory Miss, Relevant Category) ===
 Business Type: ${businessTypeLabel}
 You have access to a tool called "escalate_to_human". Use it ONLY when ALL of these conditions are met:
 1. The caller asked for a specific item that is NOT in the inventory (check_inventory returned no results)
 2. The requested item is RELEVANT to the business type "${businessTypeLabel}" (e.g., asking for an iPhone at a gadgets store = relevant; asking for an iPhone at a restaurant = NOT relevant)
 3. You have not already escalated for this same item in this conversation
+4. Never escalate more than once per call
 
 When escalating:
 - Tell the caller: "Let me check with the team on that for you."
 - Call the escalate_to_human tool with the item name and any context
-- The tool will call the business owner to ask about availability
 - After calling the tool, tell the caller you've notified the team and they'll look into it
 
 When NOT to escalate (item is irrelevant to business type):
 - Simply tell the caller: "I'm sorry, we don't carry that type of item. We're a ${businessTypeLabel} business."
 - Be natural and helpful about it
+
+=== HUMAN TRANSFER (Case B — Caller Requests a Human) ===
+If the caller explicitly asks to speak with a human, manager, representative, or real person,
+use the transferCall tool IMMEDIATELY.
+Do NOT use escalate_to_human for this case — transferCall hands the call over directly.
+Say something like: "Sure, let me connect you to someone right away."
 ` : `
 === ESCALATION ===
 No human support number is configured. If a caller asks for something not in inventory, let them know it's currently unavailable and suggest they check back later.
+If a caller asks to speak to a human, apologize and let them know no one is available right now.
 `;
 
     const systemPrompt = `${personality}
@@ -206,31 +213,48 @@ ${memoryInstructions}`;
                 url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/save-customer-name`
               }
             },
-            ...(hasOwnerPhone ? [{
-              type: "function",
-              function: {
-                name: "escalate_to_human",
-                description: "Call the business owner/manager to ask about an item that a customer is requesting but is NOT in the current inventory. ONLY use this when the requested item is relevant to the business type. Do NOT use for items irrelevant to the business.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    item_requested: {
-                      type: "string",
-                      description: "The specific item or product the customer is asking about"
+            ...(hasOwnerPhone ? [
+              {
+                type: "function",
+                function: {
+                  name: "escalate_to_human",
+                  description: "Call the business owner/manager to ask about an item that a customer is requesting but is NOT in the current inventory. ONLY use this when the requested item is relevant to the business type. Do NOT use for items irrelevant to the business. Do NOT use when a caller asks to speak to a human — use transferCall instead.",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      item_requested: {
+                        type: "string",
+                        description: "The specific item or product the customer is asking about"
+                      },
+                      caller_context: {
+                        type: "string",
+                        description: "Any additional context about what the caller needs (e.g., color, size, urgency)"
+                      }
                     },
-                    caller_context: {
-                      type: "string",
-                      description: "Any additional context about what the caller needs (e.g., color, size, urgency)"
-                    }
-                  },
-                  required: ["item_requested"]
+                    required: ["item_requested"]
+                  }
+                },
+                async: false,
+                server: {
+                  url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/escalate-to-human`
                 }
               },
-              async: false,
-              server: {
-                url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/escalate-to-human`
+              {
+                type: "transferCall",
+                destinations: [],
+                function: {
+                  name: "transferCall",
+                  description: "Transfer the call directly to a human representative. Use this ONLY when the caller explicitly asks to speak with a human, manager, or representative. Do NOT use for inventory inquiries — use escalate_to_human instead.",
+                  parameters: {
+                    type: "object",
+                    properties: {}
+                  }
+                },
+                server: {
+                  url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/vapi-call-webhook`
+                }
               }
-            }] : [])
+            ] : [])
           ]
         }
       })

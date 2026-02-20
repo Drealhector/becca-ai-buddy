@@ -23,6 +23,42 @@ serve(async (req) => {
     const eventType = payload.type || payload.message?.type;
     console.log("📊 Event type:", eventType);
 
+    // ====== TRANSFER DESTINATION REQUEST ======
+    if (eventType === "transfer-destination-request") {
+      console.log("🔀 Transfer destination request received");
+
+      // Fetch the human support phone number
+      const { data: custData } = await supabase
+        .from("customizations")
+        .select("owner_phone, business_name")
+        .limit(1)
+        .maybeSingle();
+
+      const humanPhone = custData?.owner_phone;
+
+      if (!humanPhone) {
+        console.error("❌ No human support phone configured");
+        return new Response(
+          JSON.stringify({
+            error: "No human support number configured"
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log("✅ Transferring call to:", humanPhone);
+      return new Response(
+        JSON.stringify({
+          destination: {
+            type: "number",
+            number: humanPhone,
+            message: `Connecting you to a team member now. One moment please.`
+          }
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (eventType === "end-of-call-report") {
       const data = payload.message || payload;
 
