@@ -149,10 +149,20 @@ ${escalationInstructions}
 - Keep responses short and conversational.
 ${memoryInstructions}`;
 
-    console.log('📝 Updating Vapi assistant system prompt (messages only, NO inline tools)...');
+    console.log('📝 Updating Vapi assistant system prompt (messages only, preserving toolIds)...');
 
-    // CRITICAL: Only update model.messages — NEVER write model.tools
-    // Tools are managed as persisted tools attached via toolIds
+    // First, fetch the current assistant to preserve toolIds
+    const getResponse = await fetch(`https://api.vapi.ai/assistant/${VAPI_ASSISTANT_ID}`, {
+      headers: { 'Authorization': `Bearer ${VAPI_API_KEY}` }
+    });
+
+    let existingToolIds: string[] = [];
+    if (getResponse.ok) {
+      const existing = await getResponse.json();
+      existingToolIds = existing.model?.toolIds || [];
+      console.log('📎 Preserving existing toolIds:', existingToolIds);
+    }
+
     const vapiResponse = await fetch(`https://api.vapi.ai/assistant/${VAPI_ASSISTANT_ID}`, {
       method: 'PATCH',
       headers: {
@@ -167,7 +177,7 @@ ${memoryInstructions}`;
           messages: [
             { role: 'system', content: systemPrompt }
           ],
-          // DO NOT include "tools" here — persisted tools are attached via toolIds
+          toolIds: existingToolIds,
         }
       })
     });
