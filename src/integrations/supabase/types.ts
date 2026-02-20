@@ -323,6 +323,33 @@ export type Database = {
           },
         ]
       }
+      customer_memory: {
+        Row: {
+          call_history: Json
+          conversation_count: number
+          first_contacted_at: string
+          last_contacted_at: string
+          name: string | null
+          phone_number: string
+        }
+        Insert: {
+          call_history?: Json
+          conversation_count?: number
+          first_contacted_at?: string
+          last_contacted_at?: string
+          name?: string | null
+          phone_number: string
+        }
+        Update: {
+          call_history?: Json
+          conversation_count?: number
+          first_contacted_at?: string
+          last_contacted_at?: string
+          name?: string | null
+          phone_number?: string
+        }
+        Relationships: []
+      }
       customizations: {
         Row: {
           assistant_personality: string | null
