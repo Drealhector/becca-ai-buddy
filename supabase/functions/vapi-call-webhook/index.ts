@@ -63,22 +63,81 @@ serve(async (req) => {
       }
 
       const callId = data.call?.id || data.callId || data.id || "unknown";
-      
-      // Determine call type from the call data
       const callType = data.call?.type || data.type;
       const isInbound = callType === "inboundPhoneCall" || callType === "webCall";
       const type = isInbound ? "incoming" : "outgoing";
-
-      // Get caller info
       const customerNumber = data.call?.customer?.number || "Web Call";
       const callerInfo = customerNumber;
-
       const timestamp = data.startedAt || data.call?.createdAt || new Date().toISOString();
       const durationMinutes = Math.ceil(durationSeconds / 60);
 
+      // Extract call summary from analysis
+      const callSummary = data.analysis?.summary || 
+                          data.summary || 
+                          transcriptText.substring(0, 500) || 
+                          "Call completed";
+
       console.log("💾 Saving call data:", { transcriptText: transcriptText.substring(0, 100), durationSeconds, callId, type, customerNumber });
 
-      // Check if this call already exists in call_history (outbound calls are pre-logged)
+      // ====== CUSTOMER MEMORY ENGINE ======
+      if (customerNumber && customerNumber !== "Web Call") {
+        console.log("🧠 Processing customer memory for:", customerNumber);
+
+        const { data: existingMemory } = await supabase
+          .from("customer_memory")
+          .select("*")
+          .eq("phone_number", customerNumber)
+          .maybeSingle();
+
+        if (existingMemory) {
+          // UPDATE existing record — append summary, increment count
+          const existingHistory = (existingMemory.call_history as any[]) || [];
+          existingHistory.push({
+            summary: callSummary,
+            date: new Date().toISOString(),
+          });
+
+          const { error: memError } = await supabase
+            .from("customer_memory")
+            .update({
+              conversation_count: existingMemory.conversation_count + 1,
+              last_contacted_at: new Date().toISOString(),
+              call_history: existingHistory,
+            })
+            .eq("phone_number", customerNumber);
+
+          if (memError) {
+            console.error("❌ Error updating customer_memory:", memError);
+          } else {
+            console.log("✅ Customer memory updated. Total calls:", existingMemory.conversation_count + 1);
+          }
+        } else {
+          // INSERT new record
+          const { error: memError } = await supabase
+            .from("customer_memory")
+            .insert({
+              phone_number: customerNumber,
+              conversation_count: 1,
+              first_contacted_at: new Date().toISOString(),
+              last_contacted_at: new Date().toISOString(),
+              call_history: [
+                {
+                  summary: callSummary,
+                  date: new Date().toISOString(),
+                },
+              ],
+            });
+
+          if (memError) {
+            console.error("❌ Error inserting customer_memory:", memError);
+          } else {
+            console.log("✅ New customer memory created for:", customerNumber);
+          }
+        }
+      }
+      // ====== END CUSTOMER MEMORY ENGINE ======
+
+      // Check if this call already exists in call_history
       const { data: existingCall } = await supabase
         .from("call_history")
         .select("id")
@@ -87,7 +146,6 @@ serve(async (req) => {
         .maybeSingle();
 
       if (existingCall) {
-        // Update existing record with duration
         await supabase
           .from("call_history")
           .update({
@@ -97,7 +155,6 @@ serve(async (req) => {
           .eq("conversation_id", callId);
         console.log("✅ Updated existing call history record");
       } else {
-        // Insert new record (inbound calls)
         const { error: historyError } = await supabase.from("call_history").insert({
           type,
           number: customerNumber,
