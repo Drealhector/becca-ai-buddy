@@ -23,6 +23,131 @@ serve(async (req) => {
     const eventType = payload.type || payload.message?.type;
     console.log("📊 Event type:", eventType);
 
+    // ====== ASSISTANT-REQUEST: PRE-CALL MEMORY INJECTION ======
+    if (eventType === "assistant-request") {
+      console.log("🧠 Assistant-request received — injecting memory before call starts");
+
+      const callData = payload.message?.call || payload.call || {};
+      const customerNumber = callData.customer?.number || "";
+      const assistantId = payload.message?.assistant?.id || payload.assistant?.id || "";
+
+      // Fetch the current assistant's system prompt from Vapi
+      const VAPI_API_KEY = Deno.env.get("VAPI_API_KEY");
+      let existingSystemPrompt = "";
+      let existingFirstMessage = "";
+
+      if (VAPI_API_KEY && assistantId) {
+        try {
+          const assistantRes = await fetch(`https://api.vapi.ai/assistant/${assistantId}`, {
+            headers: { "Authorization": `Bearer ${VAPI_API_KEY}` }
+          });
+          if (assistantRes.ok) {
+            const assistantConfig = await assistantRes.json();
+            const sysMsg = (assistantConfig.model?.messages || []).find((m: any) => m.role === "system");
+            existingSystemPrompt = sysMsg?.content || "";
+            existingFirstMessage = assistantConfig.firstMessage || "";
+            console.log("📋 Fetched existing system prompt length:", existingSystemPrompt.length);
+          } else {
+            const errText = await assistantRes.text();
+            console.error("⚠️ Could not fetch assistant config:", errText);
+          }
+        } catch (e) {
+          console.error("⚠️ Error fetching assistant:", e);
+        }
+      }
+
+      let memoryContext = "";
+      let memoryFirstMessage = "";
+
+      if (customerNumber && customerNumber !== "Web Call") {
+        console.log("📞 Looking up memory for:", customerNumber);
+
+        const { data: memData } = await supabase
+          .from("customer_memory")
+          .select("*")
+          .eq("phone_number", customerNumber)
+          .maybeSingle();
+
+        if (memData) {
+          const lastContact = new Date(memData.last_contacted_at);
+          const now = new Date();
+          const daysSince = Math.floor((now.getTime() - lastContact.getTime()) / (1000 * 60 * 60 * 24));
+
+          const callHistory = (memData.call_history as any[]) || [];
+          const recentSummaries = callHistory.slice(-2).map((h: any) => h.summary).filter(Boolean);
+          const lastSummary = recentSummaries.length > 0 ? recentSummaries[recentSummaries.length - 1] : null;
+
+          let timeRef = "";
+          if (daysSince === 0) timeRef = "earlier today";
+          else if (daysSince === 1) timeRef = "yesterday";
+          else if (daysSince <= 6) timeRef = `a few days ago`;
+          else if (daysSince <= 30) timeRef = "a couple of weeks ago";
+          else timeRef = "a while back";
+
+          memoryContext = `\n\n=== CALLER CONTEXT (PRE-LOADED BY SYSTEM — YOU ALREADY KNOW THIS) ===
+This is a RETURNING caller. Their phone number is ${customerNumber}.
+${memData.name ? `Their name is ${memData.name}.` : "You do NOT know their name yet. At a natural point later in the conversation (NOT immediately), casually ask 'By the way, may I know your name?' — ask ONLY ONCE. If they provide it, call save_customer_name with their phone number and name."}
+They have called ${memData.conversation_count} times before.
+You last spoke ${timeRef}.
+${lastSummary ? `What you discussed last time: ${lastSummary}` : ""}
+${recentSummaries.length > 1 ? `What you discussed the time before: ${recentSummaries[0]}` : ""}
+
+YOUR GREETING MUST reflect that you remember them. ${memData.name ? `Use their name "${memData.name}".` : ""} Reference when you last spoke naturally. If relevant, mention what you talked about.
+NEVER mention databases, records, memory systems, or that you "looked them up."
+Sound natural, like you genuinely remember them from your last conversation.
+=== END CALLER CONTEXT ===`;
+
+          // Build a personalized first message
+          const nameGreet = memData.name ? `, ${memData.name}` : "";
+          if (daysSince === 0) {
+            memoryFirstMessage = `Hey${nameGreet}! Good to hear from you again today!${lastSummary ? ` We were just talking about something earlier — how's that going?` : ""}`;
+          } else if (daysSince === 1) {
+            memoryFirstMessage = `Hey${nameGreet}! We just spoke yesterday, right? Welcome back!${lastSummary ? ` Last time you were asking about something — did that work out?` : ""}`;
+          } else if (daysSince <= 6) {
+            memoryFirstMessage = `Hey${nameGreet}! We chatted a few days ago — good to hear from you again!${lastSummary ? ` How did things go since we last talked?` : ""}`;
+          } else if (daysSince <= 30) {
+            memoryFirstMessage = `Hey${nameGreet}! It's been a little while! Good to hear from you again.`;
+          } else {
+            memoryFirstMessage = `Hey${nameGreet}! It's been a while since we last spoke! Welcome back.`;
+          }
+
+          console.log("✅ Memory found — injecting. Calls:", memData.conversation_count, "Days since:", daysSince);
+        } else {
+          memoryContext = `\n\n=== CALLER CONTEXT (PRE-LOADED BY SYSTEM) ===
+This is a FIRST-TIME caller. Their phone number is ${customerNumber}.
+You do NOT know their name. At a natural point later in the conversation (NOT immediately), casually ask their name ONCE. If they provide it, call save_customer_name with their phone number and name.
+=== END CALLER CONTEXT ===`;
+          console.log("ℹ️ No memory found — first-time caller");
+        }
+      }
+
+      // Return assistantOverrides with memory appended to system prompt
+      const finalSystemPrompt = existingSystemPrompt + memoryContext;
+      const response: any = {
+        assistant: {
+          model: {
+            messages: [
+              {
+                role: "system",
+                content: finalSystemPrompt
+              }
+            ]
+          }
+        }
+      };
+
+      // Override firstMessage if we have a personalized one
+      if (memoryFirstMessage) {
+        response.assistant.firstMessage = memoryFirstMessage;
+      }
+
+      console.log("📤 Returning assistant-request response with memory context");
+      return new Response(
+        JSON.stringify(response),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // ====== TRANSFER DESTINATION REQUEST ======
     if (eventType === "transfer-destination-request") {
       console.log("🔀 Transfer destination request received");
