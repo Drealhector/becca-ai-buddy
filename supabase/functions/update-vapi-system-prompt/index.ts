@@ -116,8 +116,19 @@ ${inventoryNote}
 === MANDATORY INVENTORY INSTRUCTIONS ===
 If a caller asks about product availability, price, stock, or category, you MUST call the get_inventory tool before responding.
 Never guess prices or availability. When the tool returns results, read the "summary" field to get the inventory info.
-If item_found is false, evaluate whether the item is relevant to the business type before deciding to escalate.
-Keep responses short and conversational.
+
+CRITICAL PRICE READING RULES — MUST FOLLOW:
+- Prices in the summary are already written as spoken words (e.g., "fifty thousand naira"). Read them EXACTLY as written.
+- NEVER say currency codes like NGN, USD, GBP — always say the full currency name.
+- NEVER read raw numbers like "50000" — say "fifty thousand" instead.
+- Example correct response: "The Alienware laptop is priced at fifty thousand naira."
+- Example WRONG response: "It costs NGN 50000." ← NEVER do this.
+
+ITEM MATCHING RULES:
+- When the summary says ITEM_FOUND: tell the caller about that specific item naturally.
+- When the summary says ITEM_NOT_FOUND: the item is NOT in stock. Evaluate relevance to business type and escalate if appropriate.
+- If the summary mentions "we do not have that exact item" — the caller asked for something we don't carry. Do NOT pretend a different item is the same.
+- Example: Caller asks for HP laptop → tool says ITEM_NOT_FOUND → escalate using escalate_to_human because laptops ARE relevant to a gadgets business.
 
 === SPEECH RECOGNITION NOTE ===
 Callers may mispronounce brand names. When calling get_inventory, always use the most likely correct product name spelling:
@@ -125,6 +136,7 @@ Callers may mispronounce brand names. When calling get_inventory, always use the
 - "eye phone", "i phone" → use "iPhone"
 - "sam sung" → use "Samsung"
 - "mac book" → use "MacBook"
+- "h p", "aitch pee" → use "HP"
 If unsure of pronunciation, still call get_inventory with your best guess — it has fuzzy matching built in.
 
 ${escalationInstructions}
@@ -132,8 +144,9 @@ ${escalationInstructions}
 === ADDITIONAL INSTRUCTIONS ===
 - ALWAYS call get_inventory before answering any question about products, stock, availability, or pricing.
 - Never tell a caller an item is unavailable without first calling get_inventory to verify.
-- Provide accurate pricing and details from the inventory tool's response.
-- If an item is not in inventory (item_found is false), evaluate relevance to business type before responding.
+- When an item is NOT found and it is relevant to our business type, ALWAYS escalate using escalate_to_human — do NOT just say "sorry we don't have it."
+- Provide accurate pricing and details from the inventory tool's response, reading all prices in spoken words.
+- Keep responses short and conversational.
 ${memoryInstructions}`;
 
     console.log('📝 Updating Vapi assistant system prompt (messages only, NO inline tools)...');

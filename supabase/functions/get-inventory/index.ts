@@ -35,6 +35,51 @@ function correctQuery(query: string): string {
   return lower;
 }
 
+// Currency code → spoken name map
+const CURRENCY_NAMES: Record<string, string> = {
+  'NGN': 'naira',
+  'USD': 'dollars',
+  'GBP': 'pounds',
+  'EUR': 'euros',
+  'GHS': 'cedis',
+  'KES': 'shillings',
+  'ZAR': 'rand',
+  'CAD': 'Canadian dollars',
+  'AUD': 'Australian dollars',
+};
+
+// Convert a number to spoken English words (handles up to billions)
+function numberToWords(n: number): string {
+  if (n === 0) return 'zero';
+  const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+    'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+  const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+  function below1000(num: number): string {
+    if (num < 20) return ones[num];
+    if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? ' ' + ones[num % 10] : '');
+    return ones[Math.floor(num / 100)] + ' hundred' + (num % 100 ? ' ' + below1000(num % 100) : '');
+  }
+
+  let result = '';
+  if (n < 0) { result = 'negative '; n = Math.abs(n); }
+  if (n >= 1_000_000_000) { result += below1000(Math.floor(n / 1_000_000_000)) + ' billion '; n %= 1_000_000_000; }
+  if (n >= 1_000_000) { result += below1000(Math.floor(n / 1_000_000)) + ' million '; n %= 1_000_000; }
+  if (n >= 1_000) { result += below1000(Math.floor(n / 1_000)) + ' thousand '; n %= 1_000; }
+  if (n > 0) result += below1000(n);
+  return result.trim();
+}
+
+// Format price into a natural speech string e.g. "fifty thousand naira"
+function formatPriceSpeech(price: number, currencyCode: string): string {
+  const wholePart = Math.floor(price);
+  const decimalPart = Math.round((price - wholePart) * 100);
+  const currencyName = CURRENCY_NAMES[currencyCode?.toUpperCase()] || currencyCode || 'units';
+  let spoken = numberToWords(wholePart) + ' ' + currencyName;
+  if (decimalPart > 0) spoken += ' and ' + numberToWords(decimalPart) + ' kobo';
+  return spoken;
+}
+
 // Levenshtein distance for additional fuzzy matching
 function levenshtein(a: string, b: string): number {
   const m = a.length, n = b.length;
@@ -167,34 +212,58 @@ serve(async (req) => {
     const hasOwnerPhone = !!custData?.owner_phone;
     const itemFound = filtered.length > 0;
 
-    // Format response for the AI to read naturally
+    // Format response for the AI to read naturally (prices in spoken words, no raw codes)
     const formatted = filtered.map((item: any) => {
       let info = `- ${item.name}`;
-      if (item.price != null) info += ` | Price: ${item.currency || 'USD'} ${item.price}`;
-      if (item.quantity > 1) info += ` | Qty: ${item.quantity}`;
-      if (item.colors?.length > 0) info += ` | Colors: ${item.colors.join(', ')}`;
+      if (item.price != null) {
+        const spokenPrice = formatPriceSpeech(item.price, item.currency || 'USD');
+        info += ` | Price: ${spokenPrice}`;
+      }
+      if (item.quantity > 1) info += ` | Quantity: ${item.quantity} units`;
+      if (item.colors?.length > 0) info += ` | Available colors: ${item.colors.join(', ')}`;
       if (item.location) info += ` | Location: ${item.location}`;
-      if (item.description) info += ` | ${item.description}`;
+      if (item.description && item.description !== item.name) info += ` | ${item.description}`;
       if (item.specs && Object.keys(item.specs).length > 0) {
         info += ` | Specs: ${Object.entries(item.specs).map(([k, v]) => `${k}: ${v}`).join(', ')}`;
       }
       return info;
     });
 
-    const resultText = itemFound
-      ? `Here's what's currently available:\n${formatted.join('\n')}`
-      : `ITEM_NOT_FOUND: No items found matching "${originalQuery || 'that query'}". The business type is "${businessTypeLabel}". ${hasOwnerPhone ? 'Escalation is available — use escalate_to_human if the item is relevant to this business type.' : 'No escalation number configured.'}`;
+    // Strict check: does what was found actually match the query?
+    // If caller asked for "HP laptop" but we returned "alienware laptop", that's a MISMATCH.
+    const queryWords = query ? query.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2) : [];
+    const queryMatchesResult = queryWords.length === 0 || filtered.some((item: any) => {
+      const itemNameLower = (item.name || '').toLowerCase();
+      // At least one meaningful query word must appear in the item name
+      return queryWords.some((qw: string) => itemNameLower.includes(qw));
+    });
 
-    console.log(`✅ Inventory result: found=${itemFound}, items=${filtered.length}`);
+    let resultText: string;
+    let trueItemFound: boolean;
+
+    if (!itemFound) {
+      trueItemFound = false;
+      resultText = `ITEM_NOT_FOUND: No items found matching "${originalQuery || 'that query'}". The business type is "${businessTypeLabel}". ${hasOwnerPhone ? 'Escalation is available — use escalate_to_human if the item is relevant to this business type.' : 'No escalation number configured.'}`;
+    } else if (!queryMatchesResult && query) {
+      // Items were returned but they do NOT match what was asked — treat as not found for this specific query
+      trueItemFound = false;
+      resultText = `ITEM_NOT_FOUND: The caller asked for "${originalQuery}" but we do not have that exact item. We only have: ${filtered.map((i: any) => i.name).join(', ')}. Business type is "${businessTypeLabel}". ${hasOwnerPhone ? 'Escalation is available — use escalate_to_human if the item is relevant to this business type.' : 'No escalation number configured.'}`;
+      console.log(`⚠️ Query "${query}" returned non-matching items: ${filtered.map((i: any) => i.name).join(', ')} — treating as NOT FOUND`);
+    } else {
+      trueItemFound = true;
+      resultText = `ITEM_FOUND: The caller asked for "${originalQuery}". Here is what we have:\n${formatted.join('\n')}\nIMPORTANT: Read prices EXACTLY as written — they are already in spoken word format. Do NOT convert them to numbers.`;
+    }
+
+    console.log(`✅ Inventory result: found=${trueItemFound}, queryMatches=${queryMatchesResult}, items=${filtered.length}`);
 
     // Return Vapi persisted tool format — results array with toolCallId
     const resultPayload = {
-      item_found: itemFound,
-      items: filtered,
-      count: filtered.length,
+      item_found: trueItemFound,
+      items: trueItemFound ? filtered : [],
+      count: trueItemFound ? filtered.length : 0,
       business_type: businessTypeLabel,
       owner_phone: custData?.owner_phone || null,
-      escalation_allowed: hasOwnerPhone && !itemFound,
+      escalation_allowed: hasOwnerPhone && !trueItemFound,
       summary: resultText,
     };
 
@@ -212,12 +281,12 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         results: resultText,
-        item_found: itemFound,
-        items: filtered,
-        count: filtered.length,
+        item_found: trueItemFound,
+        items: trueItemFound ? filtered : [],
+        count: trueItemFound ? filtered.length : 0,
         business_type: businessTypeLabel,
         owner_phone: custData?.owner_phone || null,
-        escalation_allowed: hasOwnerPhone && !itemFound,
+        escalation_allowed: hasOwnerPhone && !trueItemFound,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
