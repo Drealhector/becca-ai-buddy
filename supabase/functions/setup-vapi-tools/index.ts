@@ -13,17 +13,23 @@ serve(async (req) => {
 
   try {
     const VAPI_API_KEY = Deno.env.get('VAPI_API_KEY');
-    const VAPI_ASSISTANT_ID = Deno.env.get('VAPI_WEB_ASSISTANT_ID');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 
-    if (!VAPI_API_KEY || !VAPI_ASSISTANT_ID) {
-      throw new Error('VAPI_API_KEY or VAPI_WEB_ASSISTANT_ID not configured');
+    if (!VAPI_API_KEY) {
+      throw new Error('VAPI_API_KEY not configured');
     }
 
     const supabase = createClient(
       SUPABASE_URL,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Use VAPI_WEB_ASSISTANT_ID — this is the main AI Brain assistant used for all calls
+    const VAPI_ASSISTANT_ID = Deno.env.get('VAPI_WEB_ASSISTANT_ID');
+    if (!VAPI_ASSISTANT_ID) {
+      throw new Error('VAPI_WEB_ASSISTANT_ID not configured');
+    }
+    console.log(`📞 Using assistant ID: ${VAPI_ASSISTANT_ID}`);
 
     // Fetch owner phone to decide if escalation tool is needed
     const { data: custData } = await supabase
@@ -401,24 +407,28 @@ serve(async (req) => {
       console.log('⏭️ Skipping transferCall — no owner phone configured');
     }
 
-    // Step 2: Attach all tools via toolIds to assistant (NO model.tools)
-    console.log(`🔗 Attaching ${toolIds.length} tools via toolIds:`, toolIds);
+    // Step 2: Fetch current assistant to get its exact provider/model values
+    console.log(`🔗 Attaching ${toolIds.length} tools via model.toolIds:`, toolIds);
 
-    // First get current assistant to preserve existing config
+    // Fetch current assistant to inspect its exact config
     const getAssistantRes = await fetch(`https://api.vapi.ai/assistant/${VAPI_ASSISTANT_ID}`, {
       headers: { 'Authorization': `Bearer ${VAPI_API_KEY}` },
     });
     const currentAssistant = await getAssistantRes.json();
+    const currentModel = currentAssistant.model || {};
+    const currentProvider = currentModel.provider || 'openai';
+    const currentModelName = currentModel.model || 'gpt-4o';
+    console.log(`🔍 Assistant model: provider="${currentProvider}", model="${currentModelName}"`);
 
-    // Build PATCH payload: set toolIds, remove model.tools completely
-    const patchPayload: any = {
-      model: {
-        ...(currentAssistant.model || {}),
-        toolIds: toolIds,
-      },
+    // Only patch model.toolIds — include the minimal required fields
+    // Keep temperature/other safe fields if present to avoid resetting them
+    const modelPatch: any = {
+      provider: currentProvider,
+      model: currentModelName,
+      toolIds: toolIds,
     };
-    // Explicitly remove inline tools
-    delete patchPayload.model.tools;
+    if (currentModel.temperature != null) modelPatch.temperature = currentModel.temperature;
+    if (currentModel.maxTokens != null) modelPatch.maxTokens = currentModel.maxTokens;
 
     const patchRes = await fetch(`https://api.vapi.ai/assistant/${VAPI_ASSISTANT_ID}`, {
       method: 'PATCH',
@@ -426,16 +436,17 @@ serve(async (req) => {
         'Authorization': `Bearer ${VAPI_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(patchPayload),
+      body: JSON.stringify({ model: modelPatch }),
     });
 
     const patchResult = await patchRes.json();
     if (!patchRes.ok) {
       console.error('❌ Failed to patch assistant:', JSON.stringify(patchResult));
+      console.error('🔍 Full assistant model was:', JSON.stringify(currentModel));
       throw new Error(`Failed to attach tools: ${JSON.stringify(patchResult)}`);
     }
 
-    console.log('✅ Assistant patched with toolIds. Inline tools removed.');
+    console.log('✅ Assistant patched with toolIds successfully.');
     console.log('Tool IDs attached:', toolIds);
 
     return new Response(
