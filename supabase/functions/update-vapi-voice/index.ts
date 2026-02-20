@@ -39,6 +39,7 @@ serve(async (req) => {
         voice: {
           provider: "11labs",
           voiceId: voiceId,
+          model: "eleven_turbo_v2_5",
         },
       }),
     });
