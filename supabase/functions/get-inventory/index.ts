@@ -267,26 +267,11 @@ serve(async (req) => {
       summary: resultText,
     };
 
-    if (toolCallId) {
-      // Vapi persisted tool response format
-      return new Response(
-        JSON.stringify({
-          results: [{ toolCallId, result: resultPayload }]
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Fallback for direct/legacy calls
+    // Always return Vapi persisted tool format — toolCallId may be empty string for direct calls
+    console.log(`📤 Returning Vapi results format. toolCallId="${toolCallId}"`);
     return new Response(
       JSON.stringify({
-        results: resultText,
-        item_found: trueItemFound,
-        items: trueItemFound ? filtered : [],
-        count: trueItemFound ? filtered.length : 0,
-        business_type: businessTypeLabel,
-        owner_phone: custData?.owner_phone || null,
-        escalation_allowed: hasOwnerPhone && !trueItemFound,
+        results: [{ toolCallId: toolCallId || "direct", result: resultPayload }]
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
