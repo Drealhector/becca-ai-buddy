@@ -107,3 +107,6 @@ verify_jwt = false
 
 [functions.escalate-to-human]
 verify_jwt = false
+
+[functions.setup-vapi-tools]
+verify_jwt = false
