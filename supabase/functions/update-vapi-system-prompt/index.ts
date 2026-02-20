@@ -40,6 +40,29 @@ serve(async (req) => {
       inventoryNote = `\n\nYou have access to a tool called "check_inventory" to look up real-time inventory. Use it when anyone asks about what's available. Currently the inventory may be empty.\n`;
     }
 
+    const memoryInstructions = `
+
+=== CUSTOMER MEMORY ENGINE ===
+At the START of every call, you MUST call the get_customer_memory tool with the caller's phone number.
+
+Based on the result:
+- If "No prior record": This is a new caller. Treat them as a first-time caller.
+- If memory exists:
+  - If days_since_last_call is 0: Say something like "Good to hear from you again."
+  - If days_since_last_call is 1: Say something like "We spoke just yesterday."
+  - If days_since_last_call is 2-6: Say something like "We spoke a few days ago."
+  - If days_since_last_call is 7+: Say something like "It's been a little while."
+  - If name is not null, use their name naturally in conversation.
+  - If name is null, at some natural point during the conversation (NOT at the very beginning), casually ask "By the way, may I know your name?" — ask this ONLY ONCE. If they provide a name, IMMEDIATELY call save_customer_name. If they refuse, do NOT ask again.
+  - If last_summary exists, use it to build natural context. For example: "Last time we chatted about [topic]..."
+
+STRICT RULES:
+- NEVER mention exact dates or timestamps.
+- NEVER say "I am accessing a database" or "checking records."
+- NEVER mention "customer memory" or "memory system."
+- Always sound natural and conversational.
+- Use the memory to be helpful, not creepy.`;
+
     const systemPrompt = `${personality}
 
 ${inventoryNote}
@@ -54,7 +77,8 @@ Keep responses short and conversational.
 === ADDITIONAL INSTRUCTIONS ===
 - When someone asks "what do you have?", "what's available?", "do you have X?", or anything about products/items/inventory, ALWAYS call the check_inventory tool first before answering.
 - Provide accurate pricing and details from the inventory data.
-- If an item is not in inventory, let the customer know it's not currently available.`;
+- If an item is not in inventory, let the customer know it's not currently available.
+${memoryInstructions}`;
 
     console.log('📝 Updating Vapi assistant system prompt...');
 
@@ -97,6 +121,52 @@ Keep responses short and conversational.
               async: false,
               server: {
                 url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/get-inventory`
+              }
+            },
+            {
+              type: "function",
+              function: {
+                name: "get_customer_memory",
+                description: "Retrieve memory for a returning caller using their phone number. Call this at the START of every call to check if the caller has called before. Returns their name, conversation count, last call summary, and days since last call.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    phone_number: {
+                      type: "string",
+                      description: "The caller's phone number in E.164 format (e.g., +1234567890)"
+                    }
+                  },
+                  required: ["phone_number"]
+                }
+              },
+              async: false,
+              server: {
+                url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/get-customer-memory`
+              }
+            },
+            {
+              type: "function",
+              function: {
+                name: "save_customer_name",
+                description: "Save a customer's name after they provide it during conversation. Only call this once when the customer tells you their name.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    phone_number: {
+                      type: "string",
+                      description: "The caller's phone number in E.164 format"
+                    },
+                    name: {
+                      type: "string",
+                      description: "The customer's name as they provided it"
+                    }
+                  },
+                  required: ["phone_number", "name"]
+                }
+              },
+              async: false,
+              server: {
+                url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/save-customer-name`
               }
             }
           ]
