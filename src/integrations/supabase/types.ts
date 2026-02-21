@@ -350,6 +350,36 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          conversation_count: number | null
+          created_at: string | null
+          id: string
+          last_called_at: string | null
+          last_summary: string | null
+          name: string | null
+          phone_number: string
+        }
+        Insert: {
+          conversation_count?: number | null
+          created_at?: string | null
+          id?: string
+          last_called_at?: string | null
+          last_summary?: string | null
+          name?: string | null
+          phone_number: string
+        }
+        Update: {
+          conversation_count?: number | null
+          created_at?: string | null
+          id?: string
+          last_called_at?: string | null
+          last_summary?: string | null
+          name?: string | null
+          phone_number?: string
+        }
+        Relationships: []
+      }
       customizations: {
         Row: {
           assistant_personality: string | null
