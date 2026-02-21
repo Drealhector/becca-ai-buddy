@@ -161,13 +161,13 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
         );
       }
 
-      console.log("✅ Transferring call to:", humanPhone);
+      console.log("✅ Transferring call to manager:", humanPhone);
       return new Response(
         JSON.stringify({
           destination: {
             type: "number",
             number: humanPhone,
-            message: `Connecting you to a team member now. One moment please.`
+            message: `Connecting you to our manager now. One moment please.`
           }
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
