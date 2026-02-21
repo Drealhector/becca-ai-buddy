@@ -96,11 +96,6 @@ verify_jwt = false
 [functions.update-vapi-system-prompt]
 verify_jwt = false
 
-[functions.get-customer-memory]
-verify_jwt = false
-
-[functions.save-customer-name]
-verify_jwt = false
 
 [functions.delete-elevenlabs-voice]
 verify_jwt = false

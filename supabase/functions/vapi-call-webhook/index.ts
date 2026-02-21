@@ -85,7 +85,7 @@ serve(async (req) => {
 
           memoryContext = `\n\n=== CALLER CONTEXT (PRE-LOADED BY SYSTEM — YOU ALREADY KNOW THIS) ===
 This is a RETURNING caller. Their phone number is ${customerNumber}.
-${memData.name ? `Their name is ${memData.name}.` : "You do NOT know their name yet. At a natural point later in the conversation (NOT immediately), casually ask 'By the way, may I know your name?' — ask ONLY ONCE. If they provide it, call save_customer_name with their phone number and name."}
+${memData.name ? `Their name is ${memData.name}.` : "You do NOT know their name yet."}
 They have called ${memData.conversation_count} times before.
 You last spoke ${timeRef}.
 ${lastSummary ? `What you discussed last time: ${lastSummary}` : ""}
@@ -113,7 +113,6 @@ Sound natural, like you genuinely remember them from your last conversation.
         } else {
           memoryContext = `\n\n=== CALLER CONTEXT (PRE-LOADED BY SYSTEM) ===
 This is a FIRST-TIME caller. Their phone number is ${customerNumber}.
-You do NOT know their name. At a natural point later in the conversation (NOT immediately), casually ask their name ONCE. If they provide it, call save_customer_name with their phone number and name.
 === END CALLER CONTEXT ===`;
           console.log("ℹ️ No memory found — first-time caller");
         }
