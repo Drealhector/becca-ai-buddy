@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('🔄 Updating master assistant with all products...');
+    console.log('🔄 Updating master assistant...');
 
     const VAPI_API_KEY = Deno.env.get('VAPI_API_KEY');
     if (!VAPI_API_KEY) {
@@ -23,6 +23,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Check for serverUrl override from request body
+    let requestBody: any = {};
+    try {
+      requestBody = await req.json();
+    } catch {
+      // No body or invalid JSON, that's fine
+    }
 
     // Fetch bot personality
     const { data: personalityData } = await supabase
@@ -74,19 +82,9 @@ serve(async (req) => {
 ${productsInfo}
 
 === YOUR CAPABILITIES ===
-You have access to a function called "get_product_media" that can show customers images and videos of products.
+You have access to tools for getting inventory, escalating to human support, managing customer memory, and saving customer names.
 
-When customers ask about a product's appearance, details, or want to see it:
-1. Call get_product_media with the product name
-2. The function will return media URLs with labels
-3. Describe what you're showing them
-
-Examples:
-- "Let me show you the front view of these shoes..."
-- "Here's a detailed look at the material..."
-- "Check out this video demonstration..."
-
-IMPORTANT: When a conversation starts with {{product_name}}, that means the customer clicked on that specific product. Tailor your first message to that product specifically and reference it directly. Be contextual and engaging about THAT product.`;
+IMPORTANT: When a conversation starts with {{product_name}}, that means the customer clicked on that specific product. Tailor your first message to that product specifically.`;
 
     // Check if master assistant exists in connections
     const { data: connection } = await supabase
@@ -97,7 +95,18 @@ IMPORTANT: When a conversation starts with {{product_name}}, that means the cust
 
     let assistantId = connection?.vapi_assistant_id;
 
-    const assistantConfig = {
+    // Use toolIds instead of deprecated model.functions
+    const toolIds = [
+      "93520019-103b-4afa-ac12-4d09f2e453c2", // get_inventory
+      "57d09085-54ee-409a-b0ed-50932552b2a4", // escalate_to_human
+      "dc46f3f8-d1a4-45b8-8f75-7d5c2240cd4e", // get_customer_memory
+      "db84ce1f-8c60-4070-9ee7-5b6f8d3a2a31", // save_customer_name
+      "76f61ace-fb6d-4323-a226-7ffa61969008", // transferCall
+    ];
+
+    const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/vapi-call-webhook`;
+
+    const assistantConfig: any = {
       name: "Master Product Sales Assistant",
       model: {
         provider: 'openai',
@@ -108,34 +117,12 @@ IMPORTANT: When a conversation starts with {{product_name}}, that means the cust
             content: systemPrompt
           }
         ],
-        functions: [
-          {
-            name: "get_product_media",
-            description: "Retrieves product images and videos to show customers. Call this when customers want to see a product, ask about its appearance, or need visual details.",
-            parameters: {
-              type: "object",
-              properties: {
-                product_name: {
-                  type: "string",
-                  description: "The name of the product to fetch media for (e.g., 'Nike Air Max', 'iPhone 15')"
-                },
-                label_filter: {
-                  type: "string",
-                  description: "Optional: specific view or type to show (e.g., 'front view', 'back view', 'demo video')"
-                }
-              },
-              required: ["product_name"]
-            },
-            async: false,
-            server: {
-              url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/get-product-media`
-            }
-          }
-        ]
+        toolIds,
       },
+      serverUrl: requestBody.serverUrl || webhookUrl,
       voice: {
-        provider: 'playht',
-        voiceId: 'jennifer'
+        provider: '11labs',
+        voiceId: 'sarah'
       },
       firstMessage: "Hi! I'm here to help you learn about our products. What interests you today?"
     };
@@ -143,8 +130,7 @@ IMPORTANT: When a conversation starts with {{product_name}}, that means the cust
     let vapiResponse;
     
     if (assistantId) {
-      // Update existing assistant
-      console.log('📝 Updating existing assistant:', assistantId);
+      console.log('📝 Trying to update existing assistant:', assistantId);
       vapiResponse = await fetch(`https://api.vapi.ai/assistant/${assistantId}`, {
         method: 'PATCH',
         headers: {
@@ -153,8 +139,21 @@ IMPORTANT: When a conversation starts with {{product_name}}, that means the cust
         },
         body: JSON.stringify(assistantConfig)
       });
+
+      // If assistant not found, create a new one
+      if (vapiResponse.status === 404) {
+        console.log('⚠️ Assistant not found, creating new one...');
+        assistantId = null;
+        vapiResponse = await fetch('https://api.vapi.ai/assistant', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${VAPI_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(assistantConfig)
+        });
+      }
     } else {
-      // Create new assistant
       console.log('✨ Creating new master assistant');
       vapiResponse = await fetch('https://api.vapi.ai/assistant', {
         method: 'POST',
@@ -174,27 +173,34 @@ IMPORTANT: When a conversation starts with {{product_name}}, that means the cust
 
     const vapiAssistant = await vapiResponse.json();
     console.log('✅ Master assistant updated:', vapiAssistant.id);
+    console.log('🔗 Server URL set to:', assistantConfig.serverUrl);
 
-    // Store/update assistant ID in connections
-    if (!assistantId) {
-      const { error: insertError } = await supabase
+    // Always update the assistant ID in connections
+    if (vapiAssistant.id !== connection?.vapi_assistant_id) {
+      const { error: updateError } = await supabase
         .from('connections')
-        .upsert({
+        .update({
+          vapi_assistant_id: vapiAssistant.id,
+          updated_at: new Date().toISOString()
+        })
+        .not('id', 'is', null);
+
+      if (updateError) {
+        // Try upsert if no row exists
+        await supabase.from('connections').upsert({
           id: crypto.randomUUID(),
           vapi_assistant_id: vapiAssistant.id,
           updated_at: new Date().toISOString()
         });
-
-      if (insertError) {
-        console.error('Database error:', insertError);
-        throw insertError;
       }
+      console.log('💾 Updated connections with new assistant ID');
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         assistantId: vapiAssistant.id,
+        serverUrl: assistantConfig.serverUrl,
         productsCount: products?.length || 0
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
