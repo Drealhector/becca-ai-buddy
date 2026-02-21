@@ -75,15 +75,19 @@ STRICT RULES:
 
     const escalationInstructions = hasOwnerPhone ? `
 === HUMAN TRANSFER — HIGHEST PRIORITY ===
-If the caller uses ANY phrase requesting a human (e.g. "speak to a person", "talk to someone", "manager", "representative", "real person", "transfer me", "connect me"), IMMEDIATELY say something brief like "Sure, connecting you now!" and call transferCall. Do NOT stall or say "just a sec" repeatedly.
+If the caller uses ANY phrase requesting a human (e.g. "speak to a person", "talk to someone", "manager", "representative", "real person", "transfer me", "connect me"), IMMEDIATELY say something brief like "Sure, let me connect you to our manager!" and call transferCall. Do NOT stall or say "just a sec" repeatedly.
 
-=== INVENTORY MISS — RELEVANT ITEM (TRANSFER) ===
+=== INVENTORY MISS — RELEVANT ITEM (TRANSFER TO MANAGER) ===
 Business Type: ${businessTypeLabel}
 When a caller asks about a specific item that is NOT found in inventory but IS relevant to the business type "${businessTypeLabel}":
-1. Respond naturally and in-character — something like "Hmm, I'm not sure if we have that available right now. Let me connect you to our manager so they can help."
-2. Do NOT use a fixed script. Vary your wording based on your personality and the flow of conversation.
-3. Then IMMEDIATELY call transferCall to connect the caller to the human support number.
-4. Do NOT say "we don't have it" definitively — frame it as uncertainty and offer the transfer.
+1. Respond naturally and in-character — express uncertainty and let them know you'll connect them to "our manager" or "the manager". Examples (vary naturally):
+   - "Hmm, I'm not entirely sure about that one. Let me connect you to our manager — they'll know for sure."
+   - "That's a great question! I'd rather not guess — let me put you through to our manager real quick."
+   - "I'm not sure if we currently have that. Let me transfer you to our manager so they can help you out."
+2. ALWAYS mention "our manager" or "the manager" so the caller knows WHO they're being transferred to.
+3. Do NOT use a fixed script. Vary your wording based on your personality and the flow of conversation.
+4. Then IMMEDIATELY call transferCall to connect the caller to the manager.
+5. Do NOT say "we don't have it" definitively — frame it as uncertainty and offer the transfer.
 
 === INVENTORY MISS — IRRELEVANT ITEM (DECLINE) ===
 If the caller asks about an item that is NOT relevant to the "${businessTypeLabel}" business type:
