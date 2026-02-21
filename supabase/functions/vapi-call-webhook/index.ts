@@ -31,7 +31,6 @@ serve(async (req) => {
       const customerNumber = callData.customer?.number || "";
       const assistantId = payload.message?.assistant?.id || payload.assistant?.id || "";
 
-      // Fetch the current assistant's system prompt from Vapi
       const VAPI_API_KEY = Deno.env.get("VAPI_API_KEY");
       let existingSystemPrompt = "";
       let existingFirstMessage = "";
@@ -97,7 +96,6 @@ NEVER mention databases, records, memory systems, or that you "looked them up."
 Sound natural, like you genuinely remember them from your last conversation.
 === END CALLER CONTEXT ===`;
 
-          // Build a personalized first message
           const nameGreet = memData.name ? `, ${memData.name}` : "";
           if (daysSince === 0) {
             memoryFirstMessage = `Hey${nameGreet}! Good to hear from you again today!${lastSummary ? ` We were just talking about something earlier — how's that going?` : ""}`;
@@ -121,22 +119,17 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
         }
       }
 
-      // Return assistantOverrides with memory appended to system prompt
       const finalSystemPrompt = existingSystemPrompt + memoryContext;
       const response: any = {
         assistant: {
           model: {
             messages: [
-              {
-                role: "system",
-                content: finalSystemPrompt
-              }
+              { role: "system", content: finalSystemPrompt }
             ]
           }
         }
       };
 
-      // Override firstMessage if we have a personalized one
       if (memoryFirstMessage) {
         response.assistant.firstMessage = memoryFirstMessage;
       }
@@ -152,7 +145,6 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
     if (eventType === "transfer-destination-request") {
       console.log("🔀 Transfer destination request received");
 
-      // Fetch the human support phone number
       const { data: custData } = await supabase
         .from("customizations")
         .select("owner_phone, business_name")
@@ -164,9 +156,7 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
       if (!humanPhone) {
         console.error("❌ No human support phone configured");
         return new Response(
-          JSON.stringify({
-            error: "No human support number configured"
-          }),
+          JSON.stringify({ error: "No human support number configured" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -184,10 +174,142 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
       );
     }
 
+    // ====== END-OF-CALL-REPORT ======
     if (eventType === "end-of-call-report") {
       const data = payload.message || payload;
+      const callId = data.call?.id || data.callId || data.id || "unknown";
 
-      // Extract transcript
+      // ===== CHECK IF THIS IS AN ESCALATION CALL ENDING =====
+      const { data: escReq } = await supabase
+        .from("escalation_requests")
+        .select("*")
+        .eq("escalation_call_id", callId)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (escReq) {
+        console.log("🔄 Escalation call ended — relaying response to parent call");
+
+        // Extract what the human said
+        let humanResponse = "";
+        let humanWantsTakeover = false;
+
+        if (data.artifact?.messagesOpenAIFormatted) {
+          const msgs = data.artifact.messagesOpenAIFormatted.filter((m: any) => m.role === "user");
+          humanResponse = msgs.map((m: any) => m.content).join(" ").trim();
+        } else if (data.artifact?.messages) {
+          const msgs = data.artifact.messages.filter((m: any) => m.role === "user" || m.role === "human");
+          humanResponse = msgs.map((m: any) => m.message || m.content || "").join(" ").trim();
+        }
+
+        // Check if human wants takeover
+        const takeoverPhrases = ["transfer", "put them through", "let me talk", "let me speak", "i'll handle", "i will handle", "connect me"];
+        const lowerResponse = humanResponse.toLowerCase();
+        humanWantsTakeover = takeoverPhrases.some(p => lowerResponse.includes(p));
+
+        console.log("👤 Human response:", humanResponse);
+        console.log("🔀 Wants takeover:", humanWantsTakeover);
+
+        // Update escalation record
+        await supabase
+          .from("escalation_requests")
+          .update({
+            human_response: humanResponse,
+            status: humanWantsTakeover ? "takeover" : "answered",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", escReq.id);
+
+        // ===== INJECT RESPONSE INTO PARENT CALL VIA controlUrl =====
+        if (escReq.control_url) {
+          try {
+            if (humanWantsTakeover) {
+              // Get owner phone for transfer
+              const { data: custData } = await supabase
+                .from("customizations")
+                .select("owner_phone")
+                .limit(1)
+                .maybeSingle();
+
+              if (custData?.owner_phone) {
+                // Tell customer about transfer
+                await fetch(escReq.control_url, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    type: "say",
+                    content: "Great news — our team member wants to speak with you directly. Connecting you now.",
+                    immediate: true,
+                  }),
+                });
+
+                // Small delay then transfer
+                await new Promise(r => setTimeout(r, 2000));
+
+                await fetch(escReq.control_url, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    type: "transfer",
+                    destination: custData.owner_phone,
+                  }),
+                });
+                console.log("✅ Transfer command sent to parent call");
+              }
+            } else if (humanResponse) {
+              // Step 1: Inject into assistant memory
+              await fetch(escReq.control_url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: "add-message",
+                  message: {
+                    role: "system",
+                    content: `Human support response about "${escReq.item_requested}": ${humanResponse}`,
+                  },
+                }),
+              });
+              console.log("✅ add-message sent to parent call");
+
+              // Step 2: Speak the answer to the customer
+              await fetch(escReq.control_url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: "say",
+                  content: `Thanks for holding! I checked with our team — ${humanResponse}. Would you like to proceed or is there anything else I can help with?`,
+                  immediate: true,
+                }),
+              });
+              console.log("✅ say command sent to parent call");
+            } else {
+              // Human didn't say anything useful
+              await fetch(escReq.control_url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: "say",
+                  content: "Sorry about the wait — I wasn't able to get a clear answer from our team this time. Can I help you with anything else?",
+                  immediate: true,
+                }),
+              });
+              console.log("⚠️ No useful human response, sent fallback to customer");
+            }
+          } catch (ctrlErr) {
+            console.error("❌ Error sending controlUrl commands:", ctrlErr);
+          }
+        } else {
+          console.error("❌ No controlUrl stored for this escalation");
+        }
+
+        // Don't process this as a normal call — return early
+        return new Response(
+          JSON.stringify({ success: true, escalation_handled: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // ===== NORMAL CALL END PROCESSING =====
       let transcriptText = "";
       if (data.artifact?.messagesOpenAIFormatted) {
         transcriptText = data.artifact.messagesOpenAIFormatted
@@ -207,7 +329,6 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
           .join("\n");
       }
 
-      // Calculate duration
       let durationSeconds = 0;
       if (data.startedAt && data.endedAt) {
         durationSeconds = Math.round(
@@ -223,7 +344,6 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
         }
       }
 
-      const callId = data.call?.id || data.callId || data.id || "unknown";
       const callType = data.call?.type || data.type;
       const isInbound = callType === "inboundPhoneCall" || callType === "webCall";
       const type = isInbound ? "incoming" : "outgoing";
@@ -232,7 +352,6 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
       const timestamp = data.startedAt || data.call?.createdAt || new Date().toISOString();
       const durationMinutes = Math.ceil(durationSeconds / 60);
 
-      // Extract call summary from analysis
       const callSummary = data.analysis?.summary || 
                           data.summary || 
                           transcriptText.substring(0, 500) || 
@@ -251,7 +370,6 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
           .maybeSingle();
 
         if (existingMemory) {
-          // UPDATE existing record — append summary, increment count
           const existingHistory = (existingMemory.call_history as any[]) || [];
           existingHistory.push({
             summary: callSummary,
@@ -267,13 +385,9 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
             })
             .eq("phone_number", customerNumber);
 
-          if (memError) {
-            console.error("❌ Error updating customer_memory:", memError);
-          } else {
-            console.log("✅ Customer memory updated. Total calls:", existingMemory.conversation_count + 1);
-          }
+          if (memError) console.error("❌ Error updating customer_memory:", memError);
+          else console.log("✅ Customer memory updated. Total calls:", existingMemory.conversation_count + 1);
         } else {
-          // INSERT new record
           const { error: memError } = await supabase
             .from("customer_memory")
             .insert({
@@ -281,24 +395,15 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
               conversation_count: 1,
               first_contacted_at: new Date().toISOString(),
               last_contacted_at: new Date().toISOString(),
-              call_history: [
-                {
-                  summary: callSummary,
-                  date: new Date().toISOString(),
-                },
-              ],
+              call_history: [{ summary: callSummary, date: new Date().toISOString() }],
             });
 
-          if (memError) {
-            console.error("❌ Error inserting customer_memory:", memError);
-          } else {
-            console.log("✅ New customer memory created for:", customerNumber);
-          }
+          if (memError) console.error("❌ Error inserting customer_memory:", memError);
+          else console.log("✅ New customer memory created for:", customerNumber);
         }
       }
-      // ====== END CUSTOMER MEMORY ENGINE ======
 
-      // Check if this call already exists in call_history
+      // Check if call already exists in history
       const { data: existingCall } = await supabase
         .from("call_history")
         .select("id")
@@ -309,10 +414,7 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
       if (existingCall) {
         await supabase
           .from("call_history")
-          .update({
-            duration_minutes: durationMinutes,
-            timestamp: timestamp,
-          })
+          .update({ duration_minutes: durationMinutes, timestamp })
           .eq("conversation_id", callId);
         console.log("✅ Updated existing call history record");
       } else {
@@ -325,11 +427,8 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
           conversation_id: callId,
         });
 
-        if (historyError) {
-          console.error("❌ Error saving call history:", historyError);
-        } else {
-          console.log("✅ Call history saved");
-        }
+        if (historyError) console.error("❌ Error saving call history:", historyError);
+        else console.log("✅ Call history saved");
       }
 
       // Save transcript
@@ -344,11 +443,8 @@ You do NOT know their name. At a natural point later in the conversation (NOT im
             transcriptText.toLowerCase().includes("purchase"),
         });
 
-        if (transcriptError) {
-          console.error("❌ Error saving transcript:", transcriptError);
-        } else {
-          console.log("✅ Transcript saved");
-        }
+        if (transcriptError) console.error("❌ Error saving transcript:", transcriptError);
+        else console.log("✅ Transcript saved");
       }
 
       console.log("✅ Call logged successfully");
