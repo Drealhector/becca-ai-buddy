@@ -448,6 +448,42 @@ export type Database = {
           },
         ]
       }
+      escalation_requests: {
+        Row: {
+          control_url: string
+          created_at: string
+          escalation_call_id: string | null
+          human_response: string | null
+          id: string
+          item_requested: string | null
+          parent_call_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          control_url: string
+          created_at?: string
+          escalation_call_id?: string | null
+          human_response?: string | null
+          id?: string
+          item_requested?: string | null
+          parent_call_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          control_url?: string
+          created_at?: string
+          escalation_call_id?: string | null
+          human_response?: string | null
+          id?: string
+          item_requested?: string | null
+          parent_call_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           business_id: string | null
