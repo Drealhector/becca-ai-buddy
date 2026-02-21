@@ -231,23 +231,37 @@ serve(async (req) => {
 
     // Strict check: does what was found actually match the query?
     // If caller asked for "HP laptop" but we returned "alienware laptop", that's a MISMATCH.
-    const queryWords = query ? query.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2) : [];
-    const queryMatchesResult = queryWords.length === 0 || filtered.some((item: any) => {
-      const itemNameLower = (item.name || '').toLowerCase();
-      // At least one meaningful query word must appear in the item name
-      return queryWords.some((qw: string) => itemNameLower.includes(qw));
-    });
+    // Generic words like "laptop", "phone", "tablet" alone shouldn't confirm a match —
+    // we need the SPECIFIC/BRAND part of the query to match too.
+    const GENERIC_WORDS = new Set(['laptop', 'phone', 'tablet', 'computer', 'watch', 'speaker', 'headphone', 'headphones', 'earbuds', 'charger', 'cable', 'monitor', 'keyboard', 'mouse', 'console', 'tv', 'television', 'camera', 'drone', 'printer', 'router', 'modem', 'device', 'gadget', 'accessory', 'case', 'cover', 'screen', 'display', 'pro', 'max', 'mini', 'plus', 'ultra', 'lite', 'the', 'a', 'an', 'for', 'and', 'or', 'with', 'in', 'of', 'to', 'get', 'buy', 'want', 'need', 'have', 'can', 'do', 'you', 'your', 'me', 'my', 'please', 'i']);
+    const queryWords = query ? query.toLowerCase().split(/\s+/).filter((w: string) => w.length >= 1) : [];
+    const specificQueryWords = queryWords.filter(w => !GENERIC_WORDS.has(w));
+    
+    let queryMatchesResult: boolean;
+    if (specificQueryWords.length === 0) {
+      // Only generic words (e.g. just "laptop") — any match is valid
+      queryMatchesResult = queryWords.length === 0 || filtered.some((item: any) => {
+        const itemNameLower = (item.name || '').toLowerCase();
+        return queryWords.some((qw: string) => itemNameLower.includes(qw));
+      });
+    } else {
+      // Has specific/brand words — ALL specific words must appear in at least one item name
+      queryMatchesResult = filtered.some((item: any) => {
+        const itemNameLower = (item.name || '').toLowerCase();
+        return specificQueryWords.every((qw: string) => itemNameLower.includes(qw));
+      });
+    }
 
     let resultText: string;
     let trueItemFound: boolean;
 
     if (!itemFound) {
       trueItemFound = false;
-      resultText = `ITEM_NOT_FOUND: No items found matching "${originalQuery || 'that query'}". The business type is "${businessTypeLabel}". ${hasOwnerPhone ? 'Escalation is available — use escalate_to_human if the item is relevant to this business type.' : 'No escalation number configured.'}`;
+      resultText = `ITEM_NOT_FOUND: No items found matching "${originalQuery || 'that query'}". The business type is "${businessTypeLabel}". ${hasOwnerPhone ? 'This item may be relevant to our business — express uncertainty and use transferCall to connect the caller to our manager.' : 'No human support number configured.'}`;
     } else if (!queryMatchesResult && query) {
       // Items were returned but they do NOT match what was asked — treat as not found for this specific query
       trueItemFound = false;
-      resultText = `ITEM_NOT_FOUND: The caller asked for "${originalQuery}" but we do not have that exact item. We only have: ${filtered.map((i: any) => i.name).join(', ')}. Business type is "${businessTypeLabel}". ${hasOwnerPhone ? 'Escalation is available — use escalate_to_human if the item is relevant to this business type.' : 'No escalation number configured.'}`;
+      resultText = `ITEM_NOT_FOUND: The caller asked for "${originalQuery}" but we do not have that exact item. We only have: ${filtered.map((i: any) => i.name).join(', ')}. Business type is "${businessTypeLabel}". ${hasOwnerPhone ? 'This item may be relevant to our business — express uncertainty and use transferCall to connect the caller to our manager.' : 'No human support number configured.'}`;
       console.log(`⚠️ Query "${query}" returned non-matching items: ${filtered.map((i: any) => i.name).join(', ')} — treating as NOT FOUND`);
     } else {
       trueItemFound = true;
