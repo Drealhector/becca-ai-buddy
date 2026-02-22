@@ -181,10 +181,63 @@ serve(async (req) => {
 
       console.log("💾 Saving call data:", { transcriptText: transcriptText.substring(0, 100), durationSeconds, callId, type, customerNumber });
 
-      // ====== CUSTOMER MEMORY ENGINE ======
+      // ====== STEP 3: UPSERT CALLERS TABLE ======
       if (customerNumber && customerNumber !== "Web Call") {
-        console.log("🧠 Processing customer memory for:", customerNumber);
+        const phone = customerNumber;
+        const nowIso = new Date().toISOString();
+        console.log("🧠 Upserting caller record for:", phone);
 
+        // 3.2 Build new memory summary
+        const newSummary: string | null =
+          data.analysis?.summary ??
+          (transcriptText ? transcriptText.substring(0, 500) : null);
+
+        // 3.3 Extract captured name from structured data
+        const capturedName: string | null =
+          payload.message?.analysis?.structuredData?.captured_name ?? null;
+
+        // 3.4 Fetch existing caller
+        const { data: existing } = await supabase
+          .from("callers")
+          .select("*")
+          .eq("phone", phone)
+          .maybeSingle();
+
+        // Merge memory: old + separator + new, truncate to ~3000 chars
+        const mergedMemory = existing?.memory_summary
+          ? `${existing.memory_summary}\n- ${newSummary}`
+          : (newSummary ? `- ${newSummary}` : null);
+        const truncatedMemory = mergedMemory
+          ? mergedMemory.substring(0, 3000)
+          : null;
+
+        // Build upsert payload
+        const updatePayload: any = {
+          last_call_at: nowIso,
+          call_count: (existing?.call_count ?? 0) + 1,
+          memory_summary: truncatedMemory,
+          updated_at: nowIso,
+        };
+
+        // Only set name if callers.name is null AND capturedName is provided
+        if (!existing?.name && capturedName) {
+          updatePayload.name = capturedName;
+        }
+
+        // Upsert — onConflict: "phone" guarantees no duplicate numbers
+        const { error: callerError } = await supabase
+          .from("callers")
+          .upsert(
+            { phone, ...updatePayload },
+            { onConflict: "phone" }
+          );
+
+        if (callerError) console.error("❌ Error upserting caller:", callerError);
+        else console.log("✅ Caller upserted. Count:", updatePayload.call_count, "Name:", updatePayload.name || existing?.name || "unknown");
+      }
+
+      // ====== CUSTOMER MEMORY ENGINE (legacy) ======
+      if (customerNumber && customerNumber !== "Web Call") {
         const { data: existingMemory } = await supabase
           .from("customer_memory")
           .select("*")
@@ -193,12 +246,8 @@ serve(async (req) => {
 
         if (existingMemory) {
           const existingHistory = (existingMemory.call_history as any[]) || [];
-          existingHistory.push({
-            summary: callSummary,
-            date: new Date().toISOString(),
-          });
-
-          const { error: memError } = await supabase
+          existingHistory.push({ summary: callSummary, date: new Date().toISOString() });
+          await supabase
             .from("customer_memory")
             .update({
               conversation_count: existingMemory.conversation_count + 1,
@@ -206,11 +255,8 @@ serve(async (req) => {
               call_history: existingHistory,
             })
             .eq("phone_number", customerNumber);
-
-          if (memError) console.error("❌ Error updating customer_memory:", memError);
-          else console.log("✅ Customer memory updated. Total calls:", existingMemory.conversation_count + 1);
         } else {
-          const { error: memError } = await supabase
+          await supabase
             .from("customer_memory")
             .insert({
               phone_number: customerNumber,
@@ -219,9 +265,6 @@ serve(async (req) => {
               last_contacted_at: new Date().toISOString(),
               call_history: [{ summary: callSummary, date: new Date().toISOString() }],
             });
-
-          if (memError) console.error("❌ Error inserting customer_memory:", memError);
-          else console.log("✅ New customer memory created for:", customerNumber);
         }
       }
 
