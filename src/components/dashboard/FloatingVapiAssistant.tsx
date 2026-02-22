@@ -347,10 +347,10 @@ const FloatingVapiAssistant = ({
           isLoading ? 'animate-[spin_1s_linear_infinite]' : isActive ? 'animate-pulse' : ''
         }`}>
           <div className={`absolute inset-0 rounded-full blur-xl ${
-            isLoading ? 'bg-blue-300/40 animate-[ping_0.8s_ease-in-out_infinite]' : 'bg-blue-500/20 animate-[ping_2s_ease-in-out_infinite]'
+            isLoading ? 'bg-cyan-300/40 animate-[ping_0.8s_ease-in-out_infinite]' : 'bg-cyan-500/20 animate-[ping_2s_ease-in-out_infinite]'
           }`} />
           <div className={`absolute inset-0 rounded-full blur-lg ${
-            isLoading ? 'bg-blue-400/50 animate-[ping_1s_ease-in-out_infinite]' : 'bg-blue-400/30 animate-[ping_2.5s_ease-in-out_infinite]'
+            isLoading ? 'bg-cyan-400/50 animate-[ping_1s_ease-in-out_infinite]' : 'bg-cyan-400/30 animate-[ping_2.5s_ease-in-out_infinite]'
           }`} style={{ animationDelay: isLoading ? '0.2s' : '0.5s' }} />
         </div>
 
@@ -368,7 +368,7 @@ const FloatingVapiAssistant = ({
         }}>
           {/* === BASE: deep ocean-blue core === */}
           <div className="absolute inset-0" style={{
-            background: 'radial-gradient(circle at 38% 35%, #dbeafe 0%, #93c5fd 20%, #3b82f6 45%, #1e3a8a 72%, #0f1e4a 100%)'
+            background: 'radial-gradient(circle at 38% 35%, #dbeafe 0%, #67e8f9 20%, #06b6d4 45%, #0e4f5c 72%, #0a2a30 100%)'
           }} />
 
           {/* === MILK BLOB 1 — large dominant mass, slow rolling slosh === */}
@@ -471,14 +471,14 @@ const FloatingVapiAssistant = ({
           {/* === SPEAKING pulse overlay === */}
           {isSpeaking && (
             <div className="absolute inset-0">
-              <div className="absolute inset-0 bg-blue-400/25 rounded-full animate-[pulse_0.8s_ease-in-out_infinite]" />
-              <div className="absolute inset-0 bg-blue-500/15 rounded-full animate-[ping_1s_ease-out_infinite]" />
+              <div className="absolute inset-0 bg-cyan-400/25 rounded-full animate-[pulse_0.8s_ease-in-out_infinite]" />
+              <div className="absolute inset-0 bg-cyan-500/15 rounded-full animate-[ping_1s_ease-out_infinite]" />
             </div>
           )}
 
           {/* === LOADING border spin === */}
           {isLoading && (
-            <div className="absolute inset-0 rounded-full border-2 border-blue-300/60 animate-[spin_0.9s_linear_infinite]" />
+            <div className="absolute inset-0 rounded-full border-2 border-cyan-300/60 animate-[spin_0.9s_linear_infinite]" />
           )}
           {isActive && !isLoading && (
             <div className="absolute inset-0 rounded-full border border-cyan-400/40 animate-[spin_4s_linear_infinite]" />
@@ -489,16 +489,16 @@ const FloatingVapiAssistant = ({
         {(isLoading || isActive) && (
           <>
             <div className={`absolute top-0 left-1/2 w-1 h-1 rounded-full animate-[ping_1.5s_ease-out_infinite] ${
-              isLoading ? 'bg-blue-300 w-1.5 h-1.5' : 'bg-blue-400'
+              isLoading ? 'bg-cyan-300 w-1.5 h-1.5' : 'bg-cyan-400'
             }`} style={{ animationDelay: '0s' }} />
             <div className={`absolute top-1/4 right-0 w-1 h-1 rounded-full animate-[ping_1.5s_ease-out_infinite] ${
-              isLoading ? 'bg-blue-200 w-1.5 h-1.5' : 'bg-blue-300'
+              isLoading ? 'bg-cyan-200 w-1.5 h-1.5' : 'bg-cyan-300'
             }`} style={{ animationDelay: '0.3s' }} />
             <div className={`absolute bottom-1/4 left-0 w-1 h-1 rounded-full animate-[ping_1.5s_ease-out_infinite] ${
-              isLoading ? 'bg-blue-400 w-1.5 h-1.5' : 'bg-blue-500'
+              isLoading ? 'bg-cyan-400 w-1.5 h-1.5' : 'bg-cyan-500'
             }`} style={{ animationDelay: '0.6s' }} />
             <div className={`absolute bottom-0 right-1/3 w-1 h-1 rounded-full animate-[ping_1.5s_ease-out_infinite] ${
-              isLoading ? 'bg-blue-300 w-1.5 h-1.5' : 'bg-blue-400'
+              isLoading ? 'bg-cyan-300 w-1.5 h-1.5' : 'bg-cyan-400'
             }`} style={{ animationDelay: '0.9s' }} />
           </>
         )}
@@ -530,7 +530,7 @@ const FloatingVapiAssistant = ({
           88%  { transform: translate(4%,  -16%)  rotate(120deg); border-radius: 42% 58% 45% 55% / 58% 42% 55% 45%; opacity: 0.84; }
           100% { transform: translate(0%,   0%)   rotate(135deg); border-radius: 60% 40% 55% 45% / 50% 60% 40% 55%; opacity: 0.90; }
         }
-        .milk-blob-1 { animation: milk1 8s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
+        .milk-blob-1 { animation: milk1 3.5s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
 
         @keyframes milk2 {
           0%   { transform: translate(0%,   0%)   rotate(0deg);   border-radius: 45% 55% 40% 60% / 55% 45% 60% 40%; opacity: 0.78; }
@@ -542,7 +542,7 @@ const FloatingVapiAssistant = ({
           90%  { transform: translate(-8%, -12%)  rotate(-115deg);border-radius: 50% 50% 44% 56% / 58% 42% 50% 50%; opacity: 0.80; }
           100% { transform: translate(0%,   0%)   rotate(-130deg);border-radius: 45% 55% 40% 60% / 55% 45% 60% 40%; opacity: 0.78; }
         }
-        .milk-blob-2 { animation: milk2 11s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
+        .milk-blob-2 { animation: milk2 4.5s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
 
         @keyframes milk3 {
           0%   { transform: translate(0%,   0%)   rotate(0deg);   border-radius: 55% 45% 50% 50% / 40% 60% 45% 55%; opacity: 0.70; }
@@ -552,7 +552,7 @@ const FloatingVapiAssistant = ({
           80%  { transform: translate(-6%, -16%)  rotate(108deg); border-radius: 52% 48% 45% 55% / 44% 56% 58% 42%; opacity: 0.72; }
           100% { transform: translate(0%,   0%)   rotate(135deg); border-radius: 55% 45% 50% 50% / 40% 60% 45% 55%; opacity: 0.70; }
         }
-        .milk-blob-3 { animation: milk3 7s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
+        .milk-blob-3 { animation: milk3 3s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
 
         @keyframes milk4 {
           0%   { transform: translate(0%,0%)    scaleX(1)    scaleY(1);    opacity: 0.50; }
@@ -561,7 +561,7 @@ const FloatingVapiAssistant = ({
           75%  { transform: translate(-10%,-4%) scaleX(1.10) scaleY(0.92); opacity: 0.44; }
           100% { transform: translate(0%,0%)    scaleX(1)    scaleY(1);    opacity: 0.50; }
         }
-        .milk-blob-4 { animation: milk4 14s ease-in-out infinite; }
+        .milk-blob-4 { animation: milk4 5s ease-in-out infinite; }
 
         @keyframes milk5 {
           0%   { transform: translate(0%,  0%)  rotate(0deg);   border-radius: 40% 60% 55% 45% / 60% 40% 55% 45%; opacity: 0.65; }
@@ -569,7 +569,7 @@ const FloatingVapiAssistant = ({
           66%  { transform: translate(-10%,16%) rotate(-90deg); border-radius: 48% 52% 58% 42% / 55% 45% 40% 60%; opacity: 0.60; }
           100% { transform: translate(0%,  0%)  rotate(-135deg);border-radius: 40% 60% 55% 45% / 60% 40% 55% 45%; opacity: 0.65; }
         }
-        .milk-blob-5 { animation: milk5 9s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
+        .milk-blob-5 { animation: milk5 3.8s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
       `}</style>
     </div>
   );
