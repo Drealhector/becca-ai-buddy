@@ -1,0 +1,1 @@
+ALTER TABLE public.call_history ADD COLUMN recording_url text;
