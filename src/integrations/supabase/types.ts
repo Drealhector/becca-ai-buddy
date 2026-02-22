@@ -803,6 +803,47 @@ export type Database = {
           },
         ]
       }
+      scheduled_calls: {
+        Row: {
+          business_id: string | null
+          created_at: string
+          executed_at: string | null
+          id: string
+          phone_number: string
+          purpose: string
+          scheduled_at: string
+          status: string
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          phone_number: string
+          purpose: string
+          scheduled_at: string
+          status?: string
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          phone_number?: string
+          purpose?: string
+          scheduled_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_calls_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       toggles: {
         Row: {
           business_id: string | null
