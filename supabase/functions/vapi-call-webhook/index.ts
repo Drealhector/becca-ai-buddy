@@ -25,134 +25,121 @@ serve(async (req) => {
 
     // ====== ASSISTANT-REQUEST: PRE-CALL MEMORY INJECTION ======
     if (eventType === "assistant-request") {
-      console.log("🧠 Assistant-request received — injecting memory before call starts");
+      console.log("🧠 Assistant-request received — looking up caller before speaking");
 
       const callData = payload.message?.call || payload.call || {};
       const customerNumber = callData.customer?.number || "";
       const assistantId = payload.message?.assistant?.id || payload.assistant?.id || "";
-
       const VAPI_API_KEY = Deno.env.get("VAPI_API_KEY");
+
+      // 1. Fetch existing assistant config (system prompt + toolIds)
       let existingSystemPrompt = "";
       let existingFirstMessage = "";
+      let existingToolIds: string[] = [];
 
       if (VAPI_API_KEY && assistantId) {
         try {
-          const assistantRes = await fetch(`https://api.vapi.ai/assistant/${assistantId}`, {
+          const res = await fetch(`https://api.vapi.ai/assistant/${assistantId}`, {
             headers: { "Authorization": `Bearer ${VAPI_API_KEY}` }
           });
-          if (assistantRes.ok) {
-            const assistantConfig = await assistantRes.json();
-            const sysMsg = (assistantConfig.model?.messages || []).find((m: any) => m.role === "system");
+          if (res.ok) {
+            const cfg = await res.json();
+            const sysMsg = (cfg.model?.messages || []).find((m: any) => m.role === "system");
             existingSystemPrompt = sysMsg?.content || "";
-            existingFirstMessage = assistantConfig.firstMessage || "";
-            console.log("📋 Fetched existing system prompt length:", existingSystemPrompt.length);
+            existingFirstMessage = cfg.firstMessage || "";
+            existingToolIds = cfg.model?.toolIds || [];
+            console.log("📋 Fetched assistant config. Prompt length:", existingSystemPrompt.length, "ToolIds:", existingToolIds.length);
           } else {
-            const errText = await assistantRes.text();
-            console.error("⚠️ Could not fetch assistant config:", errText);
+            console.error("⚠️ Could not fetch assistant config:", await res.text());
           }
         } catch (e) {
           console.error("⚠️ Error fetching assistant:", e);
         }
       }
 
-      let memoryContext = "";
-      let memoryFirstMessage = "";
+      // 2. Look up caller in callers table
+      let callerContext = "";
+      let callerFirstMessage = "";
 
       if (customerNumber && customerNumber !== "Web Call") {
-        console.log("📞 Looking up memory for:", customerNumber);
+        console.log("📞 Looking up caller:", customerNumber);
 
-        const { data: memData } = await supabase
-          .from("customer_memory")
+        const { data: caller } = await supabase
+          .from("callers")
           .select("*")
-          .eq("phone_number", customerNumber)
+          .eq("phone", customerNumber)
           .maybeSingle();
 
-        if (memData) {
-          const lastContact = new Date(memData.last_contacted_at);
-          const now = new Date();
-          const daysSince = Math.floor((now.getTime() - lastContact.getTime()) / (1000 * 60 * 60 * 24));
+        if (caller) {
+          // === RETURNING CALLER ===
+          const daysSince = Math.floor((Date.now() - new Date(caller.last_call_at).getTime()) / 86400000);
 
-          const callHistory = (memData.call_history as any[]) || [];
-          const recentSummaries = callHistory.slice(-2).map((h: any) => h.summary).filter(Boolean);
-          const lastSummary = recentSummaries.length > 0 ? recentSummaries[recentSummaries.length - 1] : null;
+          let lastCallPhrase = "";
+          if (daysSince === 0) lastCallPhrase = "earlier today";
+          else if (daysSince === 1) lastCallPhrase = "yesterday";
+          else if (daysSince === 2) lastCallPhrase = "two days ago";
+          else if (daysSince <= 6) lastCallPhrase = "a few days ago";
+          else if (daysSince <= 13) lastCallPhrase = "about a week ago";
+          else lastCallPhrase = "a couple weeks ago";
 
-          let timeRef = "";
-          if (daysSince === 0) timeRef = "earlier today";
-          else if (daysSince === 1) timeRef = "yesterday";
-          else if (daysSince <= 6) timeRef = `a few days ago`;
-          else if (daysSince <= 30) timeRef = "a couple of weeks ago";
-          else timeRef = "a while back";
+          const nameInstruction = caller.name
+            ? `You already know their name is "${caller.name}". Use it naturally. Do NOT ask for their name.`
+            : `You do NOT know their name yet. Ask for it once, naturally, early in the conversation. Do not ask again after that.`;
 
-          memoryContext = `\n\n=== CALLER CONTEXT (PRE-LOADED BY SYSTEM — YOU ALREADY KNOW THIS) ===
-This is a RETURNING caller. Their phone number is ${customerNumber}.
-${memData.name ? `Their name is ${memData.name}.` : "You do NOT know their name yet."}
-They have called ${memData.conversation_count} times before.
-You last spoke ${timeRef}.
-${lastSummary ? `What you discussed last time: ${lastSummary}` : ""}
-${recentSummaries.length > 1 ? `What you discussed the time before: ${recentSummaries[0]}` : ""}
+          callerContext = `\n\n=== RETURNING CALLER CONTEXT (PRE-LOADED — YOU ALREADY KNOW THIS) ===
+Phone: ${customerNumber}
+${caller.name ? `Name: ${caller.name}` : "Name: unknown"}
+Call count: ${caller.call_count}
+Last spoke: ${lastCallPhrase}
+${caller.memory_summary ? `Memory summary: ${caller.memory_summary}` : "No previous summary available."}
 
-YOUR GREETING MUST reflect that you remember them. ${memData.name ? `Use their name "${memData.name}".` : ""} Reference when you last spoke naturally. If relevant, mention what you talked about.
-NEVER mention databases, records, memory systems, or that you "looked them up."
-Sound natural, like you genuinely remember them from your last conversation.
+${nameInstruction}
+
+Your greeting MUST reflect that you remember them. Use relative time only (e.g. "${lastCallPhrase}"). NEVER use exact dates. NEVER mention databases, records, or memory systems.
+Sound natural — like you genuinely remember them.
 === END CALLER CONTEXT ===`;
 
-          const nameGreet = memData.name ? `, ${memData.name}` : "";
+          const nameGreet = caller.name ? `, ${caller.name}` : "";
           if (daysSince === 0) {
-            memoryFirstMessage = `Hey${nameGreet}! Good to hear from you again today!${lastSummary ? ` We were just talking about something earlier — how's that going?` : ""}`;
+            callerFirstMessage = `Hey${nameGreet}! Good to hear from you again today!`;
           } else if (daysSince === 1) {
-            memoryFirstMessage = `Hey${nameGreet}! We just spoke yesterday, right? Welcome back!${lastSummary ? ` Last time you were asking about something — did that work out?` : ""}`;
+            callerFirstMessage = `Hey${nameGreet}! We just spoke yesterday — welcome back!`;
           } else if (daysSince <= 6) {
-            memoryFirstMessage = `Hey${nameGreet}! We chatted a few days ago — good to hear from you again!${lastSummary ? ` How did things go since we last talked?` : ""}`;
-          } else if (daysSince <= 30) {
-            memoryFirstMessage = `Hey${nameGreet}! It's been a little while! Good to hear from you again.`;
+            callerFirstMessage = `Hey${nameGreet}! We chatted a few days ago — good to hear from you again!`;
+          } else if (daysSince <= 13) {
+            callerFirstMessage = `Hey${nameGreet}! It's been about a week — welcome back!`;
           } else {
-            memoryFirstMessage = `Hey${nameGreet}! It's been a while since we last spoke! Welcome back.`;
+            callerFirstMessage = `Hey${nameGreet}! It's been a little while — great to hear from you again!`;
           }
 
-          console.log("✅ Memory found — injecting. Calls:", memData.conversation_count, "Days since:", daysSince);
+          console.log("✅ Returning caller found. Calls:", caller.call_count, "Days since:", daysSince);
         } else {
-          memoryContext = `\n\n=== CALLER CONTEXT (PRE-LOADED BY SYSTEM) ===
-This is a FIRST-TIME caller. Their phone number is ${customerNumber}.
+          // === FIRST-TIME CALLER ===
+          callerContext = `\n\n=== FIRST-TIME CALLER CONTEXT ===
+This is a FIRST-TIME caller. Phone: ${customerNumber}.
+Do NOT ask for their name. Just greet them naturally and discover their intent.
 === END CALLER CONTEXT ===`;
-          console.log("ℹ️ No memory found — first-time caller");
+          console.log("ℹ️ First-time caller — no record found");
         }
       }
 
-      const finalSystemPrompt = existingSystemPrompt + memoryContext;
-
-      // Preserve toolIds from the existing assistant config
-      let existingToolIds: string[] = [];
-      if (VAPI_API_KEY && assistantId) {
-        try {
-          const toolRes = await fetch(`https://api.vapi.ai/assistant/${assistantId}`, {
-            headers: { "Authorization": `Bearer ${VAPI_API_KEY}` }
-          });
-          if (toolRes.ok) {
-            const assistantData = await toolRes.json();
-            existingToolIds = assistantData.model?.toolIds || [];
-            console.log("📎 Preserving toolIds in assistant-request:", existingToolIds);
-          }
-        } catch (e) {
-          console.error("⚠️ Error fetching toolIds:", e);
-        }
-      }
+      // 3. Build response
+      const finalSystemPrompt = existingSystemPrompt + callerContext;
 
       const response: any = {
         assistant: {
           model: {
-            messages: [
-              { role: "system", content: finalSystemPrompt }
-            ],
+            messages: [{ role: "system", content: finalSystemPrompt }],
             ...(existingToolIds.length > 0 ? { toolIds: existingToolIds } : {})
           }
         }
       };
 
-      if (memoryFirstMessage) {
-        response.assistant.firstMessage = memoryFirstMessage;
+      if (callerFirstMessage) {
+        response.assistant.firstMessage = callerFirstMessage;
       }
 
-      console.log("📤 Returning assistant-request response with memory context");
+      console.log("📤 Returning assistant-request response");
       return new Response(
         JSON.stringify(response),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
