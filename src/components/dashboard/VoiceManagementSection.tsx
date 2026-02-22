@@ -333,10 +333,15 @@ const VoiceManagementSection = () => {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Combine voices: cloned first, then regular
+  // Combine voices: cloned first (with preview_url from API if available), then regular
+  const clonedIds = new Set(customVoices.map(v => v.id));
   const allVoices = [
-    ...customVoices.map(v => ({ ...v, category: 'cloned' as const })),
-    ...voices.filter(v => !customVoices.some(cv => cv.id === v.id)),
+    ...customVoices.map(v => {
+      // Find this cloned voice in the API response to get its preview_url
+      const apiVoice = voices.find(av => av.id === v.id);
+      return { ...v, category: 'cloned' as const, preview_url: apiVoice?.preview_url || v.preview_url || null };
+    }),
+    ...voices.filter(v => !clonedIds.has(v.id)),
   ];
 
   return (
