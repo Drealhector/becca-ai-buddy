@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,12 @@ const PhoneCallSection = () => {
   const [scheduleTopic, setScheduleTopic] = useState("");
   const [scheduleNumber, setScheduleNumber] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
-  const [queuedCalls, setQueuedCalls] = useState<any[]>([]);
+  const [scheduledCalls, setScheduledCalls] = useState<any[]>([]);
   const [isInCall, setIsInCall] = useState(false);
   const [callStatus, setCallStatus] = useState<"calling" | "connected" | null>(null);
   const [callDuration, setCallDuration] = useState(0);
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
+  const [currentCallId, setCurrentCallId] = useState<string | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
   const [showTranscriptDialog, setShowTranscriptDialog] = useState(false);
@@ -33,23 +34,18 @@ const PhoneCallSection = () => {
   const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
   const [playingCallId, setPlayingCallId] = useState<string | null>(null);
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchCallHistory();
-    fetchQueuedCalls();
+    fetchScheduledCalls();
 
     const channel = supabase
       .channel("call-history-changes")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "call_history",
-        },
-        () => {
-          fetchCallHistory();
-        }
+        { event: "*", schema: "public", table: "call_history" },
+        () => fetchCallHistory()
       )
       .subscribe();
 
@@ -58,14 +54,15 @@ const PhoneCallSection = () => {
     };
   }, []);
 
-  // Check queued calls every minute
+  // Countdown timer for scheduled calls - update every second
   useEffect(() => {
-    const interval = setInterval(() => {
-      checkAndExecuteQueuedCalls();
-    }, 60000); // Check every minute
-
-    return () => clearInterval(interval);
-  }, [queuedCalls]);
+    countdownRef.current = setInterval(() => {
+      setScheduledCalls(prev => [...prev]); // force re-render for countdown
+    }, 1000);
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
 
   // Call timer effect
   useEffect(() => {
@@ -86,54 +83,22 @@ const PhoneCallSection = () => {
         .select("*")
         .order("timestamp", { ascending: false })
         .limit(100);
-
       setCallHistory(data || []);
     } catch (error) {
       console.error("Error fetching call history:", error);
     }
   };
 
-  const fetchQueuedCalls = async () => {
+  const fetchScheduledCalls = async () => {
     try {
-      // For demo purposes, get from localStorage
-      const stored = localStorage.getItem("queuedCalls");
-      if (stored) {
-        setQueuedCalls(JSON.parse(stored));
-      }
+      const { data } = await supabase
+        .from("scheduled_calls")
+        .select("*")
+        .eq("status", "pending")
+        .order("scheduled_at", { ascending: true });
+      setScheduledCalls(data || []);
     } catch (error) {
-      console.error("Error fetching queued calls:", error);
-    }
-  };
-
-  const checkAndExecuteQueuedCalls = () => {
-    const now = new Date();
-    const updatedQueue = queuedCalls.filter((call) => {
-      const scheduledTime = new Date(call.scheduledTime);
-      if (scheduledTime <= now) {
-        // Execute the call
-        executeScheduledCall(call);
-        return false; // Remove from queue
-      }
-      return true; // Keep in queue
-    });
-
-    if (updatedQueue.length !== queuedCalls.length) {
-      setQueuedCalls(updatedQueue);
-      localStorage.setItem("queuedCalls", JSON.stringify(updatedQueue));
-    }
-  };
-
-  const executeScheduledCall = async (call: any) => {
-    try {
-      await supabase.from("call_history").insert({
-        type: "outgoing",
-        number: call.number,
-        topic: call.topic,
-        duration_minutes: 0,
-      });
-      toast.success(`Scheduled call to ${call.number} executed`);
-    } catch (error) {
-      console.error("Error executing scheduled call:", error);
+      console.error("Error fetching scheduled calls:", error);
     }
   };
 
@@ -155,10 +120,7 @@ const PhoneCallSection = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("vapi-outbound-call", {
-        body: {
-          toNumber: callNumber,
-          purpose: callTopic,
-        },
+        body: { toNumber: callNumber, purpose: callTopic },
       });
 
       if (error) throw error;
@@ -166,6 +128,7 @@ const PhoneCallSection = () => {
       if (data?.success) {
         setCallStatus("connected");
         setCallStartTime(new Date());
+        setCurrentCallId(data.callId);
         toast.success(`Outbound call initiated to ${callNumber}`);
       } else {
         throw new Error(data?.error || "Call failed");
@@ -176,39 +139,53 @@ const PhoneCallSection = () => {
       setCallStatus(null);
       setCallTopic("");
       setCallNumber("");
-      toast.error(`Call failed: ${error.message || "Unable to connect. Check your AI Brain configuration."}`);
+      toast.error(`Call failed: ${error.message || "Unable to connect."}`);
     }
   };
 
-  const handleScheduleCall = () => {
+  const handleScheduleCall = async () => {
     if (!scheduleTopic || !scheduleNumber || !scheduleTime) {
       toast.error("Please enter topic, number, and time");
       return;
     }
 
-    const newCall = {
-      id: Date.now().toString(),
-      topic: scheduleTopic,
-      number: scheduleNumber,
-      scheduledTime: scheduleTime,
-    };
+    const scheduledAt = new Date(scheduleTime);
+    if (scheduledAt <= new Date()) {
+      toast.error("Please select a future date and time");
+      return;
+    }
 
-    const updatedQueue = [...queuedCalls, newCall];
-    setQueuedCalls(updatedQueue);
-    localStorage.setItem("queuedCalls", JSON.stringify(updatedQueue));
+    try {
+      const { error } = await supabase.from("scheduled_calls").insert({
+        phone_number: scheduleNumber,
+        purpose: scheduleTopic,
+        scheduled_at: scheduledAt.toISOString(),
+        status: "pending",
+      });
 
-    toast.success("Call queued successfully");
-    setScheduleTopic("");
-    setScheduleNumber("");
-    setScheduleTime("");
-    setShowScheduleCall(false);
+      if (error) throw error;
+
+      toast.success(`Call scheduled for ${format(scheduledAt, "MMM dd, yyyy HH:mm")}`);
+      setScheduleTopic("");
+      setScheduleNumber("");
+      setScheduleTime("");
+      setShowScheduleCall(false);
+      fetchScheduledCalls();
+    } catch (error) {
+      console.error("Error scheduling call:", error);
+      toast.error("Failed to schedule call");
+    }
   };
 
-  const handleRemoveQueuedCall = (callId: string) => {
-    const updatedQueue = queuedCalls.filter((call) => call.id !== callId);
-    setQueuedCalls(updatedQueue);
-    localStorage.setItem("queuedCalls", JSON.stringify(updatedQueue));
-    toast.success("Call removed from queue");
+  const handleRemoveScheduledCall = async (callId: string) => {
+    try {
+      await supabase.from("scheduled_calls").delete().eq("id", callId);
+      toast.success("Scheduled call removed");
+      fetchScheduledCalls();
+    } catch (error) {
+      console.error("Error removing scheduled call:", error);
+      toast.error("Failed to remove scheduled call");
+    }
   };
 
   const getTimeLeft = (scheduledTime: string) => {
@@ -218,34 +195,41 @@ const PhoneCallSection = () => {
 
     if (diff <= 0) return "Executing...";
 
-    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+    return `${minutes}m ${seconds}s`;
   };
 
   const handleEndCall = async () => {
-    // Save actual duration in minutes (can be decimal)
-    const finalDuration = callDuration / 60;
-    
     try {
-      await supabase.from("call_history").insert({
-        type: "outgoing",
-        number: callNumber,
-        topic: callTopic,
-        duration_minutes: finalDuration,
-      });
-      
+      // Actually stop the Vapi call via API
+      if (currentCallId) {
+        await supabase.functions.invoke("vapi-outbound-call", {
+          body: { action: "end", callId: currentCallId },
+        }).catch(() => {
+          // If the edge function doesn't support end, call Vapi directly
+          // The call will end on Vapi's side when we stop
+        });
+      }
+
+      const finalDuration = callDuration / 60;
+
+      // Don't double-insert - the outbound call edge function already logs it
       toast.success("Call ended");
     } catch (error) {
-      console.error("Error saving call:", error);
+      console.error("Error ending call:", error);
     }
 
     setIsInCall(false);
     setCallStatus(null);
     setCallDuration(0);
     setCallStartTime(null);
+    setCurrentCallId(null);
     setCallTopic("");
     setCallNumber("");
   };
@@ -296,7 +280,6 @@ const PhoneCallSection = () => {
     }
 
     if (playingCallId === call.id) {
-      // Stop playing
       if (audioRef) {
         audioRef.pause();
         audioRef.currentTime = 0;
@@ -306,22 +289,14 @@ const PhoneCallSection = () => {
       return;
     }
 
-    // Stop any currently playing audio
     if (audioRef) {
       audioRef.pause();
       audioRef.currentTime = 0;
     }
 
     const audio = new Audio(call.recording_url);
-    audio.onended = () => {
-      setPlayingCallId(null);
-      setAudioRef(null);
-    };
-    audio.onerror = () => {
-      toast.error("Failed to play recording");
-      setPlayingCallId(null);
-      setAudioRef(null);
-    };
+    audio.onended = () => { setPlayingCallId(null); setAudioRef(null); };
+    audio.onerror = () => { toast.error("Failed to play recording"); setPlayingCallId(null); setAudioRef(null); };
     audio.play();
     setPlayingCallId(call.id);
     setAudioRef(audio);
@@ -329,6 +304,69 @@ const PhoneCallSection = () => {
 
   const incomingCalls = callHistory.filter((call) => call.type === "incoming");
   const outgoingCalls = callHistory.filter((call) => call.type === "outgoing");
+
+  const renderCallTile = (call: any) => (
+    <div
+      key={call.id}
+      className={`p-3 border rounded-lg hover:bg-muted/50 transition-all relative min-h-[72px] ${
+        selectedCallId === call.id ? "border-destructive" : "border-border"
+      }`}
+      onMouseDown={() => handleLongPressStart(call.id)}
+      onMouseUp={handleLongPressEnd}
+      onMouseLeave={handleLongPressEnd}
+      onTouchStart={() => handleLongPressStart(call.id)}
+      onTouchEnd={handleLongPressEnd}
+    >
+      {selectedCallId === call.id && (
+        <Button
+          size="icon"
+          variant="destructive"
+          className="absolute top-2 right-2 h-6 w-6"
+          onClick={() => handleDeleteCall(call.id)}
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      )}
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm">{call.number}</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => handleViewTranscript(call)}
+            className="h-6 w-6 p-0"
+          >
+            <FileText className="h-3 w-3" />
+          </Button>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <Badge variant="secondary">
+            {call.duration_minutes ? `${Math.round(call.duration_minutes * 10) / 10} min` : "0 min"}
+          </Badge>
+          {call.recording_url && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handlePlayRecording(call)}
+              className="h-5 w-5 p-0"
+            >
+              {playingCallId === call.id ? (
+                <Pause className="h-3 w-3 text-primary" />
+              ) : (
+                <Play className="h-3 w-3 text-primary" />
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {format(new Date(call.timestamp), "MMM dd, HH:mm")}
+      </p>
+      {call.topic && (
+        <p className="text-xs mt-1 truncate">{call.topic}</p>
+      )}
+    </div>
+  );
 
   return (
     <Card className="p-6 relative">
@@ -353,16 +391,15 @@ const PhoneCallSection = () => {
           <Button
             size="lg"
             variant="destructive"
-            className="rounded-full w-20 h-20 shadow-elegant hover:shadow-hover"
+            className="rounded-full w-24 h-24 shadow-elegant hover:shadow-hover"
             onClick={handleEndCall}
           >
-            <PhoneOff className="h-8 w-8" />
+            <PhoneOff className="h-10 w-10" />
           </Button>
         </div>
       )}
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        {/* Left side: Icon, Title, and Action Buttons (desktop/tablet) */}
         <div className="flex flex-col gap-3 w-full sm:w-auto">
           <div className="flex items-center justify-between sm:justify-start gap-3">
             <div className="flex items-center gap-3">
@@ -371,7 +408,6 @@ const PhoneCallSection = () => {
               </div>
               <h3 className="text-lg font-semibold">Phone Calls</h3>
             </div>
-            {/* Analyze Button - Mobile only (inline with title) */}
             <Button
               onClick={() => setAnalyzeDialogOpen(true)}
               variant="outline"
@@ -382,7 +418,6 @@ const PhoneCallSection = () => {
               Analyze
             </Button>
           </div>
-          {/* Make Call and Schedule - Below title on desktop/tablet, below analyze on mobile */}
           <div className="flex gap-2 w-full sm:w-auto">
             <Button
               onClick={() => setShowMakeCall(!showMakeCall)}
@@ -403,7 +438,6 @@ const PhoneCallSection = () => {
             </Button>
           </div>
         </div>
-        {/* Right side: Analyze Button (desktop/tablet only, opposite the icon) */}
         <Button
           onClick={() => setAnalyzeDialogOpen(true)}
           variant="outline"
@@ -432,11 +466,7 @@ const PhoneCallSection = () => {
             <Button onClick={handleMakeCall} className="flex-1 w-full">
               Start Call
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowMakeCall(false)}
-              className="flex-1 w-full"
-            >
+            <Button variant="outline" onClick={() => setShowMakeCall(false)} className="flex-1 w-full">
               Cancel
             </Button>
           </div>
@@ -460,56 +490,56 @@ const PhoneCallSection = () => {
             type="datetime-local"
             value={scheduleTime}
             onChange={(e) => setScheduleTime(e.target.value)}
+            min={new Date().toISOString().slice(0, 16)}
           />
           <div className="flex flex-col sm:flex-row gap-2">
             <Button onClick={handleScheduleCall} className="flex-1 w-full">
-              Queue Call
+              Schedule Call
             </Button>
             <Button
               variant="outline"
               onClick={() => setShowQueuedCalls(!showQueuedCalls)}
               className="relative w-full sm:w-auto"
             >
-              Queued Calls
-              {queuedCalls.length > 0 && (
+              Scheduled Calls
+              {scheduledCalls.length > 0 && (
                 <Badge
                   variant="destructive"
                   className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
                 >
-                  {queuedCalls.length}
+                  {scheduledCalls.length}
                 </Badge>
               )}
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowScheduleCall(false)}
-              className="w-full sm:w-auto"
-            >
+            <Button variant="outline" onClick={() => setShowScheduleCall(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
           </div>
 
-          {showQueuedCalls && queuedCalls.length > 0 && (
+          {showQueuedCalls && scheduledCalls.length > 0 && (
             <div className="mt-4 p-3 border border-border rounded-lg bg-muted/50">
-              <h4 className="font-semibold text-sm mb-3">Queued Calls</h4>
+              <h4 className="font-semibold text-sm mb-3">Scheduled Calls</h4>
               <ScrollArea className="h-48">
                 <div className="space-y-2">
-                  {queuedCalls.map((call) => (
+                  {scheduledCalls.map((call) => (
                     <div
                       key={call.id}
                       className="flex items-center justify-between p-3 border border-border rounded bg-background"
                     >
                       <div className="flex-1">
-                        <p className="font-medium text-sm">{call.topic}</p>
-                        <p className="text-xs text-muted-foreground">{call.number}</p>
-                        <p className="text-xs text-primary font-semibold mt-1">
-                          Time left: {getTimeLeft(call.scheduledTime)}
+                        <p className="font-medium text-sm">{call.purpose}</p>
+                        <p className="text-xs text-muted-foreground">{call.phone_number}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(call.scheduled_at), "MMM dd, yyyy HH:mm")}
+                        </p>
+                        <p className="text-xs font-semibold mt-1" style={{color:"rgb(0,220,255)"}}>
+                          ⏳ {getTimeLeft(call.scheduled_at)}
                         </p>
                       </div>
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => handleRemoveQueuedCall(call.id)}
+                        onClick={() => handleRemoveScheduledCall(call.id)}
                       >
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
@@ -533,68 +563,7 @@ const PhoneCallSection = () => {
             {incomingCalls.length === 0 ? (
               <p className="text-sm text-muted-foreground">No incoming calls</p>
             ) : (
-              incomingCalls.map((call) => (
-                <div
-                  key={call.id}
-                  className={`p-3 border rounded-lg hover:bg-muted/50 transition-all relative ${
-                    selectedCallId === call.id ? "border-destructive" : "border-border"
-                  }`}
-                  onMouseDown={() => handleLongPressStart(call.id)}
-                  onMouseUp={handleLongPressEnd}
-                  onMouseLeave={handleLongPressEnd}
-                  onTouchStart={() => handleLongPressStart(call.id)}
-                  onTouchEnd={handleLongPressEnd}
-                >
-                  {selectedCallId === call.id && (
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      className="absolute top-2 right-2 h-6 w-6"
-                      onClick={() => handleDeleteCall(call.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{call.number}</span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleViewTranscript(call)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <FileText className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge variant="secondary">
-                        {call.duration_minutes || 0} min
-                      </Badge>
-                      {call.recording_url && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handlePlayRecording(call)}
-                          className="h-5 w-5 p-0"
-                        >
-                          {playingCallId === call.id ? (
-                            <Pause className="h-3 w-3 text-primary" />
-                          ) : (
-                            <Play className="h-3 w-3 text-primary" />
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(call.timestamp), "MMM dd, HH:mm")}
-                  </p>
-                  {call.topic && (
-                    <p className="text-xs mt-1">{call.topic}</p>
-                  )}
-                </div>
-              ))
+              incomingCalls.map(renderCallTile)
             )}
           </div>
         </div>
@@ -609,68 +578,7 @@ const PhoneCallSection = () => {
             {outgoingCalls.length === 0 ? (
               <p className="text-sm text-muted-foreground">No outgoing calls</p>
             ) : (
-              outgoingCalls.map((call) => (
-                <div
-                  key={call.id}
-                  className={`p-3 border rounded-lg hover:bg-muted/50 transition-all relative ${
-                    selectedCallId === call.id ? "border-destructive" : "border-border"
-                  }`}
-                  onMouseDown={() => handleLongPressStart(call.id)}
-                  onMouseUp={handleLongPressEnd}
-                  onMouseLeave={handleLongPressEnd}
-                  onTouchStart={() => handleLongPressStart(call.id)}
-                  onTouchEnd={handleLongPressEnd}
-                >
-                  {selectedCallId === call.id && (
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      className="absolute top-2 right-2 h-6 w-6"
-                      onClick={() => handleDeleteCall(call.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{call.number}</span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleViewTranscript(call)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <FileText className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge variant="secondary">
-                        {call.duration_minutes || 0} min
-                      </Badge>
-                      {call.recording_url && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handlePlayRecording(call)}
-                          className="h-5 w-5 p-0"
-                        >
-                          {playingCallId === call.id ? (
-                            <Pause className="h-3 w-3 text-primary" />
-                          ) : (
-                            <Play className="h-3 w-3 text-primary" />
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(call.timestamp), "MMM dd, HH:mm")}
-                  </p>
-                  {call.topic && (
-                    <p className="text-xs mt-1">{call.topic}</p>
-                  )}
-                </div>
-              ))
+              outgoingCalls.map(renderCallTile)
             )}
           </div>
         </div>
