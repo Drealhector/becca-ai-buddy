@@ -17,12 +17,32 @@ serve(async (req) => {
       throw new Error('VAPI_API_KEY is not configured');
     }
 
+    const { toNumber, purpose, action, callId } = await req.json();
+
+    // Handle end call action
+    if (action === 'end' && callId) {
+      console.log(`Ending call ${callId}`);
+      const endRes = await fetch(`https://api.vapi.ai/call/${callId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${VAPI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'ended' }),
+      });
+      
+      const endData = await endRes.json();
+      console.log('End call response:', endRes.status, JSON.stringify(endData));
+      
+      return new Response(JSON.stringify({ success: true, ended: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const VAPI_ASSISTANT_ID = Deno.env.get('VAPI_WEB_ASSISTANT_ID');
     if (!VAPI_ASSISTANT_ID) {
       throw new Error('VAPI_WEB_ASSISTANT_ID is not configured');
     }
-
-    const { toNumber, purpose } = await req.json();
 
     if (!toNumber) {
       throw new Error('Phone number is required');
