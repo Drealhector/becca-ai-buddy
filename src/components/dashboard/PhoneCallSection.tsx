@@ -587,6 +587,12 @@ const PhoneCallSection = () => {
                       )}
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(call.timestamp), "MMM dd, HH:mm")}
+                  </p>
+                  {call.topic && (
+                    <p className="text-xs mt-1">{call.topic}</p>
+                  )}
                 </div>
               ))
             )}
