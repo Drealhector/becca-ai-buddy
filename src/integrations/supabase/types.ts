@@ -150,6 +150,7 @@ export type Database = {
           duration_minutes: number | null
           id: string
           number: string | null
+          recording_url: string | null
           timestamp: string | null
           topic: string | null
           type: string | null
@@ -160,6 +161,7 @@ export type Database = {
           duration_minutes?: number | null
           id?: string
           number?: string | null
+          recording_url?: string | null
           timestamp?: string | null
           topic?: string | null
           type?: string | null
@@ -170,6 +172,7 @@ export type Database = {
           duration_minutes?: number | null
           id?: string
           number?: string | null
+          recording_url?: string | null
           timestamp?: string | null
           topic?: string | null
           type?: string | null
