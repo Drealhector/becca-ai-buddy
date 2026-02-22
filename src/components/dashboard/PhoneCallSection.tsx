@@ -26,6 +26,7 @@ const PhoneCallSection = () => {
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
   const [scheduleHour, setScheduleHour] = useState("");
   const [scheduleMinute, setScheduleMinute] = useState("");
+  const [schedulePeriod, setSchedulePeriod] = useState<"AM" | "PM">("AM");
   const [scheduledCalls, setScheduledCalls] = useState<any[]>([]);
   const [isInCall, setIsInCall] = useState(false);
   const [callStatus, setCallStatus] = useState<"calling" | "connected" | null>(null);
@@ -154,7 +155,10 @@ const PhoneCallSection = () => {
       return;
     }
 
-    const scheduledAt = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate(), parseInt(scheduleHour), parseInt(scheduleMinute), 0, 0);
+    let hour24 = parseInt(scheduleHour);
+    if (schedulePeriod === "PM" && hour24 !== 12) hour24 += 12;
+    if (schedulePeriod === "AM" && hour24 === 12) hour24 = 0;
+    const scheduledAt = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate(), hour24, parseInt(scheduleMinute), 0, 0);
 
     if (scheduledAt.getTime() <= Date.now()) {
       toast.error("Please select a future date and time");
@@ -177,6 +181,7 @@ const PhoneCallSection = () => {
       setScheduleDate(undefined);
       setScheduleHour("");
       setScheduleMinute("");
+      setSchedulePeriod("AM");
       setShowScheduleCall(false);
       fetchScheduledCalls();
     } catch (error) {
@@ -522,8 +527,8 @@ const PhoneCallSection = () => {
             <div className="flex gap-2 items-center">
               <Input
                 type="number"
-                min="0"
-                max="23"
+                min="1"
+                max="12"
                 value={scheduleHour}
                 onChange={(e) => setScheduleHour(e.target.value)}
                 placeholder="HH"
@@ -539,6 +544,22 @@ const PhoneCallSection = () => {
                 placeholder="MM"
                 className="w-20 text-center"
               />
+              <Button
+                type="button"
+                variant={schedulePeriod === "AM" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSchedulePeriod("AM")}
+              >
+                AM
+              </Button>
+              <Button
+                type="button"
+                variant={schedulePeriod === "PM" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSchedulePeriod("PM")}
+              >
+                PM
+              </Button>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
