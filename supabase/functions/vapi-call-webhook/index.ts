@@ -23,123 +23,70 @@ serve(async (req) => {
     const eventType = payload.type || payload.message?.type;
     console.log("📊 Event type:", eventType);
 
-    // ====== ASSISTANT-REQUEST: PRE-CALL MEMORY INJECTION ======
+    // ====== ASSISTANT-REQUEST: CALLER LOOKUP BEFORE SPEAKING ======
     if (eventType === "assistant-request") {
-      console.log("🧠 Assistant-request received — looking up caller before speaking");
+      console.log("🧠 Assistant-request received — looking up caller");
 
-      const callData = payload.message?.call || payload.call || {};
-      const customerNumber = callData.customer?.number || "";
-      const assistantId = payload.message?.assistant?.id || payload.assistant?.id || "";
-      const VAPI_API_KEY = Deno.env.get("VAPI_API_KEY");
+      // 1. Extract phone number
+      const phone = payload.message?.call?.customer?.number || "";
+      const BECCA_ASSISTANT_ID = "328ef302-11ca-46a4-b731-76561f9dcbb9";
 
-      // 1. Fetch existing assistant config (system prompt + toolIds)
-      let existingSystemPrompt = "";
-      let existingFirstMessage = "";
-      let existingToolIds: string[] = [];
-
-      if (VAPI_API_KEY && assistantId) {
-        try {
-          const res = await fetch(`https://api.vapi.ai/assistant/${assistantId}`, {
-            headers: { "Authorization": `Bearer ${VAPI_API_KEY}` }
-          });
-          if (res.ok) {
-            const cfg = await res.json();
-            const sysMsg = (cfg.model?.messages || []).find((m: any) => m.role === "system");
-            existingSystemPrompt = sysMsg?.content || "";
-            existingFirstMessage = cfg.firstMessage || "";
-            existingToolIds = cfg.model?.toolIds || [];
-            console.log("📋 Fetched assistant config. Prompt length:", existingSystemPrompt.length, "ToolIds:", existingToolIds.length);
-          } else {
-            console.error("⚠️ Could not fetch assistant config:", await res.text());
-          }
-        } catch (e) {
-          console.error("⚠️ Error fetching assistant:", e);
-        }
+      // 2. If no phone or web call, just return normal assistant
+      if (!phone || phone === "Web Call") {
+        console.log("ℹ️ No phone number — returning default assistant");
+        return new Response(
+          JSON.stringify({ assistantId: BECCA_ASSISTANT_ID }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
-      // 2. Look up caller in callers table
-      let callerContext = "";
-      let callerFirstMessage = "";
+      // 3. Query callers table
+      console.log("📞 Looking up caller:", phone);
+      const { data: caller } = await supabase
+        .from("callers")
+        .select("*")
+        .eq("phone", phone)
+        .single();
 
-      if (customerNumber && customerNumber !== "Web Call") {
-        console.log("📞 Looking up caller:", customerNumber);
-
-        const { data: caller } = await supabase
-          .from("callers")
-          .select("*")
-          .eq("phone", customerNumber)
-          .maybeSingle();
-
-        if (caller) {
-          // === RETURNING CALLER ===
-          const daysSince = Math.floor((Date.now() - new Date(caller.last_call_at).getTime()) / 86400000);
-
-          let lastCallPhrase = "";
-          if (daysSince === 0) lastCallPhrase = "earlier today";
-          else if (daysSince === 1) lastCallPhrase = "yesterday";
-          else if (daysSince === 2) lastCallPhrase = "two days ago";
-          else if (daysSince <= 6) lastCallPhrase = "a few days ago";
-          else if (daysSince <= 13) lastCallPhrase = "about a week ago";
-          else lastCallPhrase = "a couple weeks ago";
-
-          const nameInstruction = caller.name
-            ? `You already know their name is "${caller.name}". Use it naturally. Do NOT ask for their name.`
-            : `You do NOT know their name yet. Ask for it once, naturally, early in the conversation. Do not ask again after that.`;
-
-          callerContext = `\n\n=== RETURNING CALLER CONTEXT (PRE-LOADED — YOU ALREADY KNOW THIS) ===
-Phone: ${customerNumber}
-${caller.name ? `Name: ${caller.name}` : "Name: unknown"}
-Call count: ${caller.call_count}
-Last spoke: ${lastCallPhrase}
-${caller.memory_summary ? `Memory summary: ${caller.memory_summary}` : "No previous summary available."}
-
-${nameInstruction}
-
-Your greeting MUST reflect that you remember them. Use relative time only (e.g. "${lastCallPhrase}"). NEVER use exact dates. NEVER mention databases, records, or memory systems.
-Sound natural — like you genuinely remember them.
-=== END CALLER CONTEXT ===`;
-
-          const nameGreet = caller.name ? `, ${caller.name}` : "";
-          if (daysSince === 0) {
-            callerFirstMessage = `Hey${nameGreet}! Good to hear from you again today!`;
-          } else if (daysSince === 1) {
-            callerFirstMessage = `Hey${nameGreet}! We just spoke yesterday — welcome back!`;
-          } else if (daysSince <= 6) {
-            callerFirstMessage = `Hey${nameGreet}! We chatted a few days ago — good to hear from you again!`;
-          } else if (daysSince <= 13) {
-            callerFirstMessage = `Hey${nameGreet}! It's been about a week — welcome back!`;
-          } else {
-            callerFirstMessage = `Hey${nameGreet}! It's been a little while — great to hear from you again!`;
-          }
-
-          console.log("✅ Returning caller found. Calls:", caller.call_count, "Days since:", daysSince);
-        } else {
-          // === FIRST-TIME CALLER ===
-          callerContext = `\n\n=== FIRST-TIME CALLER CONTEXT ===
-This is a FIRST-TIME caller. Phone: ${customerNumber}.
-Do NOT ask for their name. Just greet them naturally and discover their intent.
-=== END CALLER CONTEXT ===`;
-          console.log("ℹ️ First-time caller — no record found");
-        }
+      // CASE A — FIRST TIME CALLER
+      if (!caller) {
+        console.log("ℹ️ First-time caller — no overrides");
+        return new Response(
+          JSON.stringify({ assistantId: BECCA_ASSISTANT_ID }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
-      // 3. Build response
-      const finalSystemPrompt = existingSystemPrompt + callerContext;
+      // CASE B — RETURNING CALLER
+      const now = new Date();
+      const lastCall = new Date(caller.last_call_at);
+      const diffDays = Math.floor(
+        (now.getTime() - lastCall.getTime()) / (1000 * 60 * 60 * 24)
+      );
 
-      const response: any = {
-        assistant: {
-          model: {
-            messages: [{ role: "system", content: finalSystemPrompt }],
-            ...(existingToolIds.length > 0 ? { toolIds: existingToolIds } : {})
+      let lastCallPhrase: string;
+      if (diffDays === 0) lastCallPhrase = "earlier today";
+      else if (diffDays === 1) lastCallPhrase = "yesterday";
+      else if (diffDays === 2) lastCallPhrase = "2 days ago";
+      else if (diffDays <= 6) lastCallPhrase = "a few days ago";
+      else if (diffDays <= 13) lastCallPhrase = "about a week ago";
+      else lastCallPhrase = "a couple weeks ago";
+
+      console.log("✅ Returning caller. Calls:", caller.call_count, "Days since:", diffDays, "Phrase:", lastCallPhrase);
+
+      // Return assistant override with variableValues
+      const response = {
+        assistantId: BECCA_ASSISTANT_ID,
+        assistantOverrides: {
+          variableValues: {
+            lastCallPhrase,
+            memorySummary: caller.memory_summary || "",
+            storedName: caller.name || null,
           }
         }
       };
 
-      if (callerFirstMessage) {
-        response.assistant.firstMessage = callerFirstMessage;
-      }
-
-      console.log("📤 Returning assistant-request response");
+      console.log("📤 Returning assistant-request with caller context");
       return new Response(
         JSON.stringify(response),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
