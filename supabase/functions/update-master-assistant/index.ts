@@ -82,7 +82,7 @@ serve(async (req) => {
 ${productsInfo}
 
 === YOUR CAPABILITIES ===
-You have access to tools for getting inventory, escalating to human support, managing customer memory, and saving customer names.
+You have access to tools for checking product availability and transferring calls to our manager.
 
 IMPORTANT: When a conversation starts with {{product_name}}, that means the customer clicked on that specific product. Tailor your first message to that product specifically.`;
 
@@ -98,9 +98,6 @@ IMPORTANT: When a conversation starts with {{product_name}}, that means the cust
     // Use toolIds instead of deprecated model.functions
     const toolIds = [
       "93520019-103b-4afa-ac12-4d09f2e453c2", // get_inventory
-      "57d09085-54ee-409a-b0ed-50932552b2a4", // escalate_to_human
-      "dc46f3f8-d1a4-45b8-8f75-7d5c2240cd4e", // get_customer_memory
-      "db84ce1f-8c60-4070-9ee7-5b6f8d3a2a31", // save_customer_name
       "76f61ace-fb6d-4323-a226-7ffa61969008", // transferCall
     ];
 
