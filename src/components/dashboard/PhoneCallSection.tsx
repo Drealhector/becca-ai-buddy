@@ -339,7 +339,7 @@ const PhoneCallSection = () => {
             <FileText className="h-3 w-3" />
           </Button>
         </div>
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex items-center gap-2">
           <Badge variant="secondary">
             {call.duration_minutes ? `${Math.round(call.duration_minutes * 10) / 10} min` : "0 min"}
           </Badge>
