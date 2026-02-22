@@ -184,6 +184,33 @@ export type Database = {
           },
         ]
       }
+      callers: {
+        Row: {
+          call_count: number
+          last_call_at: string
+          memory_summary: string | null
+          name: string | null
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          call_count?: number
+          last_call_at?: string
+          memory_summary?: string | null
+          name?: string | null
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          call_count?: number
+          last_call_at?: string
+          memory_summary?: string | null
+          name?: string | null
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       connections: {
         Row: {
           business_id: string | null
