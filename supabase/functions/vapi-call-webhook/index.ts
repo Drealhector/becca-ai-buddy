@@ -268,6 +268,13 @@ serve(async (req) => {
         }
       }
 
+      // Extract recording URL from Vapi payload
+      const recordingUrl = data.artifact?.recordingUrl || 
+                           data.recordingUrl || 
+                           data.artifact?.stereoRecordingUrl ||
+                           null;
+      console.log("🎙️ Recording URL:", recordingUrl);
+
       // Check if call already exists in history
       const { data: existingCall } = await supabase
         .from("call_history")
@@ -279,7 +286,7 @@ serve(async (req) => {
       if (existingCall) {
         await supabase
           .from("call_history")
-          .update({ duration_minutes: durationMinutes, timestamp })
+          .update({ duration_minutes: durationMinutes, timestamp, recording_url: recordingUrl })
           .eq("conversation_id", callId);
         console.log("✅ Updated existing call history record");
       } else {
@@ -290,6 +297,7 @@ serve(async (req) => {
           duration_minutes: durationMinutes,
           timestamp,
           conversation_id: callId,
+          recording_url: recordingUrl,
         });
 
         if (historyError) console.error("❌ Error saving call history:", historyError);

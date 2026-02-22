@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, FileText, Clock, Brain } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, FileText, Clock, Brain, Play, Pause } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -31,6 +31,8 @@ const PhoneCallSection = () => {
   const [showTranscriptDialog, setShowTranscriptDialog] = useState(false);
   const [selectedCallTranscript, setSelectedCallTranscript] = useState<any>(null);
   const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
+  const [playingCallId, setPlayingCallId] = useState<string | null>(null);
+  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     fetchCallHistory();
@@ -274,7 +276,6 @@ const PhoneCallSection = () => {
   };
 
   const handleViewTranscript = async (call: any) => {
-    // Fetch the transcript for this call
     const { data: transcript } = await supabase
       .from("transcripts")
       .select("*")
@@ -286,6 +287,44 @@ const PhoneCallSection = () => {
       transcript: transcript?.transcript_text || "No transcript available for this call"
     });
     setShowTranscriptDialog(true);
+  };
+
+  const handlePlayRecording = (call: any) => {
+    if (!call.recording_url) {
+      toast.error("No recording available for this call");
+      return;
+    }
+
+    if (playingCallId === call.id) {
+      // Stop playing
+      if (audioRef) {
+        audioRef.pause();
+        audioRef.currentTime = 0;
+      }
+      setPlayingCallId(null);
+      setAudioRef(null);
+      return;
+    }
+
+    // Stop any currently playing audio
+    if (audioRef) {
+      audioRef.pause();
+      audioRef.currentTime = 0;
+    }
+
+    const audio = new Audio(call.recording_url);
+    audio.onended = () => {
+      setPlayingCallId(null);
+      setAudioRef(null);
+    };
+    audio.onerror = () => {
+      toast.error("Failed to play recording");
+      setPlayingCallId(null);
+      setAudioRef(null);
+    };
+    audio.play();
+    setPlayingCallId(call.id);
+    setAudioRef(audio);
   };
 
   const incomingCalls = callHistory.filter((call) => call.type === "incoming");
@@ -528,16 +567,26 @@ const PhoneCallSection = () => {
                         <FileText className="h-3 w-3" />
                       </Button>
                     </div>
-                    <Badge variant="secondary">
-                      {call.duration_minutes || 0} min
-                    </Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="secondary">
+                        {call.duration_minutes || 0} min
+                      </Badge>
+                      {call.recording_url && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handlePlayRecording(call)}
+                          className="h-5 w-5 p-0"
+                        >
+                          {playingCallId === call.id ? (
+                            <Pause className="h-3 w-3 text-primary" />
+                          ) : (
+                            <Play className="h-3 w-3 text-primary" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(call.timestamp), "MMM dd, HH:mm")}
-                  </p>
-                  {call.topic && (
-                    <p className="text-xs mt-1">{call.topic}</p>
-                  )}
                 </div>
               ))
             )}
@@ -588,9 +637,25 @@ const PhoneCallSection = () => {
                         <FileText className="h-3 w-3" />
                       </Button>
                     </div>
-                    <Badge variant="secondary">
-                      {call.duration_minutes || 0} min
-                    </Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="secondary">
+                        {call.duration_minutes || 0} min
+                      </Badge>
+                      {call.recording_url && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handlePlayRecording(call)}
+                          className="h-5 w-5 p-0"
+                        >
+                          {playingCallId === call.id ? (
+                            <Pause className="h-3 w-3 text-primary" />
+                          ) : (
+                            <Play className="h-3 w-3 text-primary" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {format(new Date(call.timestamp), "MMM dd, HH:mm")}

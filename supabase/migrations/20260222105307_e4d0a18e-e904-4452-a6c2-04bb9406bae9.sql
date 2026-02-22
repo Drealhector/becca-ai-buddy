@@ -1,0 +1,1 @@
+CREATE POLICY "Allow updating call history" ON public.call_history FOR UPDATE USING (true);
