@@ -425,6 +425,9 @@ export type Database = {
           facebook_username: string | null
           faqs: Json | null
           greeting: string | null
+          hub_bg_desktop_url: string | null
+          hub_bg_phone_url: string | null
+          hub_bg_tablet_url: string | null
           id: string
           instagram_username: string | null
           key_services: string | null
@@ -454,6 +457,9 @@ export type Database = {
           facebook_username?: string | null
           faqs?: Json | null
           greeting?: string | null
+          hub_bg_desktop_url?: string | null
+          hub_bg_phone_url?: string | null
+          hub_bg_tablet_url?: string | null
           id?: string
           instagram_username?: string | null
           key_services?: string | null
@@ -483,6 +489,9 @@ export type Database = {
           facebook_username?: string | null
           faqs?: Json | null
           greeting?: string | null
+          hub_bg_desktop_url?: string | null
+          hub_bg_phone_url?: string | null
+          hub_bg_tablet_url?: string | null
           id?: string
           instagram_username?: string | null
           key_services?: string | null

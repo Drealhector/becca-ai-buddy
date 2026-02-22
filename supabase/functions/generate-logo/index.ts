@@ -73,7 +73,149 @@ Generate a concise but detailed logo generation prompt (2-3 sentences). Focus on
       });
     }
 
-    // Handle logo generation action
+    // Handle background prompt generation
+    if (action === 'generate_bg_prompt') {
+      console.log("Generating background prompt from business info:", businessInfo);
+      
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      if (!LOVABLE_API_KEY) {
+        throw new Error('LOVABLE_API_KEY is not configured');
+      }
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [{
+            role: "user",
+            content: `Based on this business information, create a detailed prompt for generating a beautiful, professional background image for a linktree-style hub page. The background should be visually striking, modern, and represent the brand well. It will have text and buttons overlaid on top so it should not be too busy.
+
+Business Information:
+${businessInfo}
+
+Generate a concise but detailed background generation prompt (2-3 sentences). Focus on atmosphere, colors, patterns, and mood. The background should work with white/light text overlay.`
+          }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("AI gateway error:", response.status, errorText);
+        throw new Error(`Failed to generate prompt: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const generatedPrompt = data.choices?.[0]?.message?.content;
+
+      if (!generatedPrompt) {
+        throw new Error("No prompt generated");
+      }
+
+      return new Response(JSON.stringify({ prompt: generatedPrompt }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Handle hub background generation (3 images for 3 ratios)
+    if (action === 'generate_hub_background') {
+      if (!prompt) {
+        throw new Error("Prompt is required for background generation");
+      }
+
+      const bgPrompt = `Create a professional, visually stunning background image for a modern link-in-bio / linktree style page. ${prompt}. The image should be atmospheric and dark enough for white text to be readable on top. No text in the image. Subtle, elegant, immersive.`;
+
+      console.log("Generating 3 hub backgrounds with OpenAI, prompt:", bgPrompt);
+
+      // Generate 3 images with different aspect ratios
+      const sizes = [
+        { key: 'desktop', size: '1536x1024' as const, label: 'Desktop (3:2)' },
+        { key: 'tablet', size: '1024x1024' as const, label: 'Tablet (1:1)' },
+        { key: 'phone', size: '1024x1536' as const, label: 'Phone (2:3)' },
+      ];
+
+      const results: Record<string, string> = {};
+
+      for (const { key, size, label } of sizes) {
+        console.log(`Generating ${label} background (${size})...`);
+        
+        const response = await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-image-1",
+            prompt: `${bgPrompt} Aspect ratio: ${size === '1536x1024' ? 'landscape 3:2' : size === '1024x1024' ? 'square 1:1' : 'portrait 2:3'}.`,
+            n: 1,
+            size: size,
+            quality: "high",
+            output_format: "png",
+            background: "auto",
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`OpenAI API error for ${label}:`, response.status, errorText);
+          throw new Error(`OpenAI API error for ${label}: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const imageB64 = data.data?.[0]?.b64_json;
+
+        if (!imageB64) {
+          throw new Error(`No image generated for ${label}`);
+        }
+
+        // Upload to storage
+        const fileName = `hub-bg-${key}-${Date.now()}.png`;
+        const imageBytes = Uint8Array.from(atob(imageB64), c => c.charCodeAt(0));
+        
+        const { error: uploadError } = await supabase.storage
+          .from('logos')
+          .upload(fileName, imageBytes, { 
+            contentType: 'image/png',
+            upsert: true 
+          });
+
+        if (uploadError) {
+          console.error(`Upload error for ${label}:`, uploadError);
+          throw uploadError;
+        }
+
+        const { data: urlData } = supabase.storage.from('logos').getPublicUrl(fileName);
+        results[key] = urlData.publicUrl;
+        console.log(`${label} uploaded: ${urlData.publicUrl}`);
+      }
+
+      // Update customizations with all 3 URLs
+      const { error: updateError } = await supabase
+        .from("customizations")
+        .update({
+          hub_bg_desktop_url: results.desktop,
+          hub_bg_tablet_url: results.tablet,
+          hub_bg_phone_url: results.phone,
+        })
+        .eq("id", (await supabase.from("customizations").select("id").single()).data?.id);
+
+      if (updateError) throw updateError;
+
+      console.log("All 3 hub backgrounds generated and saved!");
+
+      return new Response(JSON.stringify({ 
+        success: true,
+        urls: results 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Handle logo generation action (original)
     if (!prompt) {
       throw new Error("Prompt is required for logo generation");
     }

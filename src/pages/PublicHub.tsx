@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 import hubBackground from "@/assets/hub-background.jpg";
 import CallHectorUI from "@/components/dashboard/CallHectorUI";
 
@@ -139,11 +140,31 @@ const PublicHub = () => {
     );
   }
 
+  // Determine which background to use based on screen width
+  const getResponsiveBg = () => {
+    const w = window.innerWidth;
+    if (w <= 768 && (customization as any)?.hub_bg_phone_url) return (customization as any).hub_bg_phone_url;
+    if (w <= 1024 && (customization as any)?.hub_bg_tablet_url) return (customization as any).hub_bg_tablet_url;
+    if ((customization as any)?.hub_bg_desktop_url) return (customization as any).hub_bg_desktop_url;
+    return hubBackground;
+  };
+
+  const [bgUrl, setBgUrl] = useState(hubBackground);
+
+  useEffect(() => {
+    if (customization) {
+      setBgUrl(getResponsiveBg());
+      const handleResize = () => setBgUrl(getResponsiveBg());
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [customization]);
+
   return (
     <div 
       className="min-h-screen flex items-center justify-center p-4"
       style={{
-        backgroundImage: `url(${hubBackground})`,
+        backgroundImage: `url(${bgUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed'

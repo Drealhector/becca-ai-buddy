@@ -11,6 +11,7 @@ import ConversationsSection from "@/components/dashboard/ConversationsSection";
 import CopyableLinks from "@/components/dashboard/CopyableLinks";
 import PhoneCallSection from "@/components/dashboard/PhoneCallSection";
 import LogoCustomization from "@/components/dashboard/LogoCustomization";
+import HubBackgroundGenerator from "@/components/dashboard/HubBackgroundGenerator";
 import VoiceManagementSection from "@/components/dashboard/VoiceManagementSection";
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
 import { InventorySection } from "@/components/dashboard/InventorySection";
@@ -318,6 +319,11 @@ const Dashboard = () => {
         <div id="logo-voice" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <LogoCustomization />
           <VoiceManagementSection />
+        </div>
+
+        {/* Hub Background */}
+        <div id="hub-background">
+          <HubBackgroundGenerator />
         </div>
 
         {/* AI Personality */}
