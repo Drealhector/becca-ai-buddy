@@ -265,7 +265,7 @@ serve(async (req) => {
       console.log(`⚠️ Query "${query}" returned non-matching items: ${filtered.map((i: any) => i.name).join(', ')} — treating as NOT FOUND`);
     } else {
       trueItemFound = true;
-      resultText = `ITEM_FOUND: The caller asked for "${originalQuery}". Here is what we have:\n${formatted.join('\n')}\nIMPORTANT: Read prices EXACTLY as written — they are already in spoken word format. Do NOT convert them to numbers.`;
+      resultText = `ITEM_FOUND: The caller asked for "${originalQuery}". Here is what we have:\n${formatted.join('\n')}\nCRITICAL INSTRUCTIONS: Do NOT read out all this information at once. ONLY confirm you have the item and ask what the caller wants to know (price, colors, specs, etc). Share details ONE AT A TIME only when asked. Prices are in spoken word format — read them EXACTLY as written.`;
     }
 
     console.log(`✅ Inventory result: found=${trueItemFound}, queryMatches=${queryMatchesResult}, items=${filtered.length}`);
