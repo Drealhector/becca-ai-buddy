@@ -4,12 +4,15 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, FileText, Clock, Brain, Play, Pause } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, FileText, Clock, Brain, Play, Pause, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnalyzeCallTranscriptsDialog } from "./AnalyzeCallTranscriptsDialog";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const PhoneCallSection = () => {
   const [callHistory, setCallHistory] = useState<any[]>([]);
@@ -20,7 +23,9 @@ const PhoneCallSection = () => {
   const [callNumber, setCallNumber] = useState("");
   const [scheduleTopic, setScheduleTopic] = useState("");
   const [scheduleNumber, setScheduleNumber] = useState("");
-  const [scheduleTime, setScheduleTime] = useState("");
+  const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
+  const [scheduleHour, setScheduleHour] = useState("");
+  const [scheduleMinute, setScheduleMinute] = useState("");
   const [scheduledCalls, setScheduledCalls] = useState<any[]>([]);
   const [isInCall, setIsInCall] = useState(false);
   const [callStatus, setCallStatus] = useState<"calling" | "connected" | null>(null);
@@ -144,12 +149,14 @@ const PhoneCallSection = () => {
   };
 
   const handleScheduleCall = async () => {
-    if (!scheduleTopic || !scheduleNumber || !scheduleTime) {
-      toast.error("Please enter topic, number, and time");
+    if (!scheduleTopic || !scheduleNumber || !scheduleDate || !scheduleHour || !scheduleMinute) {
+      toast.error("Please enter topic, number, date, and time");
       return;
     }
 
-    const scheduledAt = new Date(scheduleTime);
+    const scheduledAt = new Date(scheduleDate);
+    scheduledAt.setHours(parseInt(scheduleHour), parseInt(scheduleMinute), 0, 0);
+
     if (scheduledAt <= new Date()) {
       toast.error("Please select a future date and time");
       return;
@@ -168,7 +175,9 @@ const PhoneCallSection = () => {
       toast.success(`Call scheduled for ${format(scheduledAt, "MMM dd, yyyy HH:mm")}`);
       setScheduleTopic("");
       setScheduleNumber("");
-      setScheduleTime("");
+      setScheduleDate(undefined);
+      setScheduleHour("");
+      setScheduleMinute("");
       setShowScheduleCall(false);
       fetchScheduledCalls();
     } catch (error) {
@@ -486,12 +495,53 @@ const PhoneCallSection = () => {
             onChange={(e) => setScheduleNumber(e.target.value)}
             placeholder="Phone number (e.g., +1-555-123-4567)"
           />
-          <Input
-            type="datetime-local"
-            value={scheduleTime}
-            onChange={(e) => setScheduleTime(e.target.value)}
-            min={new Date().toISOString().slice(0, 16)}
-          />
+          <div className="flex flex-col gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !scheduleDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {scheduleDate ? format(scheduleDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={scheduleDate}
+                  onSelect={setScheduleDate}
+                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            <div className="flex gap-2 items-center">
+              <Input
+                type="number"
+                min="0"
+                max="23"
+                value={scheduleHour}
+                onChange={(e) => setScheduleHour(e.target.value)}
+                placeholder="HH"
+                className="w-20 text-center"
+              />
+              <span className="text-lg font-bold">:</span>
+              <Input
+                type="number"
+                min="0"
+                max="59"
+                value={scheduleMinute}
+                onChange={(e) => setScheduleMinute(e.target.value)}
+                placeholder="MM"
+                className="w-20 text-center"
+              />
+            </div>
+          </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Button onClick={handleScheduleCall} className="flex-1 w-full">
               Schedule Call
