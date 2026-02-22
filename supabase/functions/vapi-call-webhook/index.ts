@@ -119,12 +119,31 @@ This is a FIRST-TIME caller. Their phone number is ${customerNumber}.
       }
 
       const finalSystemPrompt = existingSystemPrompt + memoryContext;
+
+      // Preserve toolIds from the existing assistant config
+      let existingToolIds: string[] = [];
+      if (VAPI_API_KEY && assistantId) {
+        try {
+          const toolRes = await fetch(`https://api.vapi.ai/assistant/${assistantId}`, {
+            headers: { "Authorization": `Bearer ${VAPI_API_KEY}` }
+          });
+          if (toolRes.ok) {
+            const assistantData = await toolRes.json();
+            existingToolIds = assistantData.model?.toolIds || [];
+            console.log("📎 Preserving toolIds in assistant-request:", existingToolIds);
+          }
+        } catch (e) {
+          console.error("⚠️ Error fetching toolIds:", e);
+        }
+      }
+
       const response: any = {
         assistant: {
           model: {
             messages: [
               { role: "system", content: finalSystemPrompt }
-            ]
+            ],
+            ...(existingToolIds.length > 0 ? { toolIds: existingToolIds } : {})
           }
         }
       };
