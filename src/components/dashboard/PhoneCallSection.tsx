@@ -154,10 +154,9 @@ const PhoneCallSection = () => {
       return;
     }
 
-    const scheduledAt = new Date(scheduleDate);
-    scheduledAt.setHours(parseInt(scheduleHour), parseInt(scheduleMinute), 0, 0);
+    const scheduledAt = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate(), parseInt(scheduleHour), parseInt(scheduleMinute), 0, 0);
 
-    if (scheduledAt <= new Date()) {
+    if (scheduledAt.getTime() <= Date.now()) {
       toast.error("Please select a future date and time");
       return;
     }
@@ -566,7 +565,13 @@ const PhoneCallSection = () => {
             </Button>
           </div>
 
-          {showQueuedCalls && scheduledCalls.length > 0 && (
+          {showQueuedCalls && (
+            <>
+            {scheduledCalls.length === 0 ? (
+              <div className="mt-4 p-3 border border-border rounded-lg bg-muted/50 text-center text-sm text-muted-foreground">
+                No scheduled calls yet
+              </div>
+            ) : (
             <div className="mt-4 p-3 border border-border rounded-lg bg-muted/50">
               <h4 className="font-semibold text-sm mb-3">Scheduled Calls</h4>
               <ScrollArea className="h-48">
@@ -598,6 +603,8 @@ const PhoneCallSection = () => {
                 </div>
               </ScrollArea>
             </div>
+            )}
+            </>
           )}
         </div>
       )}
