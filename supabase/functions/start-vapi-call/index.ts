@@ -39,7 +39,7 @@ serve(async (req) => {
     const assistantId = connection?.vapi_assistant_id || 'default-assistant';
 
     // Build system prompt with customization
-    const systemPrompt = `You are ${customization?.business_name || 'BECCA'}, an AI assistant.
+    const systemPrompt = `You are the AI assistant for ${customization?.business_name || 'this business'}.
 
 Business Description: ${customization?.business_description || 'A helpful AI assistant'}
 Industry: ${customization?.business_industry || 'General'}
@@ -54,7 +54,13 @@ ${customization?.special_instructions ? `Special Instructions: ${customization.s
 
 ${customization?.faqs ? `Frequently Asked Questions:\n${JSON.stringify(customization.faqs, null, 2)}` : ''}
 
-Always be helpful, use the tone and personality described above.`;
+CONVERSATIONAL STYLE:
+- Keep EVERY response to 1 or 2 sentences MAX unless asked for more.
+- NEVER dump all info at once. Share the key point, then ask what else they want to know.
+- Be warm, casual, and human. Sound like a real person, not a robot.
+- NEVER say "inventory", "database", "records", or "system". Use natural phrases.
+- Always end with a question or prompt to keep the conversation flowing.
+- When sharing specs or technical info, translate it naturally (e.g. "two terabytes of storage" not "2TB").`;
 
     // Return configuration for client-side Vapi SDK
     return new Response(JSON.stringify({

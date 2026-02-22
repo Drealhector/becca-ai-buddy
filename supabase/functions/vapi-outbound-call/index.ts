@@ -30,6 +30,28 @@ serve(async (req) => {
 
     console.log(`Making outbound call to ${toNumber} with purpose: ${purpose}`);
 
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    // Fetch the assistant's current personality
+    const { data: personalityData } = await supabase
+      .from('bot_personality')
+      .select('personality_text')
+      .order('id', { ascending: false })
+      .limit(1)
+      .single();
+
+    const { data: custData } = await supabase
+      .from('customizations')
+      .select('business_name, assistant_personality')
+      .limit(1)
+      .maybeSingle();
+
+    const personality = personalityData?.personality_text || custData?.assistant_personality || '';
+    const businessName = custData?.business_name || 'our business';
+
     // First, get the phone number ID from Vapi account
     const phoneNumbersRes = await fetch('https://api.vapi.ai/phone-number', {
       headers: {
@@ -47,18 +69,67 @@ serve(async (req) => {
       }
     }
 
-    // Create the outbound call via Vapi API
+    // Fetch current assistant config to preserve toolIds
+    const getResponse = await fetch(`https://api.vapi.ai/assistant/${VAPI_ASSISTANT_ID}`, {
+      headers: { 'Authorization': `Bearer ${VAPI_API_KEY}` }
+    });
+
+    let existingToolIds: string[] = [];
+    if (getResponse.ok) {
+      const existing = await getResponse.json();
+      existingToolIds = existing.model?.toolIds || [];
+    }
+
+    // Build outbound-specific system prompt that blends purpose with personality
+    let outboundPrompt = '';
+    if (purpose) {
+      outboundPrompt = `${personality}
+
+=== OUTBOUND CALL CONTEXT ===
+This is an OUTBOUND call YOU are making. You are NOT receiving a call.
+You are calling on behalf of ${businessName}.
+The purpose of this call: ${purpose}
+
+CRITICAL OUTBOUND CALL BEHAVIOR:
+- Parse the purpose intelligently. If a name is mentioned (e.g. "call Hector and tell him..."), the person's name is likely the one you're calling. Use it naturally.
+- Your FIRST message should be a casual greeting. If you know the person's name, use it: "Hey, is this [Name]?" or "Hi [Name], how are you doing?"
+- If no name is provided, just say something like "Hey, how's it going?"
+- Do NOT immediately state the purpose. Have 1 or 2 natural pleasantry exchanges first (e.g. "How are you doing today?" and respond to their answer).
+- THEN naturally transition to the purpose. Don't read it like a script. Weave it into conversation naturally.
+- Keep everything to 1 or 2 sentences per response. Be conversational, not robotic.
+- NEVER say "I am calling about:" or "The purpose of my call is:" — just flow into it naturally.
+- Maintain your personality throughout. You are still the same character from your personality description.
+- NEVER greet with "How may I help you?" — YOU called THEM, so you have a reason for calling.
+
+=== CONVERSATIONAL STYLE ===
+- Keep EVERY response to 1 or 2 sentences MAX.
+- Be warm, casual, and human. Sound like a real person making a real call.
+- Match the energy of the person you're talking to.
+- Use natural fillers occasionally like "yeah", "so", "oh nice", "alright".`;
+    }
+
+    // Build the call payload
     const callPayload: any = {
       assistantId: VAPI_ASSISTANT_ID,
       customer: {
         number: toNumber,
       },
-      assistantOverrides: {
-        firstMessage: purpose
-          ? `Hi, I'm calling about: ${purpose}. How can I help you today?`
-          : undefined,
-      },
     };
+
+    // Only add overrides if we have a purpose
+    if (purpose && outboundPrompt) {
+      callPayload.assistantOverrides = {
+        model: {
+          provider: 'openai',
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: outboundPrompt }
+          ],
+          toolIds: existingToolIds,
+        },
+        // Don't set firstMessage — let the AI generate it naturally from the prompt
+      };
+    }
 
     // If we have a phone number ID, include it
     if (phoneNumberId) {
@@ -84,11 +155,6 @@ serve(async (req) => {
     console.log('Call created successfully:', callData.id);
 
     // Log the outbound call to call_history
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
     await supabase.from("call_history").insert({
       type: "outgoing",
       number: toNumber,
