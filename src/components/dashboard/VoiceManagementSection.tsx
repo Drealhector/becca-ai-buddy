@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Mic, RefreshCw, Volume2, Square, Circle, Play, Pause, Check, Trash2 } from "lucide-react";
+import { Mic, RefreshCw, Volume2, Square, Circle, Play, Pause, Check, Trash2, Upload } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,9 +44,11 @@ const VoiceManagementSection = () => {
   const [playingPreview, setPlayingPreview] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     fetchVoices();
@@ -157,8 +159,25 @@ const VoiceManagementSection = () => {
 
   const startRecording = async () => {
     try {
+      // Stop any previous stream first
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      streamRef.current = stream;
+
+      // Determine supported mimeType
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : '';
+
+      const mediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -167,12 +186,15 @@ const VoiceManagementSection = () => {
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
         setRecordedBlob(blob);
-        stream.getTracks().forEach(t => t.stop());
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+          streamRef.current = null;
+        }
       };
 
-      mediaRecorder.start();
+      mediaRecorder.start(1000); // collect data every second
       setIsRecording(true);
       setRecordingTime(0);
       setRecordedBlob(null);
@@ -180,10 +202,44 @@ const VoiceManagementSection = () => {
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Microphone error:", error);
-      toast.error("Please allow microphone access to record voice");
+      if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
+        toast.error("Microphone access was denied. Please check your browser settings and allow microphone access for this site.");
+      } else if (error?.name === 'NotFoundError') {
+        toast.error("No microphone found. Please connect a microphone and try again.");
+      } else {
+        toast.error("Could not access microphone. Try refreshing the page or using a different browser.");
+      }
     }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/m4a', 'audio/x-m4a'];
+    if (!validTypes.some(t => file.type.includes(t.split('/')[1])) && !file.name.match(/\.(wav|mp3|webm|ogg|m4a|mp4)$/i)) {
+      toast.error("Please upload a WAV, MP3, WebM, OGG, or M4A audio file.");
+      return;
+    }
+
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error("File too large. Max size is 25MB.");
+      return;
+    }
+
+    setRecordedBlob(file);
+    setRecordingTime(0);
+
+    if (!newVoiceName.trim()) {
+      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+      setNewVoiceName(nameWithoutExt);
+    }
+
+    toast.success(`Audio file "${file.name}" loaded`);
+    // Reset the input so the same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const stopRecording = () => {
@@ -373,7 +429,7 @@ const VoiceManagementSection = () => {
               onChange={(e) => setNewVoiceName(e.target.value)}
             />
 
-            <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30">
+            <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30 flex-wrap">
               {!isRecording ? (
                 <Button
                   size="sm" variant="outline"
@@ -395,6 +451,23 @@ const VoiceManagementSection = () => {
                 </Button>
               )}
 
+              <Button
+                size="sm" variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isCloning || isRecording}
+                className="gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                Upload Voice
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="audio/*,.wav,.mp3,.webm,.ogg,.m4a"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+
               {isRecording && (
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -407,13 +480,15 @@ const VoiceManagementSection = () => {
                   <Button size="sm" variant="ghost" onClick={playRecording} className="gap-1">
                     <Play className="w-3 h-3" /> Play
                   </Button>
-                  <span className="text-xs text-muted-foreground">{formatTime(recordingTime)} recorded</span>
+                  <span className="text-xs text-muted-foreground">
+                    {recordingTime > 0 ? `${formatTime(recordingTime)} recorded` : "File loaded"}
+                  </span>
                 </div>
               )}
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Record at least 30 seconds of clear speech. The voice will be cloned and automatically applied to your AI Brain.
+              Record or upload at least 30 seconds of clear speech. The voice will be cloned and automatically applied to your AI Brain.
             </p>
 
             {recordedBlob && newVoiceName.trim() && (
