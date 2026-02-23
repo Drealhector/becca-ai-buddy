@@ -90,9 +90,11 @@ serve(async (req) => {
         });
 
         let existingToolIds: string[] = [];
+        let existingVoice: any = null;
         if (getResponse.ok) {
           const existing = await getResponse.json();
           existingToolIds = existing.model?.toolIds || [];
+          existingVoice = existing.voice || null;
         }
 
         const outboundPrompt = `${personality}
@@ -129,6 +131,11 @@ CRITICAL OUTBOUND CALL BEHAVIOR:
             },
           },
         };
+
+        // Preserve voice config so scheduled calls have audio
+        if (existingVoice) {
+          callPayload.assistantOverrides.voice = existingVoice;
+        }
 
         if (phoneNumberId) {
           callPayload.phoneNumberId = phoneNumberId;

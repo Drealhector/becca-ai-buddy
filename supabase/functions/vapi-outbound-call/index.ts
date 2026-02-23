@@ -95,9 +95,12 @@ serve(async (req) => {
     });
 
     let existingToolIds: string[] = [];
+    let existingVoice: any = null;
     if (getResponse.ok) {
       const existing = await getResponse.json();
       existingToolIds = existing.model?.toolIds || [];
+      existingVoice = existing.voice || null;
+      console.log('Preserved voice config:', JSON.stringify(existingVoice));
     }
 
     // Build outbound-specific system prompt that blends purpose with personality
@@ -147,8 +150,11 @@ CRITICAL OUTBOUND CALL BEHAVIOR:
           ],
           toolIds: existingToolIds,
         },
-        // Don't set firstMessage — let the AI generate it naturally from the prompt
       };
+      // Preserve voice config so outbound calls have audio
+      if (existingVoice) {
+        callPayload.assistantOverrides.voice = existingVoice;
+      }
     }
 
     // If we have a phone number ID, include it
