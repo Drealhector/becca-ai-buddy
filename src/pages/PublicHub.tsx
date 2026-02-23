@@ -243,23 +243,15 @@ const PublicHub = () => {
             }
 
             return isExternal ? (
-              <a
+              <button
                 key={index}
-                href={link.path}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full"
-                onClick={(e) => {
-                  // Fallback: if target="_blank" is blocked (e.g. in iframes), navigate directly
-                  const newWindow = window.open(link.path, '_blank');
-                  if (!newWindow || newWindow.closed) {
-                    e.preventDefault();
-                    window.location.href = link.path;
-                  }
+                className="block w-full text-left"
+                onClick={() => {
+                  window.open(link.path, '_blank') || (window.location.href = link.path);
                 }}
               >
                 {buttonContent}
-              </a>
+              </button>
             ) : (
               <Link
                 key={index}
