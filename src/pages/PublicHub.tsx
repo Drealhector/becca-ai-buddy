@@ -12,6 +12,7 @@ const PublicHub = () => {
   const [loading, setLoading] = useState(true);
   const [hiddenLinks, setHiddenLinks] = useState<string[]>([]);
   const [showCallDialog, setShowCallDialog] = useState(false);
+  const [bgUrl, setBgUrl] = useState(hubBackground);
 
   useEffect(() => {
     fetchData();
@@ -132,14 +133,6 @@ const PublicHub = () => {
   });
 
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-dark">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   // Determine which background to use based on screen width
   const getResponsiveBg = () => {
     const w = window.innerWidth;
@@ -149,8 +142,6 @@ const PublicHub = () => {
     return hubBackground;
   };
 
-  const [bgUrl, setBgUrl] = useState(hubBackground);
-
   useEffect(() => {
     if (customization) {
       setBgUrl(getResponsiveBg());
@@ -159,6 +150,15 @@ const PublicHub = () => {
       return () => window.removeEventListener('resize', handleResize);
     }
   }, [customization]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-dark">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
 
   return (
     <div 
