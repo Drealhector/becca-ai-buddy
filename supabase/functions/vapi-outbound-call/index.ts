@@ -17,7 +17,11 @@ serve(async (req) => {
       throw new Error('VAPI_API_KEY is not configured');
     }
 
-    const { toNumber, purpose, action, callId } = await req.json();
+    const body = await req.json();
+    const toNumber = body.toNumber?.trim();
+    const purpose = body.purpose?.trim();
+    const action = body.action;
+    const callId = body.callId;
 
     // Handle end call action
     if (action === 'end' && callId) {
