@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, FileText, Clock, Brain, Play, Pause, CalendarIcon } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Trash2, FileText, Clock, Brain, Play, Pause, CalendarIcon, Copy, Check } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +13,8 @@ import { AnalyzeCallTranscriptsDialog } from "./AnalyzeCallTranscriptsDialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+const MY_PHONE_NUMBER = "+2342093940544";
 
 const PhoneCallSection = () => {
   const [callHistory, setCallHistory] = useState<any[]>([]);
@@ -31,6 +33,8 @@ const PhoneCallSection = () => {
   const [isInCall, setIsInCall] = useState(false);
   const [callStatus, setCallStatus] = useState<"calling" | "connected" | null>(null);
   const [callDuration, setCallDuration] = useState(0);
+  const [showMyNumber, setShowMyNumber] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
@@ -453,6 +457,37 @@ const PhoneCallSection = () => {
               <Clock className="w-3 h-3" />
               Schedule
             </Button>
+            <Popover open={showMyNumber} onOpenChange={setShowMyNumber}>
+              <PopoverTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1 flex-1 sm:flex-initial"
+                >
+                  <Phone className="w-3 h-3" />
+                  My Number
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-4">
+                <p className="text-sm font-medium mb-2">Your Phone Number</p>
+                <div className="flex items-center gap-2">
+                  <code className="bg-muted px-3 py-1.5 rounded text-sm font-mono">{MY_PHONE_NUMBER}</code>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      navigator.clipboard.writeText(MY_PHONE_NUMBER);
+                      setCopied(true);
+                      toast.success("Number copied!");
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                  >
+                    {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
         <Button
