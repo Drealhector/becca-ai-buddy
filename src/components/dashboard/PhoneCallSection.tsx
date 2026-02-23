@@ -219,23 +219,27 @@ const PhoneCallSection = () => {
   };
 
   const handleEndCall = async () => {
-    try {
-      // Actually stop the Vapi call via API
-      if (currentCallId) {
-        await supabase.functions.invoke("vapi-outbound-call", {
+    console.log("Ending call, currentCallId:", currentCallId);
+    
+    if (currentCallId) {
+      try {
+        const { data, error } = await supabase.functions.invoke("vapi-outbound-call", {
           body: { action: "end", callId: currentCallId },
-        }).catch(() => {
-          // If the edge function doesn't support end, call Vapi directly
-          // The call will end on Vapi's side when we stop
         });
+        console.log("End call response:", data, error);
+        if (error) {
+          console.error("Error from end call function:", error);
+          toast.error("Failed to end call");
+        } else {
+          toast.success("Call ended");
+        }
+      } catch (error) {
+        console.error("Error ending call:", error);
+        toast.error("Failed to end call");
       }
-
-      const finalDuration = callDuration / 60;
-
-      // Don't double-insert - the outbound call edge function already logs it
+    } else {
+      console.warn("No currentCallId to end");
       toast.success("Call ended");
-    } catch (error) {
-      console.error("Error ending call:", error);
     }
 
     setIsInCall(false);
