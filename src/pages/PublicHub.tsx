@@ -249,6 +249,14 @@ const PublicHub = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full"
+                onClick={(e) => {
+                  // Fallback: if target="_blank" is blocked (e.g. in iframes), navigate directly
+                  const newWindow = window.open(link.path, '_blank');
+                  if (!newWindow || newWindow.closed) {
+                    e.preventDefault();
+                    window.location.href = link.path;
+                  }
+                }}
               >
                 {buttonContent}
               </a>
