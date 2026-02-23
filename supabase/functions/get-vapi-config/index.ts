@@ -12,8 +12,8 @@ serve(async (req) => {
 
   try {
     // Use the public key and assistant ID from the Vapi widget config
-    const publicKey = 'a73cb300-eae5-4375-9b68-0dda8733474a';
-    const assistantId = '6c411909-067b-4ce3-ad02-10299109dc64';
+    const publicKey = Deno.env.get('VITE_VAPI_PUBLIC_KEY') || 'a73cb300-eae5-4375-9b68-0dda8733474a';
+    const assistantId = '328ef302-11ca-46a4-b731-76561f9dcbb9';
 
     return new Response(
       JSON.stringify({ publicKey, assistantId }),

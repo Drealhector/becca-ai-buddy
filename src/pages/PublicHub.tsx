@@ -96,7 +96,7 @@ const PublicHub = () => {
     { 
       key: 'facebook',
       label: `Facebook/${slug}`, 
-      path: customization?.facebook_username ? `https://facebook.com/${customization.facebook_username}` : '#', 
+      path: customization?.facebook_username ? `https://www.facebook.com/profile.php?id=${customization.facebook_username}` : '#', 
       icon: null,
       image: 'https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg',
       legacyPath: slug ? `/facebook/${slug}` : ''
