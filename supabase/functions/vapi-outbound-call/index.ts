@@ -23,16 +23,14 @@ serve(async (req) => {
     if (action === 'end' && callId) {
       console.log(`Ending call ${callId}`);
       const endRes = await fetch(`https://api.vapi.ai/call/${callId}`, {
-        method: 'PATCH',
+        method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${VAPI_API_KEY}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: 'ended' }),
       });
       
-      const endData = await endRes.json();
-      console.log('End call response:', endRes.status, JSON.stringify(endData));
+      const endText = await endRes.text();
+      console.log('End call response:', endRes.status, endText);
       
       return new Response(JSON.stringify({ success: true, ended: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
