@@ -95,6 +95,8 @@ export const InventorySection = () => {
   const handleSaveOwnerPhone = async () => {
     setSavingPhone(true);
     try {
+      const trimmedPhone = ownerPhone?.trim() || null;
+      
       const { data: existing } = await supabase
         .from("customizations")
         .select("id")
@@ -103,11 +105,25 @@ export const InventorySection = () => {
       if (existing) {
         const { error } = await supabase
           .from("customizations")
-          .update({ owner_phone: ownerPhone || null } as any)
+          .update({ owner_phone: trimmedPhone } as any)
           .eq("id", existing.id);
         if (error) throw error;
       }
-      toast.success("Human support number saved");
+
+      // Also update the Vapi transferCall tool destination
+      if (trimmedPhone) {
+        const { error: fnError } = await supabase.functions.invoke("update-transfer-number", {
+          body: { phoneNumber: trimmedPhone },
+        });
+        if (fnError) {
+          console.error("Error updating Vapi transfer tool:", fnError);
+          toast.error("Number saved but transfer tool sync failed. Transfer may use old number.");
+        } else {
+          toast.success("Human support number saved & transfer updated");
+        }
+      } else {
+        toast.success("Human support number saved");
+      }
     } catch (error) {
       console.error("Error saving owner phone:", error);
       toast.error("Failed to save number");
