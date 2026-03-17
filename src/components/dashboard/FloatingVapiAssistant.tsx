@@ -147,7 +147,7 @@ const FloatingVapiAssistant = ({
       }
       vapiRef.current = null;
     };
-  }, [publicKey]);
+  }, [publicKey, assistantId]);
 
   // Activation trigger effect
   useEffect(() => {
