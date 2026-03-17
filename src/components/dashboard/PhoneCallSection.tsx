@@ -37,7 +37,7 @@ const PhoneCallSection = () => {
   const [copied, setCopied] = useState(false);
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
   const [showTranscriptDialog, setShowTranscriptDialog] = useState(false);
   const [selectedCallTranscript, setSelectedCallTranscript] = useState<any>(null);
