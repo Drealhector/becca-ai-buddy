@@ -28,6 +28,38 @@ const FloatingVapiAssistant = ({
   const toggleLockRef = useRef<boolean>(false);
   const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchEventRef = useRef<boolean>(false);
+  const isActiveRef = useRef<boolean>(false);
+  const isLoadingRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
+
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
+
+  const extractVapiErrorMessage = (error: unknown) => {
+    if (!error) return "Unknown error";
+
+    if (typeof error === "string") return error;
+
+    if (error instanceof Error) return error.message;
+
+    if (typeof error === "object") {
+      const maybeError = error as Record<string, unknown>;
+      const nested = maybeError.error as Record<string, unknown> | undefined;
+
+      return (
+        (typeof maybeError.message === "string" && maybeError.message) ||
+        (typeof maybeError.reason === "string" && maybeError.reason) ||
+        (typeof nested?.message === "string" && nested.message) ||
+        JSON.stringify(error)
+      );
+    }
+
+    return String(error);
+  };
 
   useEffect(() => {
     if (!publicKey) return; // Don't init for decorative mode
@@ -78,23 +110,29 @@ const FloatingVapiAssistant = ({
       }
     });
 
-    vapi.on("error", (error: any) => {
-      console.error("Ball assistant Vapi error:", error);
+    vapi.on("error", (error: unknown) => {
+      const errorMessage = extractVapiErrorMessage(error);
+      console.error("Ball assistant Vapi error:", errorMessage, error);
+
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
         connectionTimeoutRef.current = null;
       }
+
       setIsActive(false);
       setIsLoading(false);
       toggleLockRef.current = false;
-      
-      const errorMessage = error?.message || error?.toString() || '';
-      if (errorMessage.includes('microphone') || errorMessage.includes('permission')) {
+
+      const normalized = errorMessage.toLowerCase();
+
+      if (normalized.includes("microphone") || normalized.includes("permission") || normalized.includes("notallowederror")) {
         toast.error("Microphone access denied. Please allow microphone permissions.");
-      } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+      } else if (normalized.includes("invalid key") || normalized.includes("assistant") || normalized.includes("unauthorized")) {
+        toast.error(`Vapi credential error: ${errorMessage}`);
+      } else if (normalized.includes("network") || normalized.includes("connection") || normalized.includes("timeout")) {
         toast.error("Network error. Please check your connection and try again.");
       } else {
-        toast.error("Connection failed. Please try again.");
+        toast.error(`Connection failed: ${errorMessage}`);
       }
     });
 
@@ -109,7 +147,7 @@ const FloatingVapiAssistant = ({
       }
       vapiRef.current = null;
     };
-  }, [publicKey]);
+  }, [publicKey, assistantId]);
 
   // Activation trigger effect
   useEffect(() => {
@@ -223,95 +261,96 @@ const FloatingVapiAssistant = ({
 
     try {
       // If active OR loading, stop immediately
-      if (isActive || isLoading) {
+      if (isActiveRef.current || isLoadingRef.current) {
         if (connectionTimeoutRef.current) {
           clearTimeout(connectionTimeoutRef.current);
           connectionTimeoutRef.current = null;
         }
+
         vapiRef.current.stop();
         setIsActive(false);
         setIsLoading(false);
         setIsSpeaking(false);
+        toggleLockRef.current = false;
         toast.info("Assistant stopped");
-      } else {
-        // Check microphone permissions first with proper cleanup
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          // Immediately stop the test stream
-          stream.getTracks().forEach(track => track.stop());
-        } catch (permError) {
-          console.error("Microphone permission error:", permError);
-          toast.error("Microphone access required. Please allow microphone permissions in your browser settings.");
-          toggleLockRef.current = false;
-          return;
-        }
+        return;
+      }
 
-        setIsLoading(true);
-        
-        // Set connection timeout (30 seconds for better reliability)
-        connectionTimeoutRef.current = setTimeout(() => {
-          if (isLoading && !isActive) {
-            console.log('Connection timeout');
-            
-            if (vapiRef.current) {
-              vapiRef.current.stop();
-            }
-            
-            // Retry logic with exponential backoff
-            if (retryCount < 3) {
-              const newRetryCount = retryCount + 1;
-              setRetryCount(newRetryCount);
-              
-              // Exponential backoff: 2s, 4s, 8s
-              const retryDelay = Math.pow(2, newRetryCount) * 1000;
-              
-              toast.error(`Connection timeout. Retrying in ${retryDelay/1000}s... (${newRetryCount}/3)`);
-              
-              setTimeout(() => {
-                setIsLoading(false);
-                toggleLockRef.current = false;
-                handleClick();
-              }, retryDelay);
-            } else {
-              setIsLoading(false);
-              setIsActive(false);
-              setRetryCount(0);
-              toggleLockRef.current = false;
-              toast.error("Unable to connect after multiple attempts. Please check your internet connection and try again later.");
-            }
+      setIsLoading(true);
+
+      // Set connection timeout (30 seconds)
+      connectionTimeoutRef.current = setTimeout(() => {
+        if (isLoadingRef.current && !isActiveRef.current) {
+          console.log('Connection timeout');
+
+          if (vapiRef.current) {
+            vapiRef.current.stop();
           }
-        }, 30000);
 
-        // Start the call
-        await vapiRef.current.start(assistantId);
+          // Retry logic with exponential backoff
+          if (retryCount < 3) {
+            const newRetryCount = retryCount + 1;
+            setRetryCount(newRetryCount);
+
+            // Exponential backoff: 2s, 4s, 8s
+            const retryDelay = Math.pow(2, newRetryCount) * 1000;
+
+            toast.error(`Connection timeout. Retrying in ${retryDelay / 1000}s... (${newRetryCount}/3)`);
+
+            setTimeout(() => {
+              setIsLoading(false);
+              toggleLockRef.current = false;
+              handleClick();
+            }, retryDelay);
+          } else {
+            setIsLoading(false);
+            setIsActive(false);
+            setRetryCount(0);
+            toggleLockRef.current = false;
+            toast.error("Unable to connect after multiple attempts. Please check your internet connection and try again later.");
+          }
+        }
+      }, 30000);
+
+      // Start the call (Vapi handles microphone prompt internally)
+      const call = await vapiRef.current.start(assistantId);
+      if (!call) {
+        throw new Error("Call session was not created");
       }
     } catch (error) {
-      console.error("Failed to toggle assistant:", error);
+      const errorMessage = extractVapiErrorMessage(error);
+      console.error("Failed to toggle assistant:", errorMessage, error);
+
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
         connectionTimeoutRef.current = null;
       }
+
       setIsLoading(false);
       setIsActive(false);
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
+
+      const normalized = errorMessage.toLowerCase();
+
       // Retry logic for network errors with exponential backoff
-      if ((errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('timeout')) && retryCount < 3) {
+      if ((normalized.includes('network') || normalized.includes('fetch') || normalized.includes('timeout')) && retryCount < 3) {
         const newRetryCount = retryCount + 1;
         setRetryCount(newRetryCount);
-        
+
         // Exponential backoff: 2s, 4s, 8s
         const retryDelay = Math.pow(2, newRetryCount) * 1000;
-        
-        toast.error(`Connection failed. Retrying in ${retryDelay/1000}s... (${newRetryCount}/3)`);
-        
+
+        toast.error(`Connection failed. Retrying in ${retryDelay / 1000}s... (${newRetryCount}/3)`);
+
         setTimeout(() => {
           toggleLockRef.current = false;
           handleClick();
         }, retryDelay);
+      } else if (normalized.includes("invalid key") || normalized.includes("assistant") || normalized.includes("unauthorized")) {
+        toast.error(`Vapi credential error: ${errorMessage}`);
+        setRetryCount(0);
+        toggleLockRef.current = false;
       } else {
-        toast.error("Failed to connect. Please try again in a moment.");
+        toast.error(`Failed to connect: ${errorMessage}`);
         setRetryCount(0);
         toggleLockRef.current = false;
       }
