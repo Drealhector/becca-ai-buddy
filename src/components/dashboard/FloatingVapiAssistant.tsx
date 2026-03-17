@@ -26,7 +26,7 @@ const FloatingVapiAssistant = ({
   const vapiRef = useRef<Vapi | null>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
   const toggleLockRef = useRef<boolean>(false);
-  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchEventRef = useRef<boolean>(false);
 
   useEffect(() => {
