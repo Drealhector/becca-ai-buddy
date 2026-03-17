@@ -26,17 +26,20 @@ const FloatingVapiAssistant = ({
   const vapiRef = useRef<Vapi | null>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
   const toggleLockRef = useRef<boolean>(false);
-  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchEventRef = useRef<boolean>(false);
 
   useEffect(() => {
-    // Initialize Vapi with optimized settings
+    if (!publicKey) return; // Don't init for decorative mode
+    
+    // Initialize Vapi with the ball's own public key
+    console.log("Initializing Vapi ball assistant with publicKey:", publicKey, "assistantId:", assistantId);
     const vapi = new Vapi(publicKey);
     vapiRef.current = vapi;
 
-    // Set up event listeners with faster response
+    // Set up event listeners
     vapi.on("call-start", () => {
-      console.log("Call started successfully");
+      console.log("Ball assistant: Call started successfully");
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
         connectionTimeoutRef.current = null;
@@ -44,12 +47,12 @@ const FloatingVapiAssistant = ({
       setIsLoading(false);
       setIsActive(true);
       setRetryCount(0);
-      toggleLockRef.current = false; // Unlock after successful start
+      toggleLockRef.current = false;
       toast.success("Assistant activated");
     });
 
     vapi.on("call-end", () => {
-      console.log("Call ended");
+      console.log("Ball assistant: Call ended");
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
         connectionTimeoutRef.current = null;
@@ -70,22 +73,21 @@ const FloatingVapiAssistant = ({
     });
 
     vapi.on("volume-level", (volume: number) => {
-      // Visual feedback for audio activity
       if (volume > 0.1) {
         setIsSpeaking(true);
       }
     });
 
     vapi.on("error", (error: any) => {
-      console.error("Vapi error:", error);
+      console.error("Ball assistant Vapi error:", error);
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
         connectionTimeoutRef.current = null;
       }
       setIsActive(false);
       setIsLoading(false);
+      toggleLockRef.current = false;
       
-      // Check for specific error types
       const errorMessage = error?.message || error?.toString() || '';
       if (errorMessage.includes('microphone') || errorMessage.includes('permission')) {
         toast.error("Microphone access denied. Please allow microphone permissions.");
@@ -100,11 +102,14 @@ const FloatingVapiAssistant = ({
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
       }
-      if (vapiRef.current) {
-        vapiRef.current.stop();
+      try {
+        vapi.stop();
+      } catch (e) {
+        // Ignore cleanup errors
       }
+      vapiRef.current = null;
     };
-  }, []);
+  }, [publicKey]);
 
   // Activation trigger effect
   useEffect(() => {

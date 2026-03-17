@@ -37,14 +37,14 @@ const PhoneCallSection = () => {
   const [copied, setCopied] = useState(false);
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
   const [showTranscriptDialog, setShowTranscriptDialog] = useState(false);
   const [selectedCallTranscript, setSelectedCallTranscript] = useState<any>(null);
   const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
   const [playingCallId, setPlayingCallId] = useState<string | null>(null);
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchCallHistory();
@@ -76,7 +76,7 @@ const PhoneCallSection = () => {
 
   // Call timer effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isInCall && callStatus === "connected" && callStartTime) {
       interval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - callStartTime.getTime()) / 1000);

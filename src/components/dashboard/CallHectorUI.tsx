@@ -29,7 +29,7 @@ const CallHectorUI: React.FC<CallHectorUIProps> = ({ onClose }) => {
   }, []);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isConnected && startTimeRef.current) {
       interval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTimeRef.current!) / 1000);
