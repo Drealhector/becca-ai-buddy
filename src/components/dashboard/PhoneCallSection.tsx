@@ -76,7 +76,7 @@ const PhoneCallSection = () => {
 
   // Call timer effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isInCall && callStatus === "connected" && callStartTime) {
       interval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - callStartTime.getTime()) / 1000);
