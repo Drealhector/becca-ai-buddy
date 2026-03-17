@@ -39,6 +39,28 @@ const FloatingVapiAssistant = ({
     isLoadingRef.current = isLoading;
   }, [isLoading]);
 
+  const extractVapiErrorMessage = (error: unknown) => {
+    if (!error) return "Unknown error";
+
+    if (typeof error === "string") return error;
+
+    if (error instanceof Error) return error.message;
+
+    if (typeof error === "object") {
+      const maybeError = error as Record<string, unknown>;
+      const nested = maybeError.error as Record<string, unknown> | undefined;
+
+      return (
+        (typeof maybeError.message === "string" && maybeError.message) ||
+        (typeof maybeError.reason === "string" && maybeError.reason) ||
+        (typeof nested?.message === "string" && nested.message) ||
+        JSON.stringify(error)
+      );
+    }
+
+    return String(error);
+  };
+
   useEffect(() => {
     if (!publicKey) return; // Don't init for decorative mode
     
