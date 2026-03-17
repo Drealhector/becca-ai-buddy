@@ -44,7 +44,7 @@ const PhoneCallSection = () => {
   const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
   const [playingCallId, setPlayingCallId] = useState<string | null>(null);
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchCallHistory();
