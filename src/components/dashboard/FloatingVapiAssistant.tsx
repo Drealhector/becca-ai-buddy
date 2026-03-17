@@ -28,6 +28,16 @@ const FloatingVapiAssistant = ({
   const toggleLockRef = useRef<boolean>(false);
   const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchEventRef = useRef<boolean>(false);
+  const isActiveRef = useRef<boolean>(false);
+  const isLoadingRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
+
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
 
   useEffect(() => {
     if (!publicKey) return; // Don't init for decorative mode
