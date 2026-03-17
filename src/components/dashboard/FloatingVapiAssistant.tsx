@@ -110,23 +110,29 @@ const FloatingVapiAssistant = ({
       }
     });
 
-    vapi.on("error", (error: any) => {
-      console.error("Ball assistant Vapi error:", error);
+    vapi.on("error", (error: unknown) => {
+      const errorMessage = extractVapiErrorMessage(error);
+      console.error("Ball assistant Vapi error:", errorMessage, error);
+
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
         connectionTimeoutRef.current = null;
       }
+
       setIsActive(false);
       setIsLoading(false);
       toggleLockRef.current = false;
-      
-      const errorMessage = error?.message || error?.toString() || '';
-      if (errorMessage.includes('microphone') || errorMessage.includes('permission')) {
+
+      const normalized = errorMessage.toLowerCase();
+
+      if (normalized.includes("microphone") || normalized.includes("permission") || normalized.includes("notallowederror")) {
         toast.error("Microphone access denied. Please allow microphone permissions.");
-      } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+      } else if (normalized.includes("invalid key") || normalized.includes("assistant") || normalized.includes("unauthorized")) {
+        toast.error(`Vapi credential error: ${errorMessage}`);
+      } else if (normalized.includes("network") || normalized.includes("connection") || normalized.includes("timeout")) {
         toast.error("Network error. Please check your connection and try again.");
       } else {
-        toast.error("Connection failed. Please try again.");
+        toast.error(`Connection failed: ${errorMessage}`);
       }
     });
 
