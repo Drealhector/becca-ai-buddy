@@ -232,7 +232,7 @@ const FloatingAssistant = ({
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
       // Start ElevenLabs conversation
-      await conversation.startSession({ agentId });
+      await conversation.startSession({ agentId } as any);
     } catch (error: any) {
       console.error("Failed to start BECCA:", error);
       setIsLoading(false);
