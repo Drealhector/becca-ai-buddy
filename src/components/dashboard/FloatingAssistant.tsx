@@ -30,6 +30,7 @@ const FloatingAssistant = ({
   const toggleLockRef = useRef<boolean>(false);
   const touchEventRef = useRef<boolean>(false);
   const recognitionRef = useRef<any>(null);
+  const hasHadCallRef = useRef<boolean>(false);
 
   // ElevenLabs conversation hook
   const conversation = useConversation({
@@ -101,21 +102,17 @@ const FloatingAssistant = ({
     };
 
     recognition.onerror = (event: any) => {
-      if (event.error === 'not-allowed') {
-        console.log('Microphone permission denied for wake word detection');
+      if (event.error === 'not-allowed' || event.error === 'service-not-available' || event.error === 'aborted') {
+        // Stop permanently on permission denied or service unavailable
+        recognitionRef.current = null;
         setIsListening(false);
       }
-      // For other errors, onend will auto-restart
+      // For transient errors (network, audio-capture), onend will auto-restart
     };
 
-    // Start listening for wake word
-    try {
-      recognition.start();
-      setIsListening(true);
-      console.log('Wake word detection active: say "Hey Becca" to activate');
-    } catch (e) {
-      // May fail if mic permission not yet granted
-    }
+    // Don't auto-start — wake word activates after user's first call ends
+    // (mic permission will already be granted by then)
+    console.log('Wake word detection ready: will activate after first call');
 
     return () => {
       recognitionRef.current = null;
@@ -128,14 +125,16 @@ const FloatingAssistant = ({
   useEffect(() => {
     if (!recognitionRef.current) return;
     if (isActive) {
+      hasHadCallRef.current = true;
       // Stop listening during active call
       try { recognitionRef.current.stop(); } catch (e) {}
       setIsListening(false);
-    } else {
-      // Restart listening after call ends
+    } else if (hasHadCallRef.current) {
+      // Only start listening after user has had at least one call (mic permission granted)
       try {
         recognitionRef.current.start();
         setIsListening(true);
+        console.log('Wake word detection active: say "Hey Becca" to activate');
       } catch (e) {}
     }
   }, [isActive]);
