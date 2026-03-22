@@ -15,7 +15,7 @@ import VoiceManagementSection from "@/components/dashboard/VoiceManagementSectio
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
 import { InventorySection } from "@/components/dashboard/InventorySection";
 import { PhoneConnectionDialog } from "@/components/dashboard/PhoneConnectionDialog";
-import FloatingVapiAssistant from "@/components/dashboard/FloatingVapiAssistant";
+import FloatingAssistant from "@/components/dashboard/FloatingAssistant";
 import MatrixBackground from "@/components/dashboard/MatrixBackground";
 import { Menu, LogOut, Phone, Link as LinkIcon, Settings, MessageSquare, Mic, Trash2 } from "lucide-react";
 import beccaLogo from "@/assets/becca-new-logo.png";
@@ -340,7 +340,7 @@ const Dashboard = () => {
       />
 
       {/* Floating Vapi Assistant */}
-      <FloatingVapiAssistant />
+      <FloatingAssistant />
     </div>
   );
 };

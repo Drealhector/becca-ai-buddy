@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
-import FloatingVapiAssistant from "@/components/dashboard/FloatingVapiAssistant";
+import FloatingAssistant from "@/components/dashboard/FloatingAssistant";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import NeuralBrain from "@/components/3d/NeuralBrain";
@@ -428,9 +428,8 @@ const TalkToUs = () => {
 
       {/* Decorative sphere only — no AI assistant connected */}
       {showBecca && (
-        <FloatingVapiAssistant
-          publicKey=""
-          assistantId=""
+        <FloatingAssistant
+          agentId=""
           initialPosition={{ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 60 }}
           activationTrigger={0}
         />
