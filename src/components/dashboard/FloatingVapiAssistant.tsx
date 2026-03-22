@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Vapi from "@vapi-ai/web";
 import { toast } from "sonner";
+import beccaBLogo from "@/assets/becca-b-new-logo.png";
 
 interface FloatingVapiAssistantProps {
   publicKey?: string;
@@ -9,13 +10,17 @@ interface FloatingVapiAssistantProps {
   activationTrigger?: number;
 }
 
-const FloatingVapiAssistant = ({ 
-  publicKey = "cb6d31db-2209-4ffa-ac27-794c02fcd8ec",
-  assistantId = "8eb153bb-e605-438c-85e6-bbe3484a64ff",
+const BALL_SIZE = 96;
+const HIT_PADDING = 12;
+const CONTAINER_SIZE = BALL_SIZE + HIT_PADDING * 2;
+
+const FloatingVapiAssistant = ({
+  publicKey = import.meta.env.VITE_VAPI_PUBLIC_KEY || "",
+  assistantId = import.meta.env.VITE_VAPI_ASSISTANT_ID || "",
   initialPosition,
   activationTrigger = 0
 }: FloatingVapiAssistantProps = {}) => {
-  const defaultPosition = initialPosition || { x: window.innerWidth - 120, y: window.innerHeight - 120 };
+  const defaultPosition = initialPosition || { x: window.innerWidth - CONTAINER_SIZE - 20, y: window.innerHeight - CONTAINER_SIZE - 20 };
   const [position, setPosition] = useState(defaultPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [isActive, setIsActive] = useState(false);
@@ -41,15 +46,11 @@ const FloatingVapiAssistant = ({
 
   const extractVapiErrorMessage = (error: unknown) => {
     if (!error) return "Unknown error";
-
     if (typeof error === "string") return error;
-
     if (error instanceof Error) return error.message;
-
     if (typeof error === "object") {
       const maybeError = error as Record<string, unknown>;
       const nested = maybeError.error as Record<string, unknown> | undefined;
-
       return (
         (typeof maybeError.message === "string" && maybeError.message) ||
         (typeof maybeError.reason === "string" && maybeError.reason) ||
@@ -57,7 +58,6 @@ const FloatingVapiAssistant = ({
         JSON.stringify(error)
       );
     }
-
     return String(error);
   };
 
@@ -76,17 +76,13 @@ const FloatingVapiAssistant = ({
   // Create a fresh Vapi instance with event listeners
   const createVapiInstance = () => {
     destroyVapiInstance();
-
     console.log("Creating fresh Vapi instance with publicKey:", publicKey, "assistantId:", assistantId);
     const vapi = new Vapi(publicKey);
     vapiRef.current = vapi;
 
     vapi.on("call-start", () => {
       console.log("Ball assistant: Call started successfully");
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-        connectionTimeoutRef.current = null;
-      }
+      if (connectionTimeoutRef.current) { clearTimeout(connectionTimeoutRef.current); connectionTimeoutRef.current = null; }
       setIsLoading(false);
       setIsActive(true);
       setRetryCount(0);
@@ -96,49 +92,49 @@ const FloatingVapiAssistant = ({
 
     vapi.on("call-end", () => {
       console.log("Ball assistant: Call ended");
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-        connectionTimeoutRef.current = null;
-      }
+      if (connectionTimeoutRef.current) { clearTimeout(connectionTimeoutRef.current); connectionTimeoutRef.current = null; }
       setIsActive(false);
       setIsSpeaking(false);
       setIsLoading(false);
       setRetryCount(0);
       toggleLockRef.current = false;
-      // Destroy the instance so next call gets a fresh one
       vapiRef.current = null;
     });
 
-    vapi.on("speech-start", () => {
-      setIsSpeaking(true);
-    });
-
-    vapi.on("speech-end", () => {
-      setIsSpeaking(false);
-    });
-
-    vapi.on("volume-level", (volume: number) => {
-      if (volume > 0.1) {
-        setIsSpeaking(true);
-      }
-    });
+    vapi.on("speech-start", () => setIsSpeaking(true));
+    vapi.on("speech-end", () => setIsSpeaking(false));
+    vapi.on("volume-level", (volume: number) => { if (volume > 0.1) setIsSpeaking(true); });
 
     vapi.on("error", (error: unknown) => {
       const errorMessage = extractVapiErrorMessage(error);
       console.error("Ball assistant Vapi error:", errorMessage, error);
-
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-        connectionTimeoutRef.current = null;
-      }
-
+      if (connectionTimeoutRef.current) { clearTimeout(connectionTimeoutRef.current); connectionTimeoutRef.current = null; }
       setIsActive(false);
       setIsLoading(false);
+      setIsSpeaking(false);
       toggleLockRef.current = false;
-      // Destroy the instance so next attempt gets a fresh one
       destroyVapiInstance();
 
       const normalized = errorMessage.toLowerCase();
+
+      // Auto-retry for Daily.co "ejected" / "Meeting has ended" errors
+      if (normalized.includes("ejected") || normalized.includes("meeting has ended") || normalized.includes("daily-error")) {
+        if (retryCount < 3) {
+          const newRetryCount = retryCount + 1;
+          setRetryCount(newRetryCount);
+          const retryDelay = Math.pow(2, newRetryCount) * 1000;
+          console.log(`Daily.co session error, auto-retrying in ${retryDelay}ms (attempt ${newRetryCount}/3)`);
+          toast.info(`Reconnecting... (${newRetryCount}/3)`);
+          setTimeout(() => {
+            toggleLockRef.current = false;
+            handleClick();
+          }, retryDelay);
+        } else {
+          setRetryCount(0);
+          toast.error("Unable to connect to voice assistant. Please try again in a moment.");
+        }
+        return;
+      }
 
       if (normalized.includes("microphone") || normalized.includes("permission") || normalized.includes("notallowederror")) {
         toast.error("Microphone access denied. Please allow microphone permissions.");
@@ -157,9 +153,7 @@ const FloatingVapiAssistant = ({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-      }
+      if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
       destroyVapiInstance();
     };
   }, []);
@@ -177,93 +171,59 @@ const FloatingVapiAssistant = ({
     }
   }, [activationTrigger]);
 
+  // --- DRAG HANDLERS (GPU-accelerated with transform) ---
+
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Ignore mouse events if touch just happened
     if (touchEventRef.current) return;
-    
     e.preventDefault();
     setIsDragging(true);
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startPosX: position.x,
-      startPosY: position.y,
-    };
+    dragRef.current = { startX: e.clientX, startY: e.clientY, startPosX: position.x, startPosY: position.y };
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
-    
-    // Mark that touch event occurred to prevent mouse events
     touchEventRef.current = true;
-    setTimeout(() => {
-      touchEventRef.current = false;
-    }, 500);
-    
+    setTimeout(() => { touchEventRef.current = false; }, 500);
     const touch = e.touches[0];
     setIsDragging(true);
-    dragRef.current = {
-      startX: touch.clientX,
-      startY: touch.clientY,
-      startPosX: position.x,
-      startPosY: position.y,
-    };
+    dragRef.current = { startX: touch.clientX, startY: touch.clientY, startPosX: position.x, startPosY: position.y };
   };
 
   const handleMouseMove = (e: MouseEvent) => {
     if (!isDragging || !dragRef.current) return;
-
     const deltaX = e.clientX - dragRef.current.startX;
     const deltaY = e.clientY - dragRef.current.startY;
-
-    const newX = Math.max(0, Math.min(window.innerWidth - 80, dragRef.current.startPosX + deltaX));
-    const newY = Math.max(0, Math.min(window.innerHeight - 80, dragRef.current.startPosY + deltaY));
-
+    const newX = Math.max(0, Math.min(window.innerWidth - CONTAINER_SIZE, dragRef.current.startPosX + deltaX));
+    const newY = Math.max(0, Math.min(window.innerHeight - CONTAINER_SIZE, dragRef.current.startPosY + deltaY));
     setPosition({ x: newX, y: newY });
   };
 
   const handleTouchMove = (e: TouchEvent) => {
     if (!isDragging || !dragRef.current) return;
-
     const touch = e.touches[0];
     const deltaX = touch.clientX - dragRef.current.startX;
     const deltaY = touch.clientY - dragRef.current.startY;
-
-    const newX = Math.max(0, Math.min(window.innerWidth - 80, dragRef.current.startPosX + deltaX));
-    const newY = Math.max(0, Math.min(window.innerHeight - 80, dragRef.current.startPosY + deltaY));
-
+    const newX = Math.max(0, Math.min(window.innerWidth - CONTAINER_SIZE, dragRef.current.startPosX + deltaX));
+    const newY = Math.max(0, Math.min(window.innerHeight - CONTAINER_SIZE, dragRef.current.startPosY + deltaY));
     setPosition({ x: newX, y: newY });
   };
 
   const handleMouseUp = (e: MouseEvent) => {
-    // Ignore mouse events if touch just happened
     if (touchEventRef.current) return;
     if (!isDragging) return;
-    
     const deltaX = Math.abs(e.clientX - (dragRef.current?.startX || 0));
     const deltaY = Math.abs(e.clientY - (dragRef.current?.startY || 0));
-    
-    // If barely moved, treat as click
-    if (deltaX < 10 && deltaY < 10) {
-      handleClick();
-    }
-    
+    if (deltaX < 5 && deltaY < 5) handleClick();
     setIsDragging(false);
     dragRef.current = null;
   };
 
   const handleTouchEnd = (e: TouchEvent) => {
     if (!isDragging) return;
-    
     const touch = e.changedTouches[0];
     const deltaX = Math.abs(touch.clientX - (dragRef.current?.startX || 0));
     const deltaY = Math.abs(touch.clientY - (dragRef.current?.startY || 0));
-    
-    // If barely moved, treat as click
-    if (deltaX < 10 && deltaY < 10) {
-      handleClick();
-    }
-    
+    if (deltaX < 5 && deltaY < 5) handleClick();
     setIsDragging(false);
     dragRef.current = null;
   };
@@ -271,17 +231,17 @@ const FloatingVapiAssistant = ({
   const handleClick = async () => {
     if (!publicKey || toggleLockRef.current) return;
 
-    // Lock to prevent rapid toggling
+    // Runtime guard for missing credentials
+    if (!publicKey || !assistantId) {
+      toast.error("VAPI credentials not configured. Set VITE_VAPI_PUBLIC_KEY and VITE_VAPI_ASSISTANT_ID in .env");
+      return;
+    }
+
     toggleLockRef.current = true;
 
     try {
-      // If active OR loading, stop immediately
       if (isActiveRef.current || isLoadingRef.current) {
-        if (connectionTimeoutRef.current) {
-          clearTimeout(connectionTimeoutRef.current);
-          connectionTimeoutRef.current = null;
-        }
-
+        if (connectionTimeoutRef.current) { clearTimeout(connectionTimeoutRef.current); connectionTimeoutRef.current = null; }
         destroyVapiInstance();
         setIsActive(false);
         setIsLoading(false);
@@ -293,27 +253,16 @@ const FloatingVapiAssistant = ({
 
       setIsLoading(true);
 
-      // Set connection timeout (30 seconds)
       connectionTimeoutRef.current = setTimeout(() => {
         if (isLoadingRef.current && !isActiveRef.current) {
           console.log('Connection timeout');
-
           destroyVapiInstance();
-
-          // Retry logic with exponential backoff
           if (retryCount < 3) {
             const newRetryCount = retryCount + 1;
             setRetryCount(newRetryCount);
-
             const retryDelay = Math.pow(2, newRetryCount) * 1000;
-
             toast.error(`Connection timeout. Retrying in ${retryDelay / 1000}s... (${newRetryCount}/3)`);
-
-            setTimeout(() => {
-              setIsLoading(false);
-              toggleLockRef.current = false;
-              handleClick();
-            }, retryDelay);
+            setTimeout(() => { setIsLoading(false); toggleLockRef.current = false; handleClick(); }, retryDelay);
           } else {
             setIsLoading(false);
             setIsActive(false);
@@ -324,44 +273,26 @@ const FloatingVapiAssistant = ({
         }
       }, 30000);
 
-      // Create a fresh Vapi instance for each call
       const vapi = createVapiInstance();
-
-      // Small delay to ensure clean state before starting
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Start the call
+      // Give the SDK time to fully initialize before starting
+      await new Promise(resolve => setTimeout(resolve, 200));
       const call = await vapi.start(assistantId);
-      if (!call) {
-        throw new Error("Call session was not created");
-      }
+      if (!call) throw new Error("Call session was not created");
     } catch (error) {
       const errorMessage = extractVapiErrorMessage(error);
       console.error("Failed to toggle assistant:", errorMessage, error);
-
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-        connectionTimeoutRef.current = null;
-      }
-
+      if (connectionTimeoutRef.current) { clearTimeout(connectionTimeoutRef.current); connectionTimeoutRef.current = null; }
       setIsLoading(false);
       setIsActive(false);
       destroyVapiInstance();
 
       const normalized = errorMessage.toLowerCase();
-
       if ((normalized.includes('network') || normalized.includes('fetch') || normalized.includes('timeout')) && retryCount < 3) {
         const newRetryCount = retryCount + 1;
         setRetryCount(newRetryCount);
-
         const retryDelay = Math.pow(2, newRetryCount) * 1000;
-
         toast.error(`Connection failed. Retrying in ${retryDelay / 1000}s... (${newRetryCount}/3)`);
-
-        setTimeout(() => {
-          toggleLockRef.current = false;
-          handleClick();
-        }, retryDelay);
+        setTimeout(() => { toggleLockRef.current = false; handleClick(); }, retryDelay);
       } else if (normalized.includes("invalid key") || normalized.includes("assistant") || normalized.includes("unauthorized")) {
         toast.error(`Vapi credential error: ${errorMessage}`);
         setRetryCount(0);
@@ -389,144 +320,170 @@ const FloatingVapiAssistant = ({
     }
   }, [isDragging]);
 
+  // Fluid speed based on state
+  const blobSpeed = (idle: number) => {
+    if (isSpeaking) return `${idle * 0.3}s`;
+    if (isActive || isLoading) return `${idle * 0.45}s`;
+    return `${idle}s`;
+  };
+
+  const blobEasing = isSpeaking
+    ? 'cubic-bezier(0.2, 0.8, 0.3, 1.0)'
+    : 'cubic-bezier(0.45,0.05,0.55,0.95)';
+
   return (
     <div
       ref={buttonRef}
-      className="fixed z-50 cursor-grab active:cursor-grabbing animate-float"
+      className="fixed z-50 cursor-grab active:cursor-grabbing"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        width: '80px',
-        height: '80px',
+        width: `${CONTAINER_SIZE}px`,
+        height: `${CONTAINER_SIZE}px`,
+        padding: `${HIT_PADDING}px`,
+        touchAction: 'none',
       }}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
-      <div className="relative w-full h-full">
+      {/* Inner visual container — the actual ball */}
+      <div className={`relative w-full h-full animate-float transition-transform duration-150 ${isDragging ? 'scale-95' : ''}`}>
         {/* Outer glow rings */}
-        <div className={`absolute inset-0 rounded-full transition-all duration-700 ${
+        <div className={`absolute -inset-3 rounded-full transition-all duration-700 ${
           isLoading ? 'animate-[spin_1s_linear_infinite]' : isActive ? 'animate-pulse' : ''
         }`}>
           <div className={`absolute inset-0 rounded-full blur-xl ${
-            isLoading ? 'bg-cyan-300/40 animate-[ping_0.8s_ease-in-out_infinite]' : 'bg-cyan-500/20 animate-[ping_2s_ease-in-out_infinite]'
+            isLoading ? 'bg-cyan-300/50 animate-[ping_0.8s_ease-in-out_infinite]' : 'bg-cyan-500/20 animate-[ping_2s_ease-in-out_infinite]'
           }`} />
           <div className={`absolute inset-0 rounded-full blur-lg ${
-            isLoading ? 'bg-cyan-400/50 animate-[ping_1s_ease-in-out_infinite]' : 'bg-cyan-400/30 animate-[ping_2.5s_ease-in-out_infinite]'
+            isLoading ? 'bg-cyan-400/60 animate-[ping_1s_ease-in-out_infinite]' : 'bg-cyan-400/30 animate-[ping_2.5s_ease-in-out_infinite]'
           }`} style={{ animationDelay: isLoading ? '0.2s' : '0.5s' }} />
         </div>
 
-        {/* Main sphere with B */}
+        {/* Main sphere */}
         <div className={`relative w-full h-full rounded-full overflow-hidden transition-all duration-500 ${
           isLoading ? 'scale-105' : isActive ? 'scale-110' : 'scale-100'
         }`}
         style={{
-          /* Deep outer shadow + inner rim lighting for a glass-sphere look */
           boxShadow: isActive
-            ? '0 0 0 1.5px rgba(93,213,237,0.55), 0 8px 32px rgba(37,99,235,0.55), 0 2px 8px rgba(0,0,0,0.7), inset 0 2px 8px rgba(255,255,255,0.55), inset 0 -10px 24px rgba(30,80,180,0.35)'
+            ? '0 0 0 2px rgba(93,213,237,0.6), 0 12px 44px rgba(37,99,235,0.65), 0 4px 14px rgba(0,0,0,0.85), inset 0 3px 12px rgba(255,255,255,0.6), inset 0 -14px 30px rgba(20,60,150,0.45), 0 0 24px rgba(93,213,237,0.35)'
             : isLoading
-            ? '0 0 0 1.5px rgba(96,165,250,0.7), 0 8px 32px rgba(96,165,250,0.6), 0 2px 8px rgba(0,0,0,0.7), inset 0 2px 8px rgba(255,255,255,0.55), inset 0 -10px 24px rgba(30,80,180,0.35)'
-            : '0 0 0 1px rgba(93,213,237,0.25), 0 6px 24px rgba(30,60,160,0.5), 0 2px 6px rgba(0,0,0,0.7), inset 0 2px 6px rgba(255,255,255,0.45), inset 0 -8px 20px rgba(20,50,140,0.3)',
+            ? '0 0 0 2px rgba(96,165,250,0.75), 0 12px 40px rgba(96,165,250,0.65), 0 4px 12px rgba(0,0,0,0.8), inset 0 3px 10px rgba(255,255,255,0.6), inset 0 -12px 28px rgba(30,80,180,0.4), 0 0 20px rgba(96,165,250,0.3)'
+            : '0 0 0 1.5px rgba(93,213,237,0.3), 0 8px 30px rgba(30,60,160,0.55), 0 3px 10px rgba(0,0,0,0.8), inset 0 3px 8px rgba(255,255,255,0.5), inset 0 -10px 24px rgba(20,50,140,0.35)',
         }}>
           {/* === BASE: deep ocean-blue core === */}
           <div className="absolute inset-0" style={{
-            background: 'radial-gradient(circle at 38% 35%, #dbeafe 0%, #67e8f9 20%, #06b6d4 45%, #0e4f5c 72%, #0a2a30 100%)'
+            background: 'radial-gradient(circle at 36% 33%, #e0f2fe 0%, #67e8f9 15%, #06b6d4 35%, #0891b2 50%, #0e4f5c 70%, #082f49 88%, #051e2f 100%)'
           }} />
 
-          {/* === MILK BLOB 1 — large dominant mass, slow rolling slosh === */}
+          {/* === MILK BLOB 1 === */}
           <div className="milk-blob-1" style={{
-            position: 'absolute',
-            width: '80%', height: '75%',
-            top: '10%', left: '5%',
+            position: 'absolute', width: '80%', height: '75%', top: '10%', left: '5%',
             background: 'radial-gradient(ellipse 60% 55% at 50% 50%, rgba(255,254,250,0.98) 0%, rgba(255,251,240,0.85) 45%, rgba(253,246,225,0.50) 72%, transparent 100%)',
             filter: 'blur(4px)',
             borderRadius: '60% 40% 55% 45% / 50% 60% 40% 55%',
+            animationDuration: blobSpeed(3.5),
+            animationTimingFunction: blobEasing,
           }} />
 
-          {/* === MILK BLOB 2 — secondary mass, offset phase, rolling behind === */}
+          {/* === MILK BLOB 2 === */}
           <div className="milk-blob-2" style={{
-            position: 'absolute',
-            width: '65%', height: '60%',
-            top: '20%', left: '18%',
+            position: 'absolute', width: '65%', height: '60%', top: '20%', left: '18%',
             background: 'radial-gradient(ellipse 55% 50% at 45% 52%, rgba(255,253,248,0.92) 0%, rgba(254,249,235,0.70) 50%, rgba(252,243,215,0.35) 75%, transparent 100%)',
             filter: 'blur(5px)',
             borderRadius: '45% 55% 40% 60% / 55% 45% 60% 40%',
+            animationDuration: blobSpeed(4.5),
+            animationTimingFunction: blobEasing,
           }} />
 
-          {/* === MILK BLOB 3 — small wispy trail, faster === */}
+          {/* === MILK BLOB 3 === */}
           <div className="milk-blob-3" style={{
-            position: 'absolute',
-            width: '50%', height: '45%',
-            top: '30%', left: '25%',
+            position: 'absolute', width: '50%', height: '45%', top: '30%', left: '25%',
             background: 'radial-gradient(ellipse 50% 45% at 52% 48%, rgba(255,252,245,0.88) 0%, rgba(254,247,228,0.60) 55%, transparent 85%)',
             filter: 'blur(6px)',
             borderRadius: '55% 45% 50% 50% / 40% 60% 45% 55%',
+            animationDuration: blobSpeed(3.0),
+            animationTimingFunction: blobEasing,
           }} />
 
-          {/* === MILK BLOB 4 — thin surface film wrapping the top === */}
+          {/* === MILK BLOB 4 === */}
           <div className="milk-blob-4" style={{
-            position: 'absolute',
-            width: '90%', height: '35%',
-            top: '0%', left: '5%',
+            position: 'absolute', width: '90%', height: '35%', top: '0%', left: '5%',
             background: 'radial-gradient(ellipse 70% 80% at 50% 20%, rgba(255,255,255,0.55) 0%, rgba(255,252,240,0.28) 55%, transparent 85%)',
             filter: 'blur(5px)',
             borderRadius: '50% 50% 60% 40% / 70% 70% 30% 30%',
+            animationDuration: blobSpeed(5.0),
+            animationTimingFunction: isSpeaking ? 'ease-in-out' : 'ease-in-out',
           }} />
 
-          {/* === MILK BLOB 5 — bottom sloshing tail === */}
+          {/* === MILK BLOB 5 === */}
           <div className="milk-blob-5" style={{
-            position: 'absolute',
-            width: '70%', height: '55%',
-            top: '35%', left: '10%',
+            position: 'absolute', width: '70%', height: '55%', top: '35%', left: '10%',
             background: 'radial-gradient(ellipse 55% 50% at 48% 60%, rgba(255,251,238,0.75) 0%, rgba(253,244,218,0.45) 55%, transparent 85%)',
             filter: 'blur(7px)',
             borderRadius: '40% 60% 55% 45% / 60% 40% 55% 45%',
+            animationDuration: blobSpeed(3.8),
+            animationTimingFunction: blobEasing,
           }} />
 
-          {/* === DEPTH SHADOW — bottom darkening for spherical feel === */}
+          {/* === DEPTH SHADOW === */}
           <div className="absolute inset-0 rounded-full" style={{
-            background: 'radial-gradient(circle at 50% 110%, rgba(10,20,80,0.65) 0%, transparent 65%)',
+            background: 'radial-gradient(circle at 50% 115%, rgba(10,20,80,0.7) 0%, transparent 60%)',
             mixBlendMode: 'multiply',
           }} />
 
-          {/* === GLASS RIM — thin bright ring on edge === */}
+          {/* === GLASS RIM === */}
           <div className="absolute inset-0 rounded-full" style={{
-            boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,0.18)',
+            boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.2)',
             background: 'transparent',
           }} />
 
-          {/* === PRIMARY SPECULAR HIGHLIGHT — large soft shine top-left === */}
+          {/* === GLASS REFRACTION / CHROMATIC EDGE === */}
+          <div className="absolute inset-0 rounded-full" style={{
+            background: 'conic-gradient(from 180deg, transparent 0%, rgba(147,197,253,0.1) 25%, transparent 50%, rgba(103,232,249,0.08) 75%, transparent 100%)',
+            mixBlendMode: 'overlay',
+          }} />
+
+          {/* === PRIMARY SPECULAR HIGHLIGHT === */}
           <div className="absolute" style={{
-            width: '55%', height: '40%', top: '6%', left: '8%',
-            background: 'radial-gradient(ellipse at 40% 40%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.50) 45%, transparent 75%)',
-            filter: 'blur(2px)',
+            width: '58%', height: '42%', top: '4%', left: '6%',
+            background: 'radial-gradient(ellipse at 38% 38%, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.55) 40%, transparent 72%)',
+            filter: 'blur(2.5px)',
             borderRadius: '50%',
           }} />
 
-          {/* === SECONDARY SPECULAR — small sharp pinpoint === */}
+          {/* === SECONDARY SPECULAR === */}
           <div className="absolute" style={{
-            width: '18%', height: '14%', top: '10%', left: '16%',
-            background: 'radial-gradient(circle, rgba(255,255,255,0.99) 0%, rgba(255,255,255,0.60) 50%, transparent 80%)',
+            width: '20%', height: '16%', top: '9%', left: '15%',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.99) 0%, rgba(255,255,255,0.65) 50%, transparent 80%)',
             borderRadius: '50%',
           }} />
 
-          {/* === B Letter — embossed, glowing === */}
+          {/* === B LOGO — embossed circuit === */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <span
-              className={`transition-all duration-300 ${isLoading ? 'animate-pulse' : ''}`}
+            <img
+              src={beccaBLogo}
+              alt="B"
+              draggable={false}
+              className={`transition-all duration-300 select-none ${
+                isLoading ? 'circuit-pulse' : isActive ? 'circuit-active' : ''
+              }`}
               style={{
-                fontSize: '2.4rem',
-                fontWeight: 900,
-                fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                color: '#ffffff',
-                WebkitTextStroke: isLoading ? '1.5px #60a5fa' : isActive ? '1.5px #2563eb' : '1.5px #1e3a8a',
-                textShadow: isActive
-                  ? '-2px -2px 0 #5dd5ed, -4px -4px 0 #5dd5ed, 0 6px 18px rgba(0,0,0,0.6), 0 0 28px rgba(93,213,237,0.9)'
+                width: '54%',
+                height: '54%',
+                objectFit: 'contain',
+                filter: isSpeaking
+                  ? 'drop-shadow(0 0 14px rgba(103,232,249,1.0)) brightness(1.6)'
+                  : isActive
+                  ? 'drop-shadow(0 0 10px rgba(93,213,237,0.9)) brightness(1.4)'
                   : isLoading
-                  ? '-2px -2px 0 #60a5fa, -4px -4px 0 #93c5fd, 0 6px 18px rgba(0,0,0,0.6), 0 0 28px rgba(96,165,250,0.9)'
-                  : '-2px -2px 0 #5dd5ed, -4px -4px 0 #5dd5ed, 0 5px 14px rgba(0,0,0,0.55)',
-                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
+                  ? 'drop-shadow(0 0 8px rgba(96,165,250,0.8)) brightness(1.3)'
+                  : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5)) brightness(1.1)',
+                mixBlendMode: 'screen',
+                opacity: 1.0,
+                pointerEvents: 'none',
               }}
-            >B</span>
+            />
           </div>
 
           {/* === SPEAKING pulse overlay === */}
@@ -545,6 +502,17 @@ const FloatingVapiAssistant = ({
             <div className="absolute inset-0 rounded-full border border-cyan-400/40 animate-[spin_4s_linear_infinite]" />
           )}
         </div>
+
+        {/* Floor shadow under ball */}
+        <div className="absolute" style={{
+          width: '70%',
+          height: '12px',
+          bottom: '-8px',
+          left: '15%',
+          background: 'radial-gradient(ellipse, rgba(0,0,0,0.5) 0%, transparent 70%)',
+          filter: 'blur(4px)',
+          borderRadius: '50%',
+        }} />
 
         {/* Digital brain particles when loading/active */}
         {(isLoading || isActive) && (
@@ -573,13 +541,7 @@ const FloatingVapiAssistant = ({
         }
         .animate-float { animation: float 4s ease-in-out infinite; }
 
-        /* =====================================================
-           MILK BLOBS — organic slosh inside a glass sphere
-           Each blob: translates along a rolling elliptical path
-           + morphs border-radius to simulate fluid deformation
-           + opacity breathes for depth
-           ===================================================== */
-
+        /* MILK BLOBS */
         @keyframes milk1 {
           0%   { transform: translate(0%,   0%)   rotate(0deg);   border-radius: 60% 40% 55% 45% / 50% 60% 40% 55%; opacity: 0.90; }
           12%  { transform: translate(12%, -8%)   rotate(18deg);  border-radius: 50% 50% 45% 55% / 60% 40% 55% 45%; opacity: 0.82; }
@@ -631,6 +593,23 @@ const FloatingVapiAssistant = ({
           100% { transform: translate(0%,  0%)  rotate(-135deg);border-radius: 40% 60% 55% 45% / 60% 40% 55% 45%; opacity: 0.65; }
         }
         .milk-blob-5 { animation: milk5 3.8s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
+
+        /* CIRCUIT ANIMATIONS */
+        @keyframes circuitPulse {
+          0%   { filter: drop-shadow(0 0 4px rgba(93,213,237,0.6)) brightness(1.1); }
+          25%  { filter: drop-shadow(0 0 14px rgba(93,213,237,1.0)) brightness(1.5) hue-rotate(10deg); }
+          50%  { filter: drop-shadow(0 0 6px rgba(96,165,250,0.8)) brightness(1.2) hue-rotate(-5deg); }
+          75%  { filter: drop-shadow(0 0 16px rgba(103,232,249,1.0)) brightness(1.6) hue-rotate(15deg); }
+          100% { filter: drop-shadow(0 0 4px rgba(93,213,237,0.6)) brightness(1.1); }
+        }
+        .circuit-pulse { animation: circuitPulse 0.8s ease-in-out infinite; }
+
+        @keyframes circuitActive {
+          0%   { filter: drop-shadow(0 0 8px rgba(93,213,237,0.9)) brightness(1.3); }
+          50%  { filter: drop-shadow(0 0 18px rgba(103,232,249,1.0)) brightness(1.5) hue-rotate(8deg); }
+          100% { filter: drop-shadow(0 0 8px rgba(93,213,237,0.9)) brightness(1.3); }
+        }
+        .circuit-active { animation: circuitActive 1.5s ease-in-out infinite; }
       `}</style>
     </div>
   );

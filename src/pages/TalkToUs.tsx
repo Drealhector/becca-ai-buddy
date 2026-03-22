@@ -431,7 +431,7 @@ const TalkToUs = () => {
         <FloatingVapiAssistant
           publicKey=""
           assistantId=""
-          initialPosition={{ x: window.innerWidth / 2 - 40, y: window.innerHeight / 2 - 40 }}
+          initialPosition={{ x: window.innerWidth / 2 - 60, y: window.innerHeight / 2 - 60 }}
           activationTrigger={0}
         />
       )}
