@@ -9,6 +9,8 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import NeuralBrain from "@/components/3d/NeuralBrain";
 import DimensionPortal from "@/components/ui/DimensionPortal";
+import beccaLogo from "@/assets/becca-new-logo.png";
+import beccaBLogo from "@/assets/becca-b-new-logo.png";
 
 const BusinessAuth = () => {
   const [businessName, setBusinessName] = useState("");
@@ -160,21 +162,7 @@ const BusinessAuth = () => {
                   "0 0 40px rgba(68,136,255,0.2), 0 0 80px rgba(93,213,237,0.08)",
               }}
             >
-              <span
-                className="animate-b-glow"
-                style={{
-                  fontSize: "4.5rem",
-                  fontFamily:
-                    "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-                  fontWeight: 900,
-                  lineHeight: 1,
-                  color: "#ffffff",
-                  WebkitTextStroke: "1.5px #2c4a6f",
-                  display: "inline-block",
-                }}
-              >
-                B
-              </span>
+              <img src={beccaBLogo} alt="Becca" className="w-20 h-20 object-contain" />
             </div>
           </div>
 

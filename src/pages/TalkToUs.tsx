@@ -11,6 +11,7 @@ import FloatingVapiAssistant from "@/components/dashboard/FloatingVapiAssistant"
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import NeuralBrain from "@/components/3d/NeuralBrain";
+import beccaLogo from "@/assets/becca-new-logo.png";
 
 const TalkToUs = () => {
   const navigate = useNavigate();
@@ -143,7 +144,7 @@ const TalkToUs = () => {
       />
 
       {/* Header */}
-      <header className="relative z-10 container mx-auto px-4 py-6 pointer-events-auto">
+      <header className="relative z-10 w-full px-4 sm:px-6 lg:px-8 py-6 pointer-events-auto">
         <Button
           variant="ghost"
           onClick={() => navigate("/")}
@@ -155,67 +156,61 @@ const TalkToUs = () => {
       </header>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 py-8 flex items-center justify-center min-h-[calc(100vh-88px)] pointer-events-none">
-        <div className="max-w-md mx-auto w-full pointer-events-auto">
-          {/* Info Section */}
-          <div className="text-center mb-8">
+      <div className="relative z-10 w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col items-center pointer-events-none">
+        {/* Box 1 — Outermost (logo + description) */}
+        <div
+          className="w-full rounded-3xl p-4 sm:p-6 lg:p-8 border border-white/10 pointer-events-auto"
+          style={{ background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(8px)' }}
+        >
+          <div className="text-center mb-6">
             <div className="flex items-center justify-center mb-4">
-              <span style={{
-                fontSize: '2.5rem',
-                fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                fontWeight: 900,
-                letterSpacing: '0',
-                lineHeight: 1,
-                display: 'inline-block'
-              }}>
-                <span className="animate-b-glow" style={{
-                  color: '#ffffff',
-                  WebkitTextStroke: '1.5px #2c4a6f',
-                  fontWeight: 900,
-                  display: 'inline-block',
-                }}>B</span>
-                <span style={{
-                  color: '#ffffff',
-                  fontWeight: 800,
-                  textShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                }}>ECCA</span>
-              </span>
+              <img src={beccaLogo} alt="Becca" style={{ height: '2.5rem' }} />
             </div>
-            <p className="text-lg sm:text-xl md:text-2xl text-white mb-3 font-semibold text-center leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 font-semibold text-center leading-relaxed">
               BECCA is an advanced AI brain designed to make calls, receive calls and integrate into any platform, website and social media accounts and handle interactions for businesses. Available 24/7 to support your business needs and scale with your growth.
             </p>
           </div>
 
-          {/* Success Message */}
-          {showSuccess && (
+          {/* Box 2 — Medium */}
+          <div
+            className="w-full max-w-4xl mx-auto rounded-2xl p-4 sm:p-5 lg:p-6 border border-white/10"
+            style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)' }}
+          >
+            {/* Box 3 — Smaller */}
             <div
-              ref={successMessageRef}
-              className="bg-emerald-500 text-white p-5 rounded-lg mb-6 text-center shadow-lg"
+              className="w-full max-w-2xl mx-auto rounded-2xl p-4 sm:p-5 lg:p-6 border border-white/10"
+              style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(16px)' }}
             >
-              <div className="text-lg font-bold mb-1">
-                ✅ Success! Your submission has been received.
-              </div>
-              <div className="text-sm font-normal">
-                Check your email for confirmation.
-              </div>
-            </div>
-          )}
+              {/* Success Message */}
+              {showSuccess && (
+                <div
+                  ref={successMessageRef}
+                  className="bg-emerald-500 text-white p-5 rounded-lg mb-6 text-center shadow-lg"
+                >
+                  <div className="text-lg font-bold mb-1">
+                    ✅ Success! Your submission has been received.
+                  </div>
+                  <div className="text-sm font-normal">
+                    Check your email for confirmation.
+                  </div>
+                </div>
+              )}
 
-          {/* Error Message */}
-          {showError && (
-            <div className="bg-red-500 text-white p-5 rounded-lg mb-6 text-center shadow-lg">
-              <div className="text-lg font-bold mb-1">
-                ❌ Error! There was a problem submitting your form.
-              </div>
-              <div className="text-sm font-normal">
-                Please try again.
-              </div>
-            </div>
-          )}
+              {/* Error Message */}
+              {showError && (
+                <div className="bg-red-500 text-white p-5 rounded-lg mb-6 text-center shadow-lg">
+                  <div className="text-lg font-bold mb-1">
+                    ❌ Error! There was a problem submitting your form.
+                  </div>
+                  <div className="text-sm font-normal">
+                    Please try again.
+                  </div>
+                </div>
+              )}
 
-          {/* Form */}
-          <div className="rounded-2xl p-6 border border-white/10 shadow-lg" style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(20px)', boxShadow: '0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
-            <form onSubmit={handleSubmit} id="contactForm" className="space-y-4">
+              {/* Box 4 — Form (innermost, smallest) */}
+              <div className="w-full max-w-lg mx-auto rounded-2xl p-4 sm:p-6 border border-white/10 shadow-lg" style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(20px)', boxShadow: '0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
+                <form onSubmit={handleSubmit} id="contactForm" className="space-y-4">
               <div>
                 <Label htmlFor="fullName" className="text-sm font-medium text-white/80">
                   Full Name
@@ -412,18 +407,20 @@ const TalkToUs = () => {
               </div>
             </form>
 
-            {/* Talk to Becca Button - Below Form */}
-            <div className="mt-4">
-              <Button
-                type="button"
-                onClick={() => {
-                  setShowBecca(true);
-                  setBeccaTrigger(prev => prev + 1);
-                }}
-                className="w-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 hover:bg-emerald-500/30 h-11 font-medium transition-transform active:scale-95"
-              >
-                Talk to Becca
-              </Button>
+                {/* Talk to Becca Button - Below Form */}
+                <div className="mt-4">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setShowBecca(true);
+                      setBeccaTrigger(prev => prev + 1);
+                    }}
+                    className="w-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 hover:bg-emerald-500/30 h-11 font-medium transition-transform active:scale-95"
+                  >
+                    Talk to Becca
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

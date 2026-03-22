@@ -18,6 +18,7 @@ import { PhoneConnectionDialog } from "@/components/dashboard/PhoneConnectionDia
 import FloatingVapiAssistant from "@/components/dashboard/FloatingVapiAssistant";
 import MatrixBackground from "@/components/dashboard/MatrixBackground";
 import { Menu, LogOut, Phone, Link as LinkIcon, Settings, MessageSquare, Mic, Trash2 } from "lucide-react";
+import beccaLogo from "@/assets/becca-new-logo.png";
 
 
 const Dashboard = () => {
@@ -141,25 +142,15 @@ const Dashboard = () => {
 
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => setShowNav(!showNav)}>
               <Menu className="h-5 w-5" />
             </Button>
-            <h1 className="text-sm sm:text-xl md:text-2xl font-bold flex items-baseline">
-              <span
-                className="animate-b-glow"
-                style={{
-                  fontSize: 'clamp(1rem, 4vw, 2rem)',
-                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                  fontWeight: 900,
-                  display: 'inline-block',
-                  color: '#ffffff',
-                  WebkitTextStroke: '1px #2c4a6f',
-                }}>B</span>
-              <span className="bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent hidden sm:inline">ECCA Dashboard</span>
-              <span className="bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent sm:hidden">ECCA</span>
-            </h1>
+            <div className="flex items-center gap-2">
+              <img src={beccaLogo} alt="Becca" style={{ height: 'clamp(1.5rem, 4vw, 2.5rem)' }} />
+              <span className="text-white font-normal tracking-normal" style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif', fontSize: 'clamp(0.9rem, 2.5vw, 1.5rem)' }}>Dashboard</span>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <Button
@@ -292,7 +283,7 @@ const Dashboard = () => {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="relative z-10 w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Master Switch */}
         <div id="master-switch">
           <MasterSwitch />

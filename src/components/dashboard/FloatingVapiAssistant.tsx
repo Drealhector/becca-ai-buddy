@@ -61,15 +61,26 @@ const FloatingVapiAssistant = ({
     return String(error);
   };
 
-  useEffect(() => {
-    if (!publicKey) return; // Don't init for decorative mode
-    
-    // Initialize Vapi with the ball's own public key
-    console.log("Initializing Vapi ball assistant with publicKey:", publicKey, "assistantId:", assistantId);
+  // Cleanup function to destroy a Vapi instance
+  const destroyVapiInstance = () => {
+    if (vapiRef.current) {
+      try {
+        vapiRef.current.stop();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+      vapiRef.current = null;
+    }
+  };
+
+  // Create a fresh Vapi instance with event listeners
+  const createVapiInstance = () => {
+    destroyVapiInstance();
+
+    console.log("Creating fresh Vapi instance with publicKey:", publicKey, "assistantId:", assistantId);
     const vapi = new Vapi(publicKey);
     vapiRef.current = vapi;
 
-    // Set up event listeners
     vapi.on("call-start", () => {
       console.log("Ball assistant: Call started successfully");
       if (connectionTimeoutRef.current) {
@@ -94,6 +105,8 @@ const FloatingVapiAssistant = ({
       setIsLoading(false);
       setRetryCount(0);
       toggleLockRef.current = false;
+      // Destroy the instance so next call gets a fresh one
+      vapiRef.current = null;
     });
 
     vapi.on("speech-start", () => {
@@ -122,6 +135,8 @@ const FloatingVapiAssistant = ({
       setIsActive(false);
       setIsLoading(false);
       toggleLockRef.current = false;
+      // Destroy the instance so next attempt gets a fresh one
+      destroyVapiInstance();
 
       const normalized = errorMessage.toLowerCase();
 
@@ -136,25 +151,25 @@ const FloatingVapiAssistant = ({
       }
     });
 
+    return vapi;
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
       if (connectionTimeoutRef.current) {
         clearTimeout(connectionTimeoutRef.current);
       }
-      try {
-        vapi.stop();
-      } catch (e) {
-        // Ignore cleanup errors
-      }
-      vapiRef.current = null;
+      destroyVapiInstance();
     };
-  }, [publicKey, assistantId]);
+  }, []);
 
   // Activation trigger effect
   useEffect(() => {
-    if (activationTrigger > 0 && vapiRef.current && !isLoading) {
-      // If already active, stop first then restart
+    if (activationTrigger > 0 && publicKey && !isLoading) {
       if (isActive) {
-        vapiRef.current.stop();
+        destroyVapiInstance();
+        setIsActive(false);
         setTimeout(() => handleClick(), 300);
       } else {
         handleClick();
@@ -254,7 +269,7 @@ const FloatingVapiAssistant = ({
   };
 
   const handleClick = async () => {
-    if (!vapiRef.current || toggleLockRef.current) return;
+    if (!publicKey || toggleLockRef.current) return;
 
     // Lock to prevent rapid toggling
     toggleLockRef.current = true;
@@ -267,7 +282,7 @@ const FloatingVapiAssistant = ({
           connectionTimeoutRef.current = null;
         }
 
-        vapiRef.current.stop();
+        destroyVapiInstance();
         setIsActive(false);
         setIsLoading(false);
         setIsSpeaking(false);
@@ -283,16 +298,13 @@ const FloatingVapiAssistant = ({
         if (isLoadingRef.current && !isActiveRef.current) {
           console.log('Connection timeout');
 
-          if (vapiRef.current) {
-            vapiRef.current.stop();
-          }
+          destroyVapiInstance();
 
           // Retry logic with exponential backoff
           if (retryCount < 3) {
             const newRetryCount = retryCount + 1;
             setRetryCount(newRetryCount);
 
-            // Exponential backoff: 2s, 4s, 8s
             const retryDelay = Math.pow(2, newRetryCount) * 1000;
 
             toast.error(`Connection timeout. Retrying in ${retryDelay / 1000}s... (${newRetryCount}/3)`);
@@ -312,8 +324,14 @@ const FloatingVapiAssistant = ({
         }
       }, 30000);
 
-      // Start the call (Vapi handles microphone prompt internally)
-      const call = await vapiRef.current.start(assistantId);
+      // Create a fresh Vapi instance for each call
+      const vapi = createVapiInstance();
+
+      // Small delay to ensure clean state before starting
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Start the call
+      const call = await vapi.start(assistantId);
       if (!call) {
         throw new Error("Call session was not created");
       }
@@ -328,15 +346,14 @@ const FloatingVapiAssistant = ({
 
       setIsLoading(false);
       setIsActive(false);
+      destroyVapiInstance();
 
       const normalized = errorMessage.toLowerCase();
 
-      // Retry logic for network errors with exponential backoff
       if ((normalized.includes('network') || normalized.includes('fetch') || normalized.includes('timeout')) && retryCount < 3) {
         const newRetryCount = retryCount + 1;
         setRetryCount(newRetryCount);
 
-        // Exponential backoff: 2s, 4s, 8s
         const retryDelay = Math.pow(2, newRetryCount) * 1000;
 
         toast.error(`Connection failed. Retrying in ${retryDelay / 1000}s... (${newRetryCount}/3)`);

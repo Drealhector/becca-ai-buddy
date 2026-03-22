@@ -5,6 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import NeuralBrain from "@/components/3d/NeuralBrain";
 import DimensionPortal from "@/components/ui/DimensionPortal";
+import beccaLogo from "@/assets/becca-new-logo.png";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -70,28 +71,9 @@ const Landing = () => {
       {/* UI Overlay */}
       <div className="relative z-10 pointer-events-none min-h-screen flex flex-col">
         {/* Header */}
-        <header className="container mx-auto px-4 py-6 flex items-center justify-between pointer-events-auto">
+        <header className="w-full px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between pointer-events-auto">
           <div className="flex items-center">
-            <span style={{
-              fontSize: 'clamp(1.5rem, 6vw, 3rem)',
-              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-              fontWeight: 900,
-              letterSpacing: '0',
-              lineHeight: 1,
-              display: 'inline-block'
-            }}>
-              <span className="animate-b-glow" style={{
-                color: '#ffffff',
-                WebkitTextStroke: '1.5px #2c4a6f',
-                fontWeight: 900,
-                display: 'inline-block',
-              }}>B</span>
-              <span style={{
-                color: '#ffffff',
-                fontWeight: 800,
-                textShadow: '0 2px 8px rgba(0,0,0,0.2)'
-              }}>ECCA</span>
-            </span>
+            <img src={beccaLogo} alt="Becca" style={{ height: 'clamp(2rem, 6vw, 3.5rem)' }} />
           </div>
           <div className="flex items-center gap-4">
             <Button
@@ -112,7 +94,7 @@ const Landing = () => {
 
         {/* Hero Content - vertically centered */}
         <div className="flex-1 flex items-center justify-center">
-          <div className="container mx-auto px-4 text-center max-w-5xl pointer-events-auto">
+          <div className="w-full px-4 text-center max-w-5xl mx-auto pointer-events-auto">
             <h1
               className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 md:mb-8 leading-tight px-2 flex flex-col items-center"
             >
