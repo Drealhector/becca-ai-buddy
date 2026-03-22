@@ -24,10 +24,12 @@ const FloatingAssistant = ({
   const [isActive, setIsActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
   const toggleLockRef = useRef<boolean>(false);
   const touchEventRef = useRef<boolean>(false);
+  const recognitionRef = useRef<any>(null);
 
   // ElevenLabs conversation hook
   const conversation = useConversation({
@@ -56,6 +58,87 @@ const FloatingAssistant = ({
       toast.error("Connection failed. Please try again.");
     },
   });
+
+  // "Hey Becca" wake word detection using Web Speech API
+  useEffect(() => {
+    if (!agentId) return; // No wake word for decorative mode
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return; // Browser doesn't support speech recognition
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    recognitionRef.current = recognition;
+
+    recognition.onresult = (event: any) => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript.toLowerCase().trim();
+        if (transcript.includes('hey becca') || transcript.includes('hey beca') || transcript.includes('heybekka')) {
+          console.log('Wake word detected: "Hey Becca"');
+          recognition.stop();
+          setIsListening(false);
+          // Auto-activate the assistant
+          if (!isActive && !isLoading) {
+            handleClick();
+          }
+          break;
+        }
+      }
+    };
+
+    recognition.onend = () => {
+      // Restart listening if not in active call and still mounted
+      if (!isActive && recognitionRef.current) {
+        try {
+          recognition.start();
+          setIsListening(true);
+        } catch (e) {
+          // Already started or page hidden
+        }
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      if (event.error === 'not-allowed') {
+        console.log('Microphone permission denied for wake word detection');
+        setIsListening(false);
+      }
+      // For other errors, onend will auto-restart
+    };
+
+    // Start listening for wake word
+    try {
+      recognition.start();
+      setIsListening(true);
+      console.log('Wake word detection active: say "Hey Becca" to activate');
+    } catch (e) {
+      // May fail if mic permission not yet granted
+    }
+
+    return () => {
+      recognitionRef.current = null;
+      try { recognition.stop(); } catch (e) {}
+      setIsListening(false);
+    };
+  }, [agentId]);
+
+  // Stop/restart wake word when call state changes
+  useEffect(() => {
+    if (!recognitionRef.current) return;
+    if (isActive) {
+      // Stop listening during active call
+      try { recognitionRef.current.stop(); } catch (e) {}
+      setIsListening(false);
+    } else {
+      // Restart listening after call ends
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (e) {}
+    }
+  }, [isActive]);
 
   // Activation trigger effect
   useEffect(() => {
@@ -129,10 +212,7 @@ const FloatingAssistant = ({
   const handleClick = useCallback(async () => {
     if (toggleLockRef.current) return;
 
-    if (!agentId) {
-      toast.error("ElevenLabs Agent ID not configured. Set VITE_ELEVENLABS_AGENT_ID in .env");
-      return;
-    }
+    if (!agentId) return; // Decorative mode — no agent to connect
 
     toggleLockRef.current = true;
 
