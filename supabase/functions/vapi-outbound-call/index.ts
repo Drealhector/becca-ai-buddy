@@ -57,6 +57,26 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Look up customer context for the destination number
+    const cleanNumber = toNumber.replace(/[\s\-\(\)]/g, '');
+    let customerContext = '';
+    const { data: callerData } = await supabase
+      .from('callers')
+      .select('*')
+      .or(`phone.eq.${cleanNumber},phone.eq.${cleanNumber.startsWith('+') ? cleanNumber.slice(1) : '+' + cleanNumber}`)
+      .maybeSingle();
+
+    if (callerData) {
+      const parts = [];
+      if (callerData.name) parts.push(`You are calling ${callerData.name}.`);
+      if (callerData.call_count > 1) parts.push(`You've spoken ${callerData.call_count} times before.`);
+      if (callerData.memory_summary) parts.push(`Previous interactions: ${callerData.memory_summary}`);
+      if (parts.length > 0) {
+        customerContext = `\n\n=== CUSTOMER CONTEXT ===\n${parts.join(' ')}\nUse this naturally — greet them by name if you know it. Do NOT mention looking them up.\n`;
+      }
+      console.log(`📋 Customer context found for ${cleanNumber}: ${callerData.name || 'unnamed'}`);
+    }
+
     // Fetch the assistant's current personality
     const { data: personalityData } = await supabase
       .from('bot_personality')
@@ -109,7 +129,7 @@ serve(async (req) => {
     let outboundPrompt = '';
     if (purpose) {
       outboundPrompt = `${personality}
-
+${customerContext}
 === OUTBOUND CALL CONTEXT ===
 This is an OUTBOUND call YOU are making. You are NOT receiving a call.
 You are calling on behalf of ${businessName}.

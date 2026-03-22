@@ -219,13 +219,43 @@ serve(async (req) => {
       console.log('⏭️ Skipping escalate_to_human — no owner phone configured');
     }
 
-    // --- get_customer_memory tool ---
-    let memoryTool = existingTools.find((t: any) => t.function?.name === 'get_customer_memory');
-    if (memoryTool) {
-      toolIds.push(memoryTool.id);
-      console.log(`✅ get_customer_memory exists: ${memoryTool.id}`);
+    // --- lookup_customer tool ---
+    let lookupTool = existingTools.find((t: any) => t.function?.name === 'lookup_customer' || t.function?.name === 'get_customer_memory');
+    if (lookupTool) {
+      console.log(`♻️ lookup_customer already exists: ${lookupTool.id}, updating...`);
+      const updateRes = await fetch(`https://api.vapi.ai/tool/${lookupTool.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${VAPI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          async: false,
+          server: {
+            url: `${SUPABASE_URL}/functions/v1/lookup-customer`,
+            timeoutSeconds: 20,
+          },
+          function: {
+            name: "lookup_customer",
+            description: "Look up a customer by their phone number to check if they're a returning caller. Use this at the START of every incoming call. Returns their name and summary of past interactions if available.",
+            parameters: {
+              type: "object",
+              properties: {
+                phone_number: {
+                  type: "string",
+                  description: "The caller's phone number in E.164 format (e.g., +1234567890)"
+                }
+              },
+              required: ["phone_number"]
+            }
+          }
+        }),
+      });
+      const updated = await updateRes.json();
+      console.log('✅ lookup_customer updated:', updated.id);
+      toolIds.push(updated.id);
     } else {
-      console.log('🆕 Creating get_customer_memory tool...');
+      console.log('🆕 Creating lookup_customer tool...');
       const createRes = await fetch('https://api.vapi.ai/tool', {
         method: 'POST',
         headers: {
@@ -236,12 +266,12 @@ serve(async (req) => {
           type: "function",
           async: false,
           server: {
-            url: `${SUPABASE_URL}/functions/v1/get-customer-memory`,
+            url: `${SUPABASE_URL}/functions/v1/lookup-customer`,
             timeoutSeconds: 20,
           },
           function: {
-            name: "get_customer_memory",
-            description: "Retrieve memory for a returning caller using their phone number. Call this at the START of every call to check if the caller has called before. Returns their name, conversation count, last call summary, and days since last call.",
+            name: "lookup_customer",
+            description: "Look up a customer by their phone number to check if they're a returning caller. Use this at the START of every incoming call. Returns their name and summary of past interactions if available.",
             parameters: {
               type: "object",
               properties: {
@@ -257,20 +287,58 @@ serve(async (req) => {
       });
       const created = await createRes.json();
       if (createRes.ok) {
-        console.log('✅ get_customer_memory created:', created.id);
+        console.log('✅ lookup_customer created:', created.id);
         toolIds.push(created.id);
       } else {
-        console.error('❌ Failed to create get_customer_memory:', JSON.stringify(created));
+        console.error('❌ Failed to create lookup_customer:', JSON.stringify(created));
       }
     }
 
-    // --- save_customer_name tool ---
-    let saveTool = existingTools.find((t: any) => t.function?.name === 'save_customer_name');
+    // --- save_customer tool ---
+    let saveTool = existingTools.find((t: any) => t.function?.name === 'save_customer' || t.function?.name === 'save_customer_name');
     if (saveTool) {
-      toolIds.push(saveTool.id);
-      console.log(`✅ save_customer_name exists: ${saveTool.id}`);
+      console.log(`♻️ save_customer already exists: ${saveTool.id}, updating...`);
+      const updateRes = await fetch(`https://api.vapi.ai/tool/${saveTool.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${VAPI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          async: false,
+          server: {
+            url: `${SUPABASE_URL}/functions/v1/save-customer`,
+            timeoutSeconds: 20,
+          },
+          function: {
+            name: "save_customer",
+            description: "Save or update customer information. Call this to store a customer's name when you learn it during conversation, and to save a brief summary at the end of every call. Uses phone number as unique ID.",
+            parameters: {
+              type: "object",
+              properties: {
+                phone_number: {
+                  type: "string",
+                  description: "The customer's phone number in E.164 format"
+                },
+                name: {
+                  type: "string",
+                  description: "The customer's name if you learned it during this call"
+                },
+                summary: {
+                  type: "string",
+                  description: "A brief 1-2 sentence summary of what this call was about"
+                }
+              },
+              required: ["phone_number", "summary"]
+            }
+          }
+        }),
+      });
+      const updated = await updateRes.json();
+      console.log('✅ save_customer updated:', updated.id);
+      toolIds.push(updated.id);
     } else {
-      console.log('🆕 Creating save_customer_name tool...');
+      console.log('🆕 Creating save_customer tool...');
       const createRes = await fetch('https://api.vapi.ai/tool', {
         method: 'POST',
         headers: {
@@ -281,35 +349,39 @@ serve(async (req) => {
           type: "function",
           async: false,
           server: {
-            url: `${SUPABASE_URL}/functions/v1/save-customer-name`,
+            url: `${SUPABASE_URL}/functions/v1/save-customer`,
             timeoutSeconds: 20,
           },
           function: {
-            name: "save_customer_name",
-            description: "Save a customer's name after they provide it during conversation. Only call this once when the customer tells you their name.",
+            name: "save_customer",
+            description: "Save or update customer information. Call this to store a customer's name when you learn it during conversation, and to save a brief summary at the end of every call. Uses phone number as unique ID.",
             parameters: {
               type: "object",
               properties: {
                 phone_number: {
                   type: "string",
-                  description: "The caller's phone number in E.164 format"
+                  description: "The customer's phone number in E.164 format"
                 },
                 name: {
                   type: "string",
-                  description: "The customer's name as they provided it"
+                  description: "The customer's name if you learned it during this call"
+                },
+                summary: {
+                  type: "string",
+                  description: "A brief 1-2 sentence summary of what this call was about"
                 }
               },
-              required: ["phone_number", "name"]
+              required: ["phone_number", "summary"]
             }
           }
         }),
       });
       const created = await createRes.json();
       if (createRes.ok) {
-        console.log('✅ save_customer_name created:', created.id);
+        console.log('✅ save_customer created:', created.id);
         toolIds.push(created.id);
       } else {
-        console.error('❌ Failed to create save_customer_name:', JSON.stringify(created));
+        console.error('❌ Failed to create save_customer:', JSON.stringify(created));
       }
     }
 

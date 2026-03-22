@@ -45,6 +45,32 @@ serve(async (req) => {
       duration_minutes: durationMinutes,
     });
 
+    // Auto-upsert caller record so every incoming call is tracked
+    if (caller_info) {
+      const cleanPhone = caller_info.replace(/[\s\-\(\)]/g, '');
+      const { data: existingCaller } = await supabase
+        .from('callers')
+        .select('phone, call_count')
+        .eq('phone', cleanPhone)
+        .maybeSingle();
+
+      if (existingCaller) {
+        await supabase.from('callers').update({
+          call_count: (existingCaller.call_count || 0) + 1,
+          last_call_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq('phone', existingCaller.phone);
+      } else {
+        await supabase.from('callers').insert({
+          phone: cleanPhone,
+          call_count: 1,
+          last_call_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }
+      console.log(`📋 Caller record upserted: ${cleanPhone}`);
+    }
+
     // If sales flagged, update wallet
     if (transcriptData?.sales_flagged) {
       const { data: wallet } = await supabase
