@@ -117,21 +117,21 @@ const FloatingVapiAssistant = ({
 
       const normalized = errorMessage.toLowerCase();
 
-      // Auto-retry for Daily.co "ejected" / "Meeting has ended" errors
+      // Auto-retry silently for Daily.co "ejected" / "Meeting has ended" errors
       if (normalized.includes("ejected") || normalized.includes("meeting has ended") || normalized.includes("daily-error")) {
         if (retryCount < 3) {
           const newRetryCount = retryCount + 1;
           setRetryCount(newRetryCount);
-          const retryDelay = Math.pow(2, newRetryCount) * 1000;
+          const retryDelay = Math.pow(2, newRetryCount) * 500;
           console.log(`Daily.co session error, auto-retrying in ${retryDelay}ms (attempt ${newRetryCount}/3)`);
-          toast.info(`Reconnecting... (${newRetryCount}/3)`);
+          setIsLoading(true);
           setTimeout(() => {
             toggleLockRef.current = false;
             handleClick();
           }, retryDelay);
         } else {
           setRetryCount(0);
-          toast.error("Unable to connect to voice assistant. Please try again in a moment.");
+          toast.error("Unable to connect. Please try again.");
         }
         return;
       }
@@ -479,8 +479,7 @@ const FloatingVapiAssistant = ({
                   : isLoading
                   ? 'drop-shadow(0 0 8px rgba(96,165,250,0.8)) brightness(1.3)'
                   : 'drop-shadow(0 2px 6px rgba(0,0,0,0.5)) brightness(1.1)',
-                mixBlendMode: 'screen',
-                opacity: 1.0,
+                opacity: 0.55,
                 pointerEvents: 'none',
               }}
             />
