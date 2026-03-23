@@ -74,10 +74,45 @@ serve(async (req) => {
 
       console.log("✅ Returning caller. Calls:", caller.call_count, "Days since:", diffDays, "Phrase:", lastCallPhrase);
 
-      // Return assistant override with variableValues
+      // Build dynamic firstMessage for returning callers with a known name
+      let dynamicFirstMessage: string | undefined = undefined;
+      if (caller.name) {
+        try {
+          // Fetch the user's configured greeting (dynamic — set from dashboard personality)
+          const { data: custData } = await supabase
+            .from("customizations")
+            .select("greeting")
+            .limit(1)
+            .maybeSingle();
+          const baseGreeting = custData?.greeting || "";
+
+          // Extract persona name from greeting like "Hello, this is Rebecca from TechShop, how are you doing today?"
+          const personaMatch = baseGreeting.match(/this is ([^,]+?)(?:\s+from|\s*,)/i);
+          const personaName = personaMatch ? personaMatch[1].trim() : null;
+
+          // Extract business from greeting like "...from TechShop,..."
+          const bizMatch = baseGreeting.match(/from ([^,]+),/i);
+          const bizName = bizMatch ? bizMatch[1].trim() : null;
+
+          if (personaName && bizName) {
+            dynamicFirstMessage = `Hey ${caller.name}! It's ${personaName} from ${bizName}, great to hear from you again!`;
+          } else if (personaName) {
+            dynamicFirstMessage = `Hey ${caller.name}! It's ${personaName}, great to hear from you again!`;
+          } else {
+            dynamicFirstMessage = `Hey ${caller.name}! Great to hear from you again!`;
+          }
+          console.log("🎤 Dynamic firstMessage for returning caller:", dynamicFirstMessage);
+        } catch (greetErr) {
+          console.error("⚠️ Error building dynamic greeting, using default:", greetErr);
+          dynamicFirstMessage = `Hey ${caller.name}! Great to hear from you again!`;
+        }
+      }
+
+      // Return assistant override with variableValues + optional dynamic firstMessage
       const response = {
         assistantId: BECCA_ASSISTANT_ID,
         assistantOverrides: {
+          ...(dynamicFirstMessage ? { firstMessage: dynamicFirstMessage } : {}),
           variableValues: {
             lastCallPhrase,
             memorySummary: caller.memory_summary || "",
