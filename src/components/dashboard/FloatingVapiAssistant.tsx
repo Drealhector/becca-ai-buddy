@@ -15,8 +15,8 @@ const HIT_PADDING = 12;
 const CONTAINER_SIZE = BALL_SIZE + HIT_PADDING * 2;
 
 const FloatingVapiAssistant = ({
-  publicKey = import.meta.env.VITE_VAPI_PUBLIC_KEY || "",
-  assistantId = import.meta.env.VITE_VAPI_ASSISTANT_ID || "",
+  publicKey = import.meta.env.VITE_VAPI_PUBLIC_KEY || "cb6d31db-2209-4ffa-ac27-794c02fcd8ec",
+  assistantId = import.meta.env.VITE_VAPI_ASSISTANT_ID || "8eb153bb-e605-438c-85e6-bbe3484a64ff",
   initialPosition,
   activationTrigger = 0
 }: FloatingVapiAssistantProps = {}) => {
