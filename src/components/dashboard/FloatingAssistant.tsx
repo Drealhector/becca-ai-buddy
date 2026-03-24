@@ -25,6 +25,7 @@ const FloatingAssistant = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [clickBurst, setClickBurst] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
   const toggleLockRef = useRef<boolean>(false);
@@ -213,6 +214,10 @@ const FloatingAssistant = ({
 
     if (!agentId) return; // Decorative mode — no agent to connect
 
+    // Trigger click burst animation
+    setClickBurst(true);
+    setTimeout(() => setClickBurst(false), 700);
+
     toggleLockRef.current = true;
 
     try {
@@ -313,91 +318,130 @@ const FloatingAssistant = ({
             ? '0 0 0 2px rgba(96,165,250,0.75), 0 12px 40px rgba(96,165,250,0.65), 0 4px 12px rgba(0,0,0,0.8), inset 0 3px 10px rgba(255,255,255,0.6), inset 0 -12px 28px rgba(30,80,180,0.4), 0 0 20px rgba(96,165,250,0.3)'
             : '0 0 0 1.5px rgba(93,213,237,0.3), 0 8px 30px rgba(30,60,160,0.55), 0 3px 10px rgba(0,0,0,0.8), inset 0 3px 8px rgba(255,255,255,0.5), inset 0 -10px 24px rgba(20,50,140,0.35)',
         }}>
-          {/* === BASE: deep ocean-blue core === */}
+          {/* === BASE: deep cyan core === */}
           <div className="absolute inset-0" style={{
-            background: 'radial-gradient(circle at 36% 33%, #e0f2fe 0%, #67e8f9 15%, #06b6d4 35%, #0891b2 50%, #0e4f5c 70%, #082f49 88%, #051e2f 100%)'
+            background: 'radial-gradient(circle at 38% 35%, #a5f3fc 0%, #22d3ee 10%, #06b6d4 25%, #0891b2 40%, #155e75 55%, #0c4a6e 70%, #082f49 85%, #051e2f 100%)'
           }} />
 
-          {/* === MILK BLOB 1 === */}
+          {/* === BRAIN FLUID 1 — large cortex mass === */}
           <div className="milk-blob-1" style={{
-            position: 'absolute', width: '80%', height: '75%', top: '10%', left: '5%',
-            background: 'radial-gradient(ellipse 60% 55% at 50% 50%, rgba(255,254,250,0.98) 0%, rgba(255,251,240,0.85) 45%, rgba(253,246,225,0.50) 72%, transparent 100%)',
-            filter: 'blur(4px)',
+            position: 'absolute', width: '82%', height: '78%', top: '8%', left: '4%',
+            background: 'radial-gradient(ellipse 62% 58% at 48% 48%, rgba(210,180,160,0.95) 0%, rgba(195,165,140,0.80) 25%, rgba(180,148,120,0.55) 50%, rgba(160,128,100,0.25) 75%, transparent 100%)',
+            filter: 'blur(3px)',
             borderRadius: '60% 40% 55% 45% / 50% 60% 40% 55%',
             animationDuration: blobSpeed(3.5),
             animationTimingFunction: blobEasing,
           }} />
 
-          {/* === MILK BLOB 2 === */}
+          {/* === BRAIN FLUID 2 — secondary lobe === */}
           <div className="milk-blob-2" style={{
-            position: 'absolute', width: '65%', height: '60%', top: '20%', left: '18%',
-            background: 'radial-gradient(ellipse 55% 50% at 45% 52%, rgba(255,253,248,0.92) 0%, rgba(254,249,235,0.70) 50%, rgba(252,243,215,0.35) 75%, transparent 100%)',
-            filter: 'blur(5px)',
+            position: 'absolute', width: '65%', height: '62%', top: '18%', left: '16%',
+            background: 'radial-gradient(ellipse 55% 50% at 45% 52%, rgba(225,200,178,0.90) 0%, rgba(205,178,155,0.65) 35%, rgba(185,155,130,0.35) 65%, transparent 100%)',
+            filter: 'blur(4px)',
             borderRadius: '45% 55% 40% 60% / 55% 45% 60% 40%',
             animationDuration: blobSpeed(4.5),
             animationTimingFunction: blobEasing,
           }} />
 
-          {/* === MILK BLOB 3 === */}
+          {/* === BRAIN FLUID 3 — central tissue, faster === */}
           <div className="milk-blob-3" style={{
-            position: 'absolute', width: '50%', height: '45%', top: '30%', left: '25%',
-            background: 'radial-gradient(ellipse 50% 45% at 52% 48%, rgba(255,252,245,0.88) 0%, rgba(254,247,228,0.60) 55%, transparent 85%)',
-            filter: 'blur(6px)',
+            position: 'absolute', width: '52%', height: '48%', top: '26%', left: '24%',
+            background: 'radial-gradient(ellipse 50% 46% at 52% 48%, rgba(235,215,195,0.88) 0%, rgba(215,190,168,0.60) 40%, rgba(190,165,140,0.28) 72%, transparent 100%)',
+            filter: 'blur(4px)',
             borderRadius: '55% 45% 50% 50% / 40% 60% 45% 55%',
             animationDuration: blobSpeed(3.0),
             animationTimingFunction: blobEasing,
           }} />
 
-          {/* === MILK BLOB 4 === */}
+          {/* === BRAIN FLUID 4 — surface wrinkle film === */}
           <div className="milk-blob-4" style={{
-            position: 'absolute', width: '90%', height: '35%', top: '0%', left: '5%',
-            background: 'radial-gradient(ellipse 70% 80% at 50% 20%, rgba(255,255,255,0.55) 0%, rgba(255,252,240,0.28) 55%, transparent 85%)',
-            filter: 'blur(5px)',
+            position: 'absolute', width: '88%', height: '35%', top: '2%', left: '6%',
+            background: 'radial-gradient(ellipse 70% 78% at 50% 22%, rgba(220,195,172,0.50) 0%, rgba(200,175,150,0.25) 50%, transparent 85%)',
+            filter: 'blur(4px)',
             borderRadius: '50% 50% 60% 40% / 70% 70% 30% 30%',
             animationDuration: blobSpeed(5.0),
             animationTimingFunction: 'ease-in-out',
           }} />
 
-          {/* === MILK BLOB 5 === */}
+          {/* === BRAIN FLUID 5 — deep sloshing mass === */}
           <div className="milk-blob-5" style={{
-            position: 'absolute', width: '70%', height: '55%', top: '35%', left: '10%',
-            background: 'radial-gradient(ellipse 55% 50% at 48% 60%, rgba(255,251,238,0.75) 0%, rgba(253,244,218,0.45) 55%, transparent 85%)',
-            filter: 'blur(7px)',
+            position: 'absolute', width: '72%', height: '55%', top: '35%', left: '10%',
+            background: 'radial-gradient(ellipse 55% 50% at 48% 58%, rgba(200,175,152,0.72) 0%, rgba(180,155,132,0.42) 48%, transparent 85%)',
+            filter: 'blur(5px)',
             borderRadius: '40% 60% 55% 45% / 60% 40% 55% 45%',
             animationDuration: blobSpeed(3.8),
             animationTimingFunction: blobEasing,
           }} />
 
-          {/* === DEPTH SHADOW === */}
+          {/* === BRAIN FLUID 6 — bright cortex ridge === */}
+          <div className="milk-blob-3" style={{
+            position: 'absolute', width: '42%', height: '38%', top: '14%', left: '32%',
+            background: 'radial-gradient(ellipse 48% 42% at 50% 45%, rgba(240,225,210,0.65) 0%, rgba(225,205,185,0.35) 50%, transparent 85%)',
+            filter: 'blur(3px)',
+            borderRadius: '50% 50% 45% 55% / 45% 55% 50% 50%',
+            animationDuration: blobSpeed(2.5),
+            animationTimingFunction: blobEasing,
+          }} />
+
+          {/* === BRAIN FLUID 7 — sulcus fold shadow === */}
+          <div className="milk-blob-2" style={{
+            position: 'absolute', width: '58%', height: '32%', top: '42%', left: '20%',
+            background: 'radial-gradient(ellipse 52% 46% at 50% 55%, rgba(145,115,90,0.40) 0%, rgba(125,98,75,0.20) 50%, transparent 85%)',
+            filter: 'blur(5px)',
+            borderRadius: '48% 52% 55% 45% / 52% 48% 45% 55%',
+            animationDuration: blobSpeed(5.2),
+            animationTimingFunction: blobEasing,
+            mixBlendMode: 'multiply' as any,
+          }} />
+
+          {/* === DEPTH SHADOW — enhanced 3D === */}
           <div className="absolute inset-0 rounded-full" style={{
-            background: 'radial-gradient(circle at 50% 115%, rgba(10,20,80,0.7) 0%, transparent 60%)',
+            background: 'radial-gradient(circle at 50% 120%, rgba(10,15,50,0.8) 0%, rgba(15,20,60,0.4) 35%, transparent 60%)',
             mixBlendMode: 'multiply',
           }} />
 
-          {/* === GLASS RIM === */}
+          {/* === RIM LIGHT — bottom catch light for 3D depth === */}
           <div className="absolute inset-0 rounded-full" style={{
-            boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.2)',
+            background: 'radial-gradient(ellipse 80% 15% at 50% 92%, rgba(103,232,249,0.15) 0%, transparent 100%)',
+          }} />
+
+          {/* === GLASS RIM — double edge for realism === */}
+          <div className="absolute inset-0 rounded-full" style={{
+            boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,0.15), inset 0 0 0 3px rgba(0,230,255,0.05)',
             background: 'transparent',
           }} />
 
           {/* === GLASS REFRACTION / CHROMATIC EDGE === */}
           <div className="absolute inset-0 rounded-full" style={{
-            background: 'conic-gradient(from 180deg, transparent 0%, rgba(147,197,253,0.1) 25%, transparent 50%, rgba(103,232,249,0.08) 75%, transparent 100%)',
+            background: 'conic-gradient(from 200deg, transparent 0%, rgba(147,197,253,0.08) 20%, transparent 40%, rgba(200,170,190,0.06) 60%, transparent 80%, rgba(103,232,249,0.06) 90%, transparent 100%)',
             mixBlendMode: 'overlay',
+          }} />
+
+          {/* === ENVIRONMENT REFLECTION — subtle === */}
+          <div className="absolute inset-0 rounded-full" style={{
+            background: 'linear-gradient(135deg, transparent 40%, rgba(103,232,249,0.04) 50%, transparent 60%)',
           }} />
 
           {/* === PRIMARY SPECULAR HIGHLIGHT === */}
           <div className="absolute" style={{
-            width: '58%', height: '42%', top: '4%', left: '6%',
-            background: 'radial-gradient(ellipse at 38% 38%, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.55) 40%, transparent 72%)',
-            filter: 'blur(2.5px)',
+            width: '55%', height: '38%', top: '5%', left: '8%',
+            background: 'radial-gradient(ellipse at 40% 40%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.50) 35%, rgba(255,255,255,0.15) 55%, transparent 72%)',
+            filter: 'blur(2px)',
             borderRadius: '50%',
           }} />
 
-          {/* === SECONDARY SPECULAR === */}
+          {/* === SECONDARY SPECULAR — sharp pinpoint === */}
           <div className="absolute" style={{
-            width: '20%', height: '16%', top: '9%', left: '15%',
-            background: 'radial-gradient(circle, rgba(255,255,255,0.99) 0%, rgba(255,255,255,0.65) 50%, transparent 80%)',
+            width: '16%', height: '12%', top: '10%', left: '17%',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.99) 0%, rgba(255,255,255,0.70) 40%, transparent 80%)',
+            borderRadius: '50%',
+          }} />
+
+          {/* === TERTIARY CATCH LIGHT — bottom right (new) === */}
+          <div className="absolute" style={{
+            width: '12%', height: '8%', bottom: '18%', right: '15%',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.25) 0%, transparent 80%)',
+            filter: 'blur(1px)',
             borderRadius: '50%',
           }} />
 
@@ -442,6 +486,25 @@ const FloatingAssistant = ({
           {isActive && !isLoading && (
             <div className="absolute inset-0 rounded-full border border-cyan-400/40 animate-[spin_4s_linear_infinite]" />
           )}
+
+          {/* === CLICK BURST — shockwave + flash === */}
+          {clickBurst && (
+            <>
+              <div className="absolute inset-0 rounded-full" style={{
+                background: 'radial-gradient(circle, rgba(0,230,255,0.35) 0%, rgba(0,230,255,0.1) 40%, transparent 70%)',
+                animation: 'click-flash 0.5s ease-out forwards',
+              }} />
+              <div className="absolute -inset-2 rounded-full" style={{
+                border: '2px solid rgba(0,230,255,0.5)',
+                animation: 'click-ring 0.7s ease-out forwards',
+              }} />
+              <div className="absolute -inset-4 rounded-full" style={{
+                border: '1px solid rgba(0,230,255,0.25)',
+                animation: 'click-ring 0.7s 0.1s ease-out forwards',
+                opacity: 0,
+              }} />
+            </>
+          )}
         </div>
 
         {/* Floor shadow under ball */}
@@ -482,58 +545,72 @@ const FloatingAssistant = ({
         }
         .animate-float { animation: float 4s ease-in-out infinite; }
 
-        /* MILK BLOBS */
+        /* BRAIN FLUID BLOBS — pronounced organic movement */
         @keyframes milk1 {
-          0%   { transform: translate(0%,   0%)   rotate(0deg);   border-radius: 60% 40% 55% 45% / 50% 60% 40% 55%; opacity: 0.90; }
-          12%  { transform: translate(12%, -8%)   rotate(18deg);  border-radius: 50% 50% 45% 55% / 60% 40% 55% 45%; opacity: 0.82; }
-          25%  { transform: translate(18%, 5%)    rotate(35deg);  border-radius: 40% 60% 55% 45% / 55% 45% 50% 50%; opacity: 0.88; }
-          37%  { transform: translate(8%,  18%)   rotate(50deg);  border-radius: 55% 45% 42% 58% / 48% 52% 58% 42%; opacity: 0.78; }
-          50%  { transform: translate(-8%, 12%)   rotate(70deg);  border-radius: 45% 55% 60% 40% / 52% 48% 42% 58%; opacity: 0.92; }
-          62%  { transform: translate(-16%, 0%)   rotate(85deg);  border-radius: 58% 42% 48% 52% / 40% 60% 52% 48%; opacity: 0.80; }
-          75%  { transform: translate(-10%,-12%)  rotate(100deg); border-radius: 50% 50% 55% 45% / 55% 45% 50% 50%; opacity: 0.86; }
-          88%  { transform: translate(4%,  -16%)  rotate(120deg); border-radius: 42% 58% 45% 55% / 58% 42% 55% 45%; opacity: 0.84; }
-          100% { transform: translate(0%,   0%)   rotate(135deg); border-radius: 60% 40% 55% 45% / 50% 60% 40% 55%; opacity: 0.90; }
+          0%   { transform: translate(0%, 0%)     rotate(0deg);   border-radius: 62% 38% 52% 48% / 48% 62% 38% 52%; }
+          10%  { transform: translate(15%, -10%)  rotate(22deg);  border-radius: 48% 52% 42% 58% / 58% 42% 52% 48%; }
+          20%  { transform: translate(22%, 8%)    rotate(40deg);  border-radius: 38% 62% 58% 42% / 52% 48% 42% 58%; }
+          35%  { transform: translate(10%, 22%)   rotate(65deg);  border-radius: 55% 45% 38% 62% / 42% 58% 62% 38%; }
+          50%  { transform: translate(-12%, 15%)  rotate(85deg);  border-radius: 42% 58% 62% 38% / 55% 45% 38% 62%; }
+          65%  { transform: translate(-20%, -2%)  rotate(108deg); border-radius: 58% 42% 45% 55% / 38% 62% 55% 45%; }
+          80%  { transform: translate(-8%, -18%)  rotate(125deg); border-radius: 45% 55% 55% 45% / 62% 38% 48% 52%; }
+          90%  { transform: translate(8%, -15%)   rotate(140deg); border-radius: 40% 60% 48% 52% / 55% 45% 58% 42%; }
+          100% { transform: translate(0%, 0%)     rotate(160deg); border-radius: 62% 38% 52% 48% / 48% 62% 38% 52%; }
         }
         .milk-blob-1 { animation: milk1 3.5s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
 
         @keyframes milk2 {
-          0%   { transform: translate(0%,   0%)   rotate(0deg);   border-radius: 45% 55% 40% 60% / 55% 45% 60% 40%; opacity: 0.78; }
-          15%  { transform: translate(-14%, 6%)   rotate(-22deg); border-radius: 55% 45% 50% 50% / 48% 52% 45% 55%; opacity: 0.88; }
-          30%  { transform: translate(-8%, 18%)   rotate(-40deg); border-radius: 48% 52% 58% 42% / 60% 40% 48% 52%; opacity: 0.72; }
-          45%  { transform: translate(10%, 14%)   rotate(-58deg); border-radius: 60% 40% 45% 55% / 42% 58% 55% 45%; opacity: 0.85; }
-          60%  { transform: translate(16%, -4%)   rotate(-75deg); border-radius: 42% 58% 52% 48% / 55% 45% 42% 58%; opacity: 0.75; }
-          75%  { transform: translate(6%, -18%)   rotate(-95deg); border-radius: 52% 48% 60% 40% / 45% 55% 52% 48%; opacity: 0.88; }
-          90%  { transform: translate(-8%, -12%)  rotate(-115deg);border-radius: 50% 50% 44% 56% / 58% 42% 50% 50%; opacity: 0.80; }
-          100% { transform: translate(0%,   0%)   rotate(-130deg);border-radius: 45% 55% 40% 60% / 55% 45% 60% 40%; opacity: 0.78; }
+          0%   { transform: translate(0%, 0%)     rotate(0deg);   border-radius: 45% 55% 38% 62% / 55% 45% 62% 38%; }
+          14%  { transform: translate(-18%, 10%)  rotate(-28deg); border-radius: 55% 45% 52% 48% / 42% 58% 45% 55%; }
+          28%  { transform: translate(-10%, 22%)  rotate(-50deg); border-radius: 48% 52% 62% 38% / 60% 40% 48% 52%; }
+          42%  { transform: translate(14%, 18%)   rotate(-72deg); border-radius: 62% 38% 42% 58% / 40% 60% 58% 42%; }
+          57%  { transform: translate(20%, -5%)   rotate(-95deg); border-radius: 40% 60% 55% 45% / 52% 48% 40% 60%; }
+          71%  { transform: translate(8%, -22%)   rotate(-118deg);border-radius: 52% 48% 60% 40% / 45% 55% 52% 48%; }
+          85%  { transform: translate(-10%, -14%) rotate(-138deg);border-radius: 50% 50% 42% 58% / 58% 42% 50% 50%; }
+          100% { transform: translate(0%, 0%)     rotate(-155deg);border-radius: 45% 55% 38% 62% / 55% 45% 62% 38%; }
         }
         .milk-blob-2 { animation: milk2 4.5s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
 
         @keyframes milk3 {
-          0%   { transform: translate(0%,   0%)   rotate(0deg);   border-radius: 55% 45% 50% 50% / 40% 60% 45% 55%; opacity: 0.70; }
-          20%  { transform: translate(10%, 14%)   rotate(28deg);  border-radius: 42% 58% 55% 45% / 52% 48% 58% 42%; opacity: 0.80; }
-          40%  { transform: translate(-6%, 20%)   rotate(55deg);  border-radius: 60% 40% 44% 56% / 48% 52% 42% 58%; opacity: 0.65; }
-          60%  { transform: translate(-18%, 4%)   rotate(82deg);  border-radius: 48% 52% 58% 42% / 58% 42% 52% 48%; opacity: 0.78; }
-          80%  { transform: translate(-6%, -16%)  rotate(108deg); border-radius: 52% 48% 45% 55% / 44% 56% 58% 42%; opacity: 0.72; }
-          100% { transform: translate(0%,   0%)   rotate(135deg); border-radius: 55% 45% 50% 50% / 40% 60% 45% 55%; opacity: 0.70; }
+          0%   { transform: translate(0%, 0%)     rotate(0deg);   border-radius: 55% 45% 50% 50% / 38% 62% 48% 52%; }
+          17%  { transform: translate(14%, 18%)   rotate(35deg);  border-radius: 40% 60% 58% 42% / 52% 48% 55% 45%; }
+          33%  { transform: translate(-8%, 24%)   rotate(65deg);  border-radius: 62% 38% 42% 58% / 48% 52% 40% 60%; }
+          50%  { transform: translate(-22%, 6%)   rotate(95deg);  border-radius: 48% 52% 60% 40% / 58% 42% 52% 48%; }
+          67%  { transform: translate(-12%, -18%) rotate(120deg); border-radius: 55% 45% 45% 55% / 42% 58% 60% 40%; }
+          83%  { transform: translate(10%, -20%)  rotate(148deg); border-radius: 42% 58% 52% 48% / 55% 45% 42% 58%; }
+          100% { transform: translate(0%, 0%)     rotate(170deg); border-radius: 55% 45% 50% 50% / 38% 62% 48% 52%; }
         }
         .milk-blob-3 { animation: milk3 3s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
 
         @keyframes milk4 {
-          0%   { transform: translate(0%,0%)    scaleX(1)    scaleY(1);    opacity: 0.50; }
-          25%  { transform: translate(8%,-5%)   scaleX(1.15) scaleY(0.88); opacity: 0.42; }
-          50%  { transform: translate(-5%,8%)   scaleX(0.90) scaleY(1.12); opacity: 0.55; }
-          75%  { transform: translate(-10%,-4%) scaleX(1.10) scaleY(0.92); opacity: 0.44; }
-          100% { transform: translate(0%,0%)    scaleX(1)    scaleY(1);    opacity: 0.50; }
+          0%   { transform: translate(0%,0%)     scaleX(1)    scaleY(1);    }
+          20%  { transform: translate(10%,-8%)   scaleX(1.18) scaleY(0.85); }
+          40%  { transform: translate(-8%,12%)   scaleX(0.88) scaleY(1.15); }
+          60%  { transform: translate(-14%,-6%)  scaleX(1.12) scaleY(0.90); }
+          80%  { transform: translate(6%,-10%)   scaleX(0.92) scaleY(1.10); }
+          100% { transform: translate(0%,0%)     scaleX(1)    scaleY(1);    }
         }
         .milk-blob-4 { animation: milk4 5s ease-in-out infinite; }
 
         @keyframes milk5 {
-          0%   { transform: translate(0%,  0%)  rotate(0deg);   border-radius: 40% 60% 55% 45% / 60% 40% 55% 45%; opacity: 0.65; }
-          33%  { transform: translate(14%, 10%) rotate(-45deg); border-radius: 55% 45% 42% 58% / 48% 52% 60% 40%; opacity: 0.75; }
-          66%  { transform: translate(-10%,16%) rotate(-90deg); border-radius: 48% 52% 58% 42% / 55% 45% 40% 60%; opacity: 0.60; }
-          100% { transform: translate(0%,  0%)  rotate(-135deg);border-radius: 40% 60% 55% 45% / 60% 40% 55% 45%; opacity: 0.65; }
+          0%   { transform: translate(0%, 0%)    rotate(0deg);   border-radius: 38% 62% 55% 45% / 62% 38% 52% 48%; }
+          25%  { transform: translate(18%, 14%)  rotate(-55deg);  border-radius: 55% 45% 40% 60% / 45% 55% 62% 38%; }
+          50%  { transform: translate(-14%, 20%) rotate(-105deg); border-radius: 48% 52% 60% 40% / 55% 45% 38% 62%; }
+          75%  { transform: translate(-18%, -8%) rotate(-145deg); border-radius: 60% 40% 48% 52% / 40% 60% 52% 48%; }
+          100% { transform: translate(0%, 0%)    rotate(-180deg); border-radius: 38% 62% 55% 45% / 62% 38% 52% 48%; }
         }
         .milk-blob-5 { animation: milk5 3.8s cubic-bezier(0.45,0.05,0.55,0.95) infinite; }
+
+        /* CLICK BURST ANIMATIONS */
+        @keyframes click-flash {
+          0% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.6; }
+          100% { opacity: 0; transform: scale(1.3); }
+        }
+        @keyframes click-ring {
+          0% { transform: scale(0.8); opacity: 1; }
+          100% { transform: scale(1.8); opacity: 0; }
+        }
 
         /* CIRCUIT ANIMATIONS */
         @keyframes circuitPulse {
