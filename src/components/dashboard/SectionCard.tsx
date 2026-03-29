@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from "react";
-import { Info, X, Zap, ChevronRight } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Info, X, Zap, ChevronRight, EyeOff } from "lucide-react";
 
 interface SectionCardProps {
   id: string;
@@ -16,9 +16,22 @@ const SectionCard = ({ id, title, icon: Icon, infoText, children, className = ""
   const [isRevealed, setIsRevealed] = useState(alwaysOpen);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [showHint, setShowHint] = useState(false);
   const [ripple, setRipple] = useState<{ x: number; y: number } | null>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
+
+  // Show hint briefly when section is revealed
+  useEffect(() => {
+    if (isRevealed && !alwaysOpen) {
+      // Small delay so the reveal animation completes first
+      const showTimer = setTimeout(() => setShowHint(true), 300);
+      const hideTimer = setTimeout(() => setShowHint(false), 4000);
+      return () => { clearTimeout(showTimer); clearTimeout(hideTimer); };
+    } else {
+      setShowHint(false);
+    }
+  }, [isRevealed, alwaysOpen]);
 
   const handleCardClick = (e: React.MouseEvent) => {
     if (!cardRef.current) return;
@@ -374,6 +387,27 @@ const SectionCard = ({ id, title, icon: Icon, infoText, children, className = ""
             </div>
           )}
         </div>
+
+        {/* "Click anywhere to collapse" hint — pops in briefly when opened */}
+        {!alwaysOpen && (
+          <div
+            className="absolute bottom-4 left-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full pointer-events-none"
+            style={{
+              background: 'linear-gradient(135deg, rgba(0,230,255,0.12) 0%, rgba(0,180,220,0.08) 100%)',
+              border: '1px solid rgba(0,230,255,0.15)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3), 0 0 15px rgba(0,230,255,0.08)',
+              backdropFilter: 'blur(8px)',
+              opacity: showHint ? 1 : 0,
+              transform: showHint ? 'translateX(-50%) translateY(0) scale(1)' : 'translateX(-50%) translateY(8px) scale(0.9)',
+              transition: 'opacity 0.5s cubic-bezier(0.23,1,0.32,1), transform 0.5s cubic-bezier(0.23,1,0.32,1)',
+            }}
+          >
+            <EyeOff className="h-3 w-3 text-cyan-400/70" />
+            <span className="text-[10px] text-cyan-300/70 font-medium tracking-wide whitespace-nowrap">
+              Click anywhere to collapse
+            </span>
+          </div>
+        )}
 
         {/* Bottom glow */}
         <div className="absolute bottom-0 left-[20%] right-[20%] h-[1px]
