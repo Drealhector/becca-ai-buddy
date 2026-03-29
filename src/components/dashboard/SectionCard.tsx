@@ -388,23 +388,22 @@ const SectionCard = ({ id, title, icon: Icon, infoText, children, className = ""
           )}
         </div>
 
-        {/* "Click anywhere to collapse" hint — pops in briefly when opened */}
-        {!alwaysOpen && (
+        {/* "Tap to collapse" hint — fixed toast on mobile, absolute on desktop */}
+        {!alwaysOpen && showHint && (
           <div
-            className="absolute bottom-4 left-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full pointer-events-none"
+            className="fixed top-20 left-1/2 z-[100] lg:absolute lg:top-auto lg:bottom-4 flex items-center gap-1.5 px-4 py-2 rounded-full pointer-events-none"
             style={{
-              background: 'linear-gradient(135deg, rgba(0,230,255,0.12) 0%, rgba(0,180,220,0.08) 100%)',
-              border: '1px solid rgba(0,230,255,0.15)',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3), 0 0 15px rgba(0,230,255,0.08)',
-              backdropFilter: 'blur(8px)',
-              opacity: showHint ? 1 : 0,
-              transform: showHint ? 'translateX(-50%) translateY(0) scale(1)' : 'translateX(-50%) translateY(8px) scale(0.9)',
-              transition: 'opacity 0.5s cubic-bezier(0.23,1,0.32,1), transform 0.5s cubic-bezier(0.23,1,0.32,1)',
+              background: 'linear-gradient(135deg, rgba(0,20,40,0.9) 0%, rgba(0,15,35,0.95) 100%)',
+              border: '1px solid rgba(0,230,255,0.2)',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 20px rgba(0,230,255,0.12)',
+              backdropFilter: 'blur(12px)',
+              transform: 'translateX(-50%)',
+              animation: 'hint-pop 0.4s cubic-bezier(0.23,1,0.32,1) forwards',
             }}
           >
-            <EyeOff className="h-3 w-3 text-cyan-400/70" />
-            <span className="text-[10px] text-cyan-300/70 font-medium tracking-wide whitespace-nowrap">
-              Click anywhere to collapse
+            <EyeOff className="h-3 w-3 text-cyan-400/80" />
+            <span className="text-[11px] text-cyan-300/80 font-medium tracking-wide whitespace-nowrap">
+              Tap anywhere to collapse
             </span>
           </div>
         )}
@@ -420,6 +419,10 @@ const SectionCard = ({ id, title, icon: Icon, infoText, children, className = ""
       </div>
 
       <style>{`
+        @keyframes hint-pop {
+          0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.9); }
+          100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+        }
         @keyframes card-float {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-6px); }
