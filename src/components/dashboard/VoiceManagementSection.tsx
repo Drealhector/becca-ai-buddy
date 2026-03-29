@@ -345,7 +345,7 @@ const VoiceManagementSection = () => {
   ];
 
   return (
-    <Card className="p-6 shadow-elegant hover:shadow-hover transition-all">
+    <Card className="p-6 shadow-elegant hover:shadow-hover transition-all h-full flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <Volume2 className="w-5 h-5 text-primary" />

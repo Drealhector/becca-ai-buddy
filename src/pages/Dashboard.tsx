@@ -48,13 +48,13 @@ const Dashboard = () => {
       sections: [
         { id: "master-switch", label: "Master Switch", icon: ToggleLeft, info: "The power button for BECCA. Turn it ON to activate across all platforms, OFF to pause everything." },
         { id: "channels", label: "Channels", icon: Radio, info: "Choose which platforms BECCA responds on — WhatsApp, Instagram, Facebook, or Telegram." },
+        { id: "inventory", label: "Inventory", icon: Package, info: "Add and manage your products. BECCA learns from these to help customers." },
       ]
     },
     {
       label: "OPERATIONS",
       sections: [
         { id: "conversations", label: "Conversations", icon: MessageSquare, info: "Monitor all customer conversations across platforms. Click any chat to read the full transcript." },
-        { id: "inventory", label: "Inventory", icon: Package, info: "Add and manage your products. BECCA learns from these to help customers." },
         { id: "phone-calls", label: "Phone Calls", icon: PhoneCall, info: "Manage inbound/outbound calls, view call history, and access full transcripts." },
       ]
     },
@@ -172,9 +172,9 @@ const Dashboard = () => {
           transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
           ${sidebarW} lg:translate-x-0 ${sidebarOpen ? 'translate-x-0 w-56' : '-translate-x-full'}`}
         style={{
-          background: 'linear-gradient(180deg, rgba(4,10,20,0.97) 0%, rgba(2,8,18,0.98) 100%)',
-          borderRight: '1px solid rgba(0,230,255,0.08)',
-          boxShadow: '4px 0 40px rgba(0,0,0,0.4), 1px 0 0 rgba(0,230,255,0.05)',
+          background: 'linear-gradient(180deg, rgba(16,26,46,0.97) 0%, rgba(12,22,40,0.98) 100%)',
+          borderRight: '1px solid rgba(0,230,255,0.12)',
+          boxShadow: '4px 0 40px rgba(0,0,0,0.3), 1px 0 0 rgba(0,230,255,0.08)',
         }}
       >
         {/* Animated edge glow on sidebar */}
@@ -359,29 +359,29 @@ const Dashboard = () => {
       <main className={`relative z-10 transition-all duration-300 ${mainPl}`}>
         <div className="w-full px-3 sm:px-5 lg:px-6 py-5 space-y-5">
 
-          {/* === ROW 1: Control Center — Master Switch + Channels side by side === */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <SectionCard id="master-switch" title="Master Switch" icon={ToggleLeft}
-              infoText="The power button for BECCA. Turn it ON to activate across all platforms, OFF to pause everything.">
-              <MasterSwitch />
-            </SectionCard>
+          {/* === ROW 1: Master Switch — full width umbrella === */}
+          <SectionCard id="master-switch" title="Master Switch" icon={ToggleLeft} alwaysOpen
+            infoText="The power button for BECCA. Turn it ON to activate across all platforms, OFF to pause everything.">
+            <MasterSwitch />
+          </SectionCard>
+
+          {/* === ROW 2: Channels + Inventory side by side equal === */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <SectionCard id="channels" title="Channels" icon={Radio}
               infoText="Choose which platforms BECCA responds on — WhatsApp, Instagram, Facebook, or Telegram.">
               <ChannelToggles />
             </SectionCard>
-          </div>
-
-          {/* === ROW 2: Conversations (full width) === */}
-          <SectionCard id="conversations" title="Conversations" icon={MessageSquare}
-            infoText="Monitor all customer conversations across platforms. Click any chat to read the full transcript.">
-            <ConversationsSection />
-          </SectionCard>
-
-          {/* === ROW 3: Inventory + Phone Calls side by side === */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <SectionCard id="inventory" title="Inventory" icon={Package}
               infoText="Add and manage your products. BECCA learns from these to help customers.">
               <InventorySection />
+            </SectionCard>
+          </div>
+
+          {/* === ROW 3: Conversations + Phone Calls side by side equal === */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <SectionCard id="conversations" title="Conversations" icon={MessageSquare}
+              infoText="Monitor all customer conversations across platforms. Click any chat to read the full transcript.">
+              <ConversationsSection />
             </SectionCard>
             <SectionCard id="phone-calls" title="Phone Calls" icon={PhoneCall}
               infoText="Manage inbound/outbound calls, view call history, and access full transcripts.">

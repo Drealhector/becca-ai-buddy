@@ -390,7 +390,7 @@ const PhoneCallSection = () => {
   );
 
   return (
-    <Card className="p-6 relative">
+    <Card className="p-6 relative h-full flex flex-col">
       {/* Call Widget Overlay */}
       {isInCall && (
         <div className="absolute inset-0 z-10 bg-gradient-to-b from-card to-background/95 backdrop-blur-lg rounded-lg flex flex-col items-center justify-center p-8">

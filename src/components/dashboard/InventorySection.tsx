@@ -305,7 +305,7 @@ export const InventorySection = () => {
   };
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 h-full flex flex-col">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-2">
           <Package className="h-5 w-5 text-primary" />

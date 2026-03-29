@@ -116,7 +116,7 @@ const ConversationsSection = () => {
 
   return (
     <>
-      <Card className="p-6">
+      <Card className="p-6 h-full flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Conversations</h3>
           <Button

@@ -50,7 +50,7 @@ const MasterSwitch = () => {
   if (loading) return null;
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 h-full">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={`p-3 rounded-full ${masterSwitch ? "bg-primary/10" : "bg-muted"}`}>

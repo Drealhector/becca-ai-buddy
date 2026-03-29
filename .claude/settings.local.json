@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l \"/c/Users/samym/Downloads/becca brain/supabase/migrations\"/*.sql)"
+    ]
+  }
+}

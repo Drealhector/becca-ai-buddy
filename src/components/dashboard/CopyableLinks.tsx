@@ -154,9 +154,9 @@ const CopyableLinks = () => {
   }));
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 h-full flex flex-col">
       <h3 className="text-lg font-semibold mb-4">Shareable Links</h3>
-      <div className="space-y-3">
+      <div className="space-y-3 flex-1">
         {/* Public Hub Link - Always visible */}
         <div
           className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"

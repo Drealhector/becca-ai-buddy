@@ -156,7 +156,7 @@ const HubBackgroundGenerator = () => {
 
   return (
     <>
-      <Card className="p-6 shadow-elegant hover:shadow-hover transition-all">
+      <Card className="p-6 shadow-elegant hover:shadow-hover transition-all h-full flex flex-col">
         <div className="flex items-center gap-2 mb-6">
           <ImageIcon className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-semibold">Hub Background</h3>

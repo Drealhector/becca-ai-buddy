@@ -134,7 +134,7 @@ export const AIPersonalitySection = () => {
   };
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 h-full flex flex-col">
       <div className="flex items-center gap-2 mb-4">
         <Brain className="h-5 w-5 text-primary" />
         <h2 className="text-xl font-semibold">AI Personality</h2>
