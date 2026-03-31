@@ -13,7 +13,7 @@ import PhoneCallSection from "@/components/dashboard/PhoneCallSection";
 import HubBackgroundGenerator from "@/components/dashboard/HubBackgroundGenerator";
 import VoiceManagementSection from "@/components/dashboard/VoiceManagementSection";
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
-import { InventorySection } from "@/components/dashboard/InventorySection";
+// InventorySection replaced by PropertiesSection for real estate
 import { PhoneConnectionDialog } from "@/components/dashboard/PhoneConnectionDialog";
 import FloatingAssistant from "@/components/dashboard/FloatingAssistant";
 import MatrixBackground from "@/components/dashboard/MatrixBackground";
@@ -21,9 +21,12 @@ import SectionCard from "@/components/dashboard/SectionCard";
 import {
   Menu, X, LogOut, Phone, Link as LinkIcon, Settings, MessageSquare,
   Mic, Trash2, CreditCard, Brain, Palette, Share2, PhoneCall,
-  ToggleLeft, Radio, Package, Image, ChevronDown, ChevronRight,
+  ToggleLeft, Radio, Image, ChevronDown, ChevronRight,
   PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
+import CRMSection from "@/components/dashboard/crm/CRMSection";
+import PropertiesSection from "@/components/dashboard/crm/PropertiesSection";
+import { Building2, Users } from "lucide-react";
 import beccaLogo from "@/assets/becca-new-logo.png";
 import beccaBLogo from "@/assets/becca-b-new-logo.png";
 
@@ -48,7 +51,13 @@ const Dashboard = () => {
       sections: [
         { id: "master-switch", label: "Master Switch", icon: ToggleLeft, info: "The power button for BECCA. Turn it ON to activate across all platforms, OFF to pause everything." },
         { id: "channels", label: "Channels", icon: Radio, info: "Choose which platforms BECCA responds on — WhatsApp, Instagram, Facebook, or Telegram." },
-        { id: "inventory", label: "Inventory", icon: Package, info: "Add and manage your products. BECCA learns from these to help customers." },
+        { id: "properties", label: "Properties", icon: Building2, info: "Manage your real estate listings — apartments, houses, land, and commercial properties." },
+      ]
+    },
+    {
+      label: "CRM",
+      sections: [
+        { id: "crm", label: "CRM", icon: Users, info: "Manage contacts, pipeline, follow-ups, and analytics — your full real estate command center." },
       ]
     },
     {
@@ -365,17 +374,30 @@ const Dashboard = () => {
             <MasterSwitch />
           </SectionCard>
 
-          {/* === ROW 2: Channels + Inventory side by side equal === */}
+          {/* === ROW 2: Channels + Properties side by side equal === */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <SectionCard id="channels" title="Channels" icon={Radio}
               infoText="Choose which platforms BECCA responds on — WhatsApp, Instagram, Facebook, or Telegram.">
               <ChannelToggles />
             </SectionCard>
-            <SectionCard id="inventory" title="Inventory" icon={Package}
-              infoText="Add and manage your products. BECCA learns from these to help customers.">
-              <InventorySection />
+            <SectionCard id="properties" title="Properties" icon={Building2}
+              infoText="Manage your real estate listings — apartments, houses, land, and commercial properties.">
+              <PropertiesSection />
             </SectionCard>
           </div>
+
+          {/* CRM Divider */}
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-cyan-500/15 to-transparent" />
+            <span className="text-[9px] text-cyan-500/30 uppercase tracking-[0.3em] font-bold">CRM</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-cyan-500/15 to-transparent" />
+          </div>
+
+          {/* === ROW 3: CRM (full width with tabs) === */}
+          <SectionCard id="crm" title="CRM" icon={Users}
+            infoText="Manage contacts, pipeline, follow-ups, and analytics — your full real estate command center.">
+            <CRMSection />
+          </SectionCard>
 
           {/* === ROW 3: Conversations + Phone Calls side by side equal === */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
