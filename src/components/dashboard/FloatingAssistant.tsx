@@ -86,7 +86,8 @@ const FloatingAssistant = ({
   const conversationRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
   const userHasSpokenRef = useRef<boolean>(false);
-  const SILENCE_TIMEOUT_MS = 3000; // 3 seconds of silence after user has spoken = auto-disconnect
+  const agentTurnCountRef = useRef<number>(0);
+  const SILENCE_TIMEOUT_MS = 8000; // 8 seconds of silence after agent finishes speaking = auto-disconnect
 
   // ElevenLabs conversation hook — with client tools for dashboard data, name memory, and auto-disconnect
   const conversation = useConversation({
@@ -154,7 +155,8 @@ const FloatingAssistant = ({
       setIsLoading(false);
       setIsActive(true);
       toggleLockRef.current = false;
-      userHasSpokenRef.current = false; // Reset — wait for first user speech before silence timer
+      userHasSpokenRef.current = false;
+      agentTurnCountRef.current = 0; // Reset turn counter for silence timer
       toast.success("BECCA activated");
     },
     onDisconnect: () => {
@@ -164,29 +166,29 @@ const FloatingAssistant = ({
       setIsLoading(false);
       toggleLockRef.current = false;
       userHasSpokenRef.current = false;
+      agentTurnCountRef.current = 0;
       if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
     },
     onModeChange: ({ mode }) => {
       setIsSpeaking(mode === "speaking");
 
       // Silence-based auto-disconnect:
-      // When agent finishes speaking (mode → "listening"), start a silence timer.
-      // If user doesn't speak within SILENCE_TIMEOUT_MS, disconnect.
-      // Only activate after the user has spoken at least once (skip the initial greeting wait).
+      // Track agent speaking turns. After the agent has spoken at least twice
+      // (greeting + response to user), start a silence timer when it goes quiet.
+      // This ensures we never cut off the initial greeting wait.
       if (mode === "speaking") {
-        // Agent is speaking — user was talking before this, so mark them as having spoken
-        userHasSpokenRef.current = true;
+        agentTurnCountRef.current += 1;
         // Clear any running silence timer while agent speaks
         if (silenceTimerRef.current) {
           clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = null;
         }
-      } else if (mode === "listening" && userHasSpokenRef.current) {
-        // Agent finished speaking, waiting for user — start silence timer
+      } else if (mode === "listening" && agentTurnCountRef.current >= 2) {
+        // Agent finished speaking (at least 2nd time), waiting for user — start silence timer
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
           if (isActiveRef.current && conversationRef.current) {
-            console.log("BECCA: User silent for 3s, ending session");
+            console.log("BECCA: User silent, ending session");
             try { conversationRef.current.endSession(); } catch (e) { console.error("endSession error:", e); }
           }
         }, SILENCE_TIMEOUT_MS);
