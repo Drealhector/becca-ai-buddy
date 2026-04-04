@@ -84,6 +84,9 @@ const FloatingAssistant = ({
   useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
 
   const conversationRef = useRef<any>(null);
+  const silenceTimerRef = useRef<any>(null);
+  const userHasSpokenRef = useRef<boolean>(false);
+  const SILENCE_TIMEOUT_MS = 3000; // 3 seconds of silence after user has spoken = auto-disconnect
 
   // ElevenLabs conversation hook — with client tools for dashboard data, name memory, and auto-disconnect
   const conversation = useConversation({
@@ -151,6 +154,7 @@ const FloatingAssistant = ({
       setIsLoading(false);
       setIsActive(true);
       toggleLockRef.current = false;
+      userHasSpokenRef.current = false; // Reset — wait for first user speech before silence timer
       toast.success("BECCA activated");
     },
     onDisconnect: () => {
@@ -159,32 +163,42 @@ const FloatingAssistant = ({
       setIsSpeaking(false);
       setIsLoading(false);
       toggleLockRef.current = false;
+      userHasSpokenRef.current = false;
+      if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
     },
     onModeChange: ({ mode }) => {
       setIsSpeaking(mode === "speaking");
+
+      // Silence-based auto-disconnect:
+      // When agent finishes speaking (mode → "listening"), start a silence timer.
+      // If user doesn't speak within SILENCE_TIMEOUT_MS, disconnect.
+      // Only activate after the user has spoken at least once (skip the initial greeting wait).
+      if (mode === "speaking") {
+        // Agent is speaking — user was talking before this, so mark them as having spoken
+        userHasSpokenRef.current = true;
+        // Clear any running silence timer while agent speaks
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
+      } else if (mode === "listening" && userHasSpokenRef.current) {
+        // Agent finished speaking, waiting for user — start silence timer
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = setTimeout(() => {
+          if (isActiveRef.current && conversationRef.current) {
+            console.log("BECCA: User silent for 3s, ending session");
+            try { conversationRef.current.endSession(); } catch (e) { console.error("endSession error:", e); }
+          }
+        }, SILENCE_TIMEOUT_MS);
+      }
     },
     onError: (error) => {
       console.error("BECCA assistant error:", error);
       setIsActive(false);
       setIsLoading(false);
       toggleLockRef.current = false;
+      if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
       toast.error("Connection failed. Please try again.");
-    },
-    // Fallback bye-detection: only triggers on very short, clear farewell messages
-    // The agent's endConversation tool is the primary disconnect mechanism
-    onMessage: (props: any) => {
-      if (props.source === "user" || props.role === "user") {
-        const msg = (props.message || "").toLowerCase().trim();
-        // Only exact short farewell phrases (max ~3 words) — avoids false positives
-        const exactFarewells = ["bye", "goodbye", "good bye", "bye bye", "see you", "see ya"];
-        if (exactFarewells.includes(msg)) {
-          setTimeout(() => {
-            if (isActiveRef.current && conversationRef.current) {
-              try { conversationRef.current.endSession(); } catch (e) { console.error("endSession error:", e); }
-            }
-          }, 6000);
-        }
-      }
     },
   });
 
