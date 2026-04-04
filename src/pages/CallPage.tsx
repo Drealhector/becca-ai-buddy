@@ -1,192 +1,45 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Phone, PhoneOff } from "lucide-react";
+import { Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Vapi from "@vapi-ai/web";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+
+const TELNYX_PHONE = "+2342093940544";
 
 const CallPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { toast } = useToast();
-  const [customization, setCustomization] = useState<any>(null);
-  const [isInCall, setIsInCall] = useState(false);
-  const [callDuration, setCallDuration] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const vapiRef = useRef<Vapi | null>(null);
+  const customization = useQuery(api.customizations.get, {});
 
-  useEffect(() => {
-    fetchCustomization();
-  }, []);
-
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (isInCall) {
-      interval = setInterval(() => {
-        setCallDuration((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isInCall]);
-
-  const fetchCustomization = async () => {
-    try {
-      const { data } = await supabase
-        .from("customizations")
-        .select("*")
-        .limit(1)
-        .maybeSingle();
-      setCustomization(data);
-    } catch (error) {
-      console.error("Error fetching customization:", error);
-    }
-  };
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const handleCall = async () => {
-    setIsLoading(true);
-    try {
-      // Get customization config and Vapi key from edge function
-      const { data, error } = await supabase.functions.invoke("start-vapi-call");
-      
-      if (error) {
-        console.error("Edge function error:", error);
-        throw new Error(error.message || "Failed to start call configuration");
-      }
-
-      if (!data?.vapiPublicKey) {
-        throw new Error("Vapi configuration is missing. Please contact support.");
-      }
-
-      // Initialize Vapi instance
-      if (!vapiRef.current) {
-        vapiRef.current = new Vapi(data.vapiPublicKey);
-        
-        // Set up event listeners
-        vapiRef.current.on("call-start", () => {
-          console.log("Call started");
-          setIsInCall(true);
-          setCallDuration(0);
-          setIsLoading(false);
-        });
-
-        vapiRef.current.on("call-end", () => {
-          console.log("Call ended");
-          handleEndCall();
-        });
-
-        vapiRef.current.on("error", (error) => {
-          console.error("Vapi error:", error);
-          toast({
-            title: "Call Error",
-            description: error?.message || "Failed to connect. Please try again.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          setIsInCall(false);
-        });
-      }
-
-      console.log("Starting call with config:", data);
-      
-      // Start the call with assistant overrides
-      await vapiRef.current.start(data.assistantId, data.assistantOverrides);
-      
-    } catch (error) {
-      console.error("Error starting call:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to start call. Please try again.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-    }
-  };
-
-  const handleEndCall = async () => {
-    setIsInCall(false);
-    
-    // Stop Vapi call
-    if (vapiRef.current) {
-      vapiRef.current.stop();
-    }
-    
-    // Save call history
-    try {
-      await supabase.from("call_history").insert({
-        type: "outgoing",
-        number: slug || "web-call",
-        topic: "Voice call with BECCA",
-        duration_minutes: Math.round(callDuration / 60),
-      });
-    } catch (error) {
-      console.error("Error saving call:", error);
-    }
-    
-    setCallDuration(0);
+  const handleCall = () => {
+    window.location.href = `tel:${TELNYX_PHONE}`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary via-accent to-primary flex items-center justify-center p-4">
-      <div className="w-full max-w-md text-center">
-        <div className="mb-8">
-          <div className="w-32 h-32 rounded-full mx-auto mb-6 bg-white/20 backdrop-blur-sm flex items-center justify-center border-4 border-white shadow-glow">
-            {isInCall ? (
-              <div className="animate-pulse">
-                <Phone className="h-16 w-16 text-white" />
-              </div>
-            ) : (
-              <span className="text-6xl">🤖</span>
-            )}
-          </div>
-
-          <h1 className="text-3xl font-bold text-white mb-2">
-            {customization?.business_name || "BECCA"}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4">
+      <div className="text-center space-y-8">
+        <div className="space-y-4">
+          <h1 className="text-4xl font-bold text-white">
+            Talk to {customization?.business_name || "BECCA"}
           </h1>
-          
-          {isInCall ? (
-            <div className="space-y-4">
-              <p className="text-white/90 text-xl">Connected</p>
-              <p className="text-white text-3xl font-mono">{formatDuration(callDuration)}</p>
-            </div>
-          ) : (
-            <p className="text-white/90 text-lg">
-              Ready to talk with {slug || "BECCA"}
-            </p>
-          )}
+          <p className="text-lg text-gray-300">
+            Start a voice call with our AI assistant
+          </p>
         </div>
 
-        {!isInCall ? (
-          <Button
-            onClick={handleCall}
-            size="lg"
-            disabled={isLoading}
-            className="w-64 h-64 rounded-full bg-white hover:bg-white/90 text-primary shadow-glow hover:scale-110 transition-all animate-pulse disabled:opacity-50 disabled:animate-none"
-          >
-            {isLoading ? (
-              <div className="flex flex-col items-center gap-4">
-                <Phone className="h-32 w-32 animate-pulse" />
-                <span className="text-sm">Connecting...</span>
-              </div>
-            ) : (
-              <Phone className="h-32 w-32" />
-            )}
-          </Button>
-        ) : (
-          <Button
-            onClick={handleEndCall}
-            size="lg"
-            variant="destructive"
-            className="w-64 h-64 rounded-full shadow-glow hover:scale-110 transition-all"
-          >
-            <PhoneOff className="h-32 w-32" />
-          </Button>
-        )}
+        <div className="bg-primary/10 rounded-full p-12 mx-auto w-fit">
+          <Phone className="h-16 w-16 text-primary" />
+        </div>
+
+        <Button
+          onClick={handleCall}
+          className="bg-green-500 hover:bg-green-600 text-white px-8 py-6 rounded-full text-xl shadow-2xl hover:shadow-green-500/50 transition-all duration-300 hover:scale-105"
+        >
+          <Phone className="mr-3 h-6 w-6" />
+          Call Now
+        </Button>
+
+        <p className="text-gray-400 text-sm">{TELNYX_PHONE}</p>
       </div>
     </div>
   );

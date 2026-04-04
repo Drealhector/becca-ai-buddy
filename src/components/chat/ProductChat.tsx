@@ -51,7 +51,7 @@ const ProductChat = ({ productId, productName, salesInstructions, onClose }: Pro
     setLoading(true);
 
     try {
-      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/product-chat`;
+      const CHAT_URL = `${import.meta.env.VITE_CONVEX_SITE_URL}/web-chat`;
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
@@ -131,28 +131,8 @@ const ProductChat = ({ productId, productName, salesInstructions, onClose }: Pro
               let imageUrl = null;
 
               if (imageMatch) {
-                const label = imageMatch[1];
-                // Remove the tag from display
+                // Remove the tag from display (product_media removed)
                 displayContent = aiContent.replace(/\[SHOW_IMAGE:([^\]]+)\]/, '').trim();
-                
-                // Fetch the image URL for this label
-                try {
-                  const response = await fetch(
-                    `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/product_media?product_id=eq.${productId}&label=ilike.%${label}%&select=media_url`,
-                    {
-                      headers: {
-                        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-                        "Content-Type": "application/json",
-                      },
-                    }
-                  );
-                  const mediaData = await response.json();
-                  if (mediaData && mediaData.length > 0) {
-                    imageUrl = mediaData[0].media_url;
-                  }
-                } catch (e) {
-                  console.error("Error fetching media:", e);
-                }
               }
 
               setMessages((prev) => {

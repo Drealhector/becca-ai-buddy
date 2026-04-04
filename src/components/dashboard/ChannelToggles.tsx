@@ -1,52 +1,27 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { MessageCircle, Instagram, Facebook, Send } from "lucide-react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 
 const channels = [
   { key: "whatsapp_on", label: "WhatsApp", icon: MessageCircle, color: "text-cyan-400" },
   { key: "instagram_on", label: "Instagram", icon: Instagram, color: "text-pink-600" },
   { key: "facebook_on", label: "Facebook", icon: Facebook, color: "text-blue-600" },
   { key: "telegram_on", label: "Telegram", icon: Send, color: "text-sky-600" },
-];
+] as const;
 
 const ChannelToggles = () => {
-  const [toggles, setToggles] = useState<any>({});
-  const [loading, setLoading] = useState(true);
+  const toggles = useQuery(api.toggles.get, {});
+  const updateToggle = useMutation(api.toggles.update);
 
-  useEffect(() => {
-    fetchToggles();
-  }, []);
-
-  const fetchToggles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("toggles")
-        .select("*")
-        .limit(1)
-        .single();
-
-      if (error) throw error;
-      setToggles(data || {});
-    } catch (error) {
-      console.error("Error fetching toggles:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading = toggles === undefined;
 
   const handleToggle = async (key: string, checked: boolean) => {
+    if (!toggles?._id) return;
     try {
-      const { error } = await supabase
-        .from("toggles")
-        .update({ [key]: checked })
-        .eq("id", toggles.id);
-
-      if (error) throw error;
-
-      setToggles({ ...toggles, [key]: checked });
+      await updateToggle({ id: toggles._id, [key]: checked } as any);
       toast.success(`${channels.find(c => c.key === key)?.label} ${checked ? "enabled" : "disabled"}`);
     } catch (error) {
       console.error("Error updating toggle:", error);
@@ -56,7 +31,7 @@ const ChannelToggles = () => {
 
   if (loading) return null;
 
-  const activeCount = channels.filter(c => toggles[c.key]).length;
+  const activeCount = channels.filter(c => (toggles as any)?.[c.key]).length;
 
   return (
     <Card className="p-6 h-full flex flex-col">
@@ -71,7 +46,7 @@ const ChannelToggles = () => {
                 <span className="font-medium">{channel.label}</span>
               </div>
               <Switch
-                checked={toggles[channel.key] || false}
+                checked={(toggles as any)?.[channel.key] || false}
                 onCheckedChange={(checked) => handleToggle(channel.key, checked)}
               />
             </div>
@@ -79,21 +54,19 @@ const ChannelToggles = () => {
         })}
       </div>
 
-      {/* Creative filler — Channel status overview */}
+      {/* Channel status overview */}
       <div className="mt-auto pt-6 space-y-4">
         <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/15 to-transparent" />
 
-        {/* Active channels indicator */}
         <div className="flex items-center justify-between">
           <span className="text-xs text-white/40 uppercase tracking-wider">Active Channels</span>
           <span className="text-sm font-semibold text-cyan-400">{activeCount} / {channels.length}</span>
         </div>
 
-        {/* Channel status bar */}
         <div className="flex gap-2">
           {channels.map((channel) => {
             const Icon = channel.icon;
-            const isActive = toggles[channel.key];
+            const isActive = (toggles as any)?.[channel.key];
             return (
               <div
                 key={channel.key}
@@ -117,7 +90,6 @@ const ChannelToggles = () => {
           })}
         </div>
 
-        {/* Coverage bar */}
         <div className="space-y-1.5">
           <div className="flex justify-between text-[10px] text-white/30">
             <span>Platform Coverage</span>

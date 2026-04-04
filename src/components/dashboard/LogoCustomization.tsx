@@ -1,64 +1,44 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload, Image as ImageIcon, Loader2 } from "lucide-react";
 import { AILogoGeneratorDialog } from "./AILogoGeneratorDialog";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 
 const LogoCustomization = () => {
-  const [logoUrl, setLogoUrl] = useState("");
-  const [chatLogoUrl, setChatLogoUrl] = useState("");
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState<"hub" | "chat" | null>(null);
 
-  useEffect(() => {
-    fetchLogos();
-  }, []);
+  const customizations = useQuery(api.customizations.get, {});
+  const updateCustomizations = useMutation(api.customizations.update);
+  const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
-  const fetchLogos = async () => {
-    try {
-      const { data } = await supabase
-        .from("customizations")
-        .select("logo_url, chat_logo_url")
-        .limit(1)
-        .single();
-      setLogoUrl(data?.logo_url || "");
-      setChatLogoUrl(data?.chat_logo_url || "");
-    } catch (error) {
-      console.error("Error fetching logos:", error);
-    }
-  };
+  const logoUrl = customizations?.logo_url || "";
+  const chatLogoUrl = customizations?.chat_logo_url || "";
 
   const handleFileUpload = async (file: File, type: "hub" | "chat") => {
+    if (!customizations?._id) return;
     setUploading(type);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      // Upload to Convex file storage
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await result.json();
 
-      const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('logos').getPublicUrl(filePath);
-      const publicUrl = data.publicUrl;
+      // Get public URL
+      const url = `${import.meta.env.VITE_CONVEX_URL}/api/storage/${storageId}`;
 
       const updateField = type === "hub" ? "logo_url" : "chat_logo_url";
-      const { error: updateError } = await supabase
-        .from("customizations")
-        .update({ [updateField]: publicUrl })
-        .eq("id", (await supabase.from("customizations").select("id").single()).data?.id);
+      await updateCustomizations({ id: customizations._id, [updateField]: url } as any);
 
-      if (updateError) throw updateError;
-
-      if (type === "hub") setLogoUrl(publicUrl);
-      else setChatLogoUrl(publicUrl);
-
-      toast.success("Logo uploaded!");
+      toast.success(`${type === "hub" ? "Hub" : "Chat"} logo updated!`);
     } catch (error) {
       console.error("Error uploading logo:", error);
       toast.error("Failed to upload logo");
@@ -67,49 +47,72 @@ const LogoCustomization = () => {
     }
   };
 
-
-
   return (
     <Card className="p-6 shadow-elegant hover:shadow-hover transition-all">
-      <div className="flex items-center gap-2 mb-6">
-        <ImageIcon className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-semibold">Hub Logo</h3>
+      <h3 className="text-lg font-semibold mb-4">Logo Customization</h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Hub Logo */}
+        <div>
+          <Label className="text-sm font-medium mb-2 block">Hub Logo</Label>
+          {logoUrl && (
+            <div className="mb-3 p-4 border rounded-lg bg-muted/50 flex justify-center">
+              <img src={logoUrl} alt="Hub Logo" className="max-h-24 object-contain" />
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button
+              variant="outline" size="sm" className="gap-2 flex-1"
+              disabled={!!uploading}
+              onClick={() => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "image/*";
+                input.onchange = (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) handleFileUpload(file, "hub");
+                };
+                input.click();
+              }}
+            >
+              {uploading === "hub" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              Upload
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2 flex-1" onClick={() => setGenerating(true)}>
+              <ImageIcon className="w-4 h-4" /> AI Generate
+            </Button>
+          </div>
+        </div>
+
+        {/* Chat Logo */}
+        <div>
+          <Label className="text-sm font-medium mb-2 block">Chat Logo</Label>
+          {chatLogoUrl && (
+            <div className="mb-3 p-4 border rounded-lg bg-muted/50 flex justify-center">
+              <img src={chatLogoUrl} alt="Chat Logo" className="max-h-24 object-contain" />
+            </div>
+          )}
+          <Button
+            variant="outline" size="sm" className="gap-2 w-full"
+            disabled={!!uploading}
+            onClick={() => {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/*";
+              input.onchange = (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) handleFileUpload(file, "chat");
+              };
+              input.click();
+            }}
+          >
+            {uploading === "chat" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            Upload Chat Logo
+          </Button>
+        </div>
       </div>
 
-      <div className="space-y-3">
-        <Label>Hub Logo (for Public Hub page)</Label>
-        <div className="flex items-center gap-4">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], "hub")}
-            className="hidden"
-            id="hub-logo-upload"
-          />
-          <label htmlFor="hub-logo-upload">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={uploading === "hub"}
-              className="gap-2 cursor-pointer"
-              asChild
-            >
-              <span>
-                {uploading === "hub" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Upload className="w-4 h-4" />
-                )}
-                {uploading === "hub" ? "Uploading..." : "Upload Logo"}
-              </span>
-            </Button>
-          </label>
-          {logoUrl && (
-            <img src={logoUrl} alt="Hub Logo" className="w-16 h-16 object-cover rounded-lg border" />
-          )}
-        </div>
-        <AILogoGeneratorDialog onLogoGenerated={fetchLogos} />
-      </div>
+      <AILogoGeneratorDialog open={generating} onOpenChange={setGenerating} />
     </Card>
   );
 };

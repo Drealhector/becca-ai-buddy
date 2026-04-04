@@ -3,8 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { useAction, useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { toast } from "sonner";
+import { getAuthHeaders } from "@/lib/auth-fetch";
 import { Sparkles, Loader2, Wand2, RefreshCw, Plus } from "lucide-react";
 
 interface AILogoGeneratorDialogProps {
@@ -41,14 +43,13 @@ export const AILogoGeneratorDialog = ({ onLogoGenerated }: AILogoGeneratorDialog
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-logo", {
-        body: { 
-          action: 'generate_prompt',
-          businessInfo 
-        }
+      const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL;
+      const res = await fetch(`${CONVEX_SITE_URL}/generate-logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ action: "generate_prompt", businessInfo }),
       });
-
-      if (error) throw error;
+      const data = await res.json();
       if (!data?.prompt) throw new Error("No prompt generated");
 
       setGeneratedPrompt(data.prompt);
@@ -82,38 +83,27 @@ export const AILogoGeneratorDialog = ({ onLogoGenerated }: AILogoGeneratorDialog
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke("generate-logo", {
-        body: { prompt: promptToUse }
+      const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL;
+      const res = await fetch(`${CONVEX_SITE_URL}/generate-logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ prompt: promptToUse }),
+      });
+      const data = await res.json();
+      if (!data?.image_url) throw new Error("No image generated");
+
+      // The image URL from OpenAI is temporary — store it directly in customizations
+      // In production, download and re-upload to Convex storage
+      const publicUrl = data.image_url;
+
+      // Update customizations with the logo URL
+      const customRes = await fetch(`${CONVEX_SITE_URL}/update-logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ logo_url: publicUrl }),
       });
 
-      if (error) throw error;
-      if (!data?.imageDataUrl) throw new Error("No image generated");
-
-      const base64Response = await fetch(data.imageDataUrl);
-      const blob = await base64Response.blob();
-      const file = new File([blob], "generated-logo.png", { type: "image/png" });
-      
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('logos').getPublicUrl(filePath);
-      const publicUrl = urlData.publicUrl;
-
-      const { error: updateError } = await supabase
-        .from("customizations")
-        .update({ logo_url: publicUrl })
-        .eq("id", (await supabase.from("customizations").select("id").single()).data?.id);
-
-      if (updateError) throw updateError;
-
-      toast.success("Logo generated and uploaded!");
+      toast.success("Logo generated!");
       setOpen(false);
       resetDialog();
       onLogoGenerated();

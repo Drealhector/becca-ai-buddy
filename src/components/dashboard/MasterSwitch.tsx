@@ -1,45 +1,21 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Power } from "lucide-react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 
 const MasterSwitch = () => {
-  const [masterSwitch, setMasterSwitch] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const toggles = useQuery(api.toggles.get, {});
+  const updateToggle = useMutation(api.toggles.update);
 
-  useEffect(() => {
-    fetchToggleState();
-  }, []);
-
-  const fetchToggleState = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("toggles")
-        .select("master_switch")
-        .limit(1)
-        .single();
-
-      if (error) throw error;
-      setMasterSwitch(data?.master_switch || false);
-    } catch (error) {
-      console.error("Error fetching toggle state:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const masterSwitch = toggles?.master_switch ?? false;
+  const loading = toggles === undefined;
 
   const handleToggle = async (checked: boolean) => {
+    if (!toggles?._id) return;
     try {
-      const { error } = await supabase
-        .from("toggles")
-        .update({ master_switch: checked })
-        .eq("id", (await supabase.from("toggles").select("id").limit(1).single()).data?.id);
-
-      if (error) throw error;
-
-      setMasterSwitch(checked);
+      await updateToggle({ id: toggles._id, master_switch: checked });
       toast.success(checked ? "BECCA is now active" : "BECCA is now inactive");
     } catch (error) {
       console.error("Error updating master switch:", error);

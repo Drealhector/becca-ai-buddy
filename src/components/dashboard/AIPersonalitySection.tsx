@@ -2,38 +2,29 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Brain, Sparkles } from "lucide-react";
 import { AICharacterCreatorDialog } from "./AICharacterCreatorDialog";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { getAuthHeaders } from "@/lib/auth-fetch";
 
 export const AIPersonalitySection = () => {
   const [personality, setPersonality] = useState("");
   const [loading, setLoading] = useState(false);
   const [showCreatorDialog, setShowCreatorDialog] = useState(false);
 
+  const botPersonality = useQuery(api.botPersonality.get);
+  const updatePersonality = useMutation(api.botPersonality.update);
+  const createPersonality = useMutation(api.botPersonality.create);
+  const customizations = useQuery(api.customizations.get, {});
+  const updateCustomizations = useMutation(api.customizations.update);
+
   useEffect(() => {
-    fetchPersonality();
-  }, []);
-
-  const fetchPersonality = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("bot_personality")
-        .select("personality_text")
-        .order("id", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (error) throw error;
-      if (data) {
-        setPersonality(data.personality_text);
-      }
-    } catch (error) {
-      console.error("Error fetching personality:", error);
-      toast.error("Failed to load AI personality");
+    if (botPersonality?.personality_text) {
+      setPersonality(botPersonality.personality_text);
     }
-  };
+  }, [botPersonality]);
 
   // Extract assistant name from personality text
   const extractName = (text: string): string => {
@@ -64,66 +55,45 @@ export const AIPersonalitySection = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from("bot_personality")
-        .insert({ personality_text: personality });
-
-      if (error) throw error;
+      // Save to Convex
+      if (botPersonality?._id) {
+        await updatePersonality({ id: botPersonality._id, personality_text: personality });
+      } else {
+        await createPersonality({ personality_text: personality });
+      }
 
       // Generate a simple first message from the personality
       const firstMessage = generateFirstMessage(personality);
 
-      // Save the greeting to customizations
+      // Save the greeting to customizations via Convex
       try {
-        const { data: existing } = await supabase
-          .from("customizations")
-          .select("id")
-          .limit(1)
-          .single();
-
-        if (existing) {
-          await supabase
-            .from("customizations")
-            .update({ greeting: firstMessage })
-            .eq("id", existing.id);
+        if (customizations?._id) {
+          await updateCustomizations({ id: customizations._id, greeting: firstMessage });
         }
       } catch (greetingErr) {
         console.error("Error saving greeting:", greetingErr);
       }
 
-      // Auto-sync personality to AI Brain system prompt (includes firstMessage)
+      // Sync personality to Telnyx AI assistant via Convex endpoint
       let synced = false;
       try {
-        const { data, error: syncError } = await supabase.functions.invoke("update-vapi-system-prompt", {
-          body: { personality, firstMessage }
+        const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL;
+        const syncRes = await fetch(`${CONVEX_SITE_URL}/telnyx/sync-personality`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         });
-        if (syncError) throw syncError;
-        console.log("✅ AI Brain synced:", data);
-        synced = true;
+        const syncData = await syncRes.json();
+        if (syncData.success) {
+          synced = true;
+        }
       } catch (syncErr) {
-        console.error("Error syncing AI Brain:", syncErr);
-      }
-
-      // Update the Call Hector assistant with new personality
-      try {
-        await supabase.functions.invoke("update-call-hector-assistant");
-      } catch (assistantError) {
-        console.error("Error updating assistant:", assistantError);
-      }
-
-      // Sync personality to Telnyx
-      try {
-        await supabase.functions.invoke("telnyx-update-personality", {
-          body: { personality }
-        });
-      } catch (telnyxErr) {
-        console.warn("Telnyx personality sync error:", telnyxErr);
+        console.error("Error syncing to Telnyx:", syncErr);
       }
 
       toast.success(
         synced
-          ? "AI personality updated & synced to your AI Brain!"
-          : "AI personality saved (sync failed — please try again)"
+          ? "AI personality updated & synced to Telnyx!"
+          : "AI personality saved (Telnyx sync failed — try again)"
       );
     } catch (error) {
       console.error("Error saving personality:", error);

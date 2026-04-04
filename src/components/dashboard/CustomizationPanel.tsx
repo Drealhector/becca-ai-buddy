@@ -1,59 +1,50 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ExternalLink } from "lucide-react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 
 const CustomizationPanel = () => {
   const [customization, setCustomization] = useState<any>({});
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchCustomization();
-  }, []);
+  const convexCustomization = useQuery(api.customizations.get, {});
+  const updateCustomization = useMutation(api.customizations.update);
 
-  const fetchCustomization = async () => {
-    try {
-      const { data } = await supabase
-        .from("customizations")
-        .select("*")
-        .limit(1)
-        .single();
-      setCustomization(data || {});
-    } catch (error) {
-      console.error("Error fetching customization:", error);
+  useEffect(() => {
+    if (convexCustomization) {
+      setCustomization(convexCustomization);
     }
-  };
+  }, [convexCustomization]);
 
   const handleSave = async () => {
+    if (!customization._id) return;
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from("customizations")
-        .update({
-          business_name: customization.business_name,
-          business_description: customization.business_description,
-          business_industry: customization.business_industry,
-          target_audience: customization.target_audience,
-          key_services: customization.key_services,
-          business_hours: customization.business_hours,
-          assistant_personality: customization.assistant_personality,
-          special_instructions: customization.special_instructions,
-          tone: customization.tone,
-          greeting: customization.greeting,
-          faqs: customization.faqs,
-          whatsapp_username: customization.whatsapp_username,
-          instagram_username: customization.instagram_username,
-          facebook_username: customization.facebook_username,
-          telegram_username: customization.telegram_username,
-          owner_phone: customization.owner_phone,
-        } as any)
-        .eq("id", customization.id);
+      await updateCustomization({
+        id: customization._id,
+        business_name: customization.business_name,
+        business_description: customization.business_description,
+        business_industry: customization.business_industry,
+        target_audience: customization.target_audience,
+        key_services: customization.key_services,
+        business_hours: customization.business_hours,
+        assistant_personality: customization.assistant_personality,
+        special_instructions: customization.special_instructions,
+        tone: customization.tone,
+        greeting: customization.greeting,
+        faqs: customization.faqs,
+        whatsapp_username: customization.whatsapp_username,
+        instagram_username: customization.instagram_username,
+        facebook_username: customization.facebook_username,
+        telegram_username: customization.telegram_username,
+        owner_phone: customization.owner_phone,
+      });
 
-      if (error) throw error;
       toast.success("Customization saved");
     } catch (error) {
       console.error("Error saving customization:", error);

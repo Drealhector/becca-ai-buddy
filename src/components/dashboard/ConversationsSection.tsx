@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,112 +6,17 @@ import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Brain, MessageSquare } from "lucide-react";
 import { AnalyzeConversationsDialog } from "./AnalyzeConversationsDialog";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 
 const ConversationsSection = () => {
-  const [conversations, setConversations] = useState<any[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
   const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
 
-  useEffect(() => {
-    fetchConversations();
-
-    const channel = supabase
-      .channel("messages-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "messages",
-        },
-        () => {
-          fetchConversations();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [selectedPlatform]);
-
-  const fetchConversations = async () => {
-    try {
-      if (selectedPlatform === "all") {
-        // Fetch all conversations across all platforms
-        const { data: allConvos } = await supabase
-          .from("conversations")
-          .select("*")
-          .order("start_time", { ascending: false })
-          .limit(20);
-
-        // For each conversation, fetch the latest messages
-        const conversationsWithMessages = await Promise.all(
-          (allConvos || []).map(async (convo) => {
-            const { data: messages } = await supabase
-              .from("messages")
-              .select("*")
-              .eq("conversation_id", convo.id)
-              .order("timestamp", { ascending: false })
-              .limit(15);
-
-            return { 
-              ...convo, 
-              messages: messages || [],
-              latest_message_time: messages && messages.length > 0 
-                ? messages[0].timestamp 
-                : convo.start_time
-            };
-          })
-        );
-
-        // Sort by latest message timestamp (most recent first)
-        conversationsWithMessages.sort((a, b) => 
-          new Date(b.latest_message_time).getTime() - new Date(a.latest_message_time).getTime()
-        );
-
-        setConversations(conversationsWithMessages);
-      } else {
-        // For specific platform, fetch conversations with last 15 messages each
-        let query = supabase
-          .from("conversations")
-          .select("*")
-          .eq("platform", selectedPlatform)
-          .order("start_time", { ascending: false })
-          .limit(10);
-
-        const { data: convos } = await query;
-
-        const conversationsWithMessages = await Promise.all(
-          (convos || []).map(async (convo) => {
-            const { data: messages } = await supabase
-              .from("messages")
-              .select("*")
-              .eq("conversation_id", convo.id)
-              .order("timestamp", { ascending: false })
-              .limit(15);
-
-            return { 
-              ...convo, 
-              messages: messages || [],
-              latest_message_time: messages && messages.length > 0 
-                ? messages[0].timestamp 
-                : convo.start_time
-            };
-          })
-        );
-
-        // Sort by latest message timestamp (most recent first)
-        conversationsWithMessages.sort((a, b) => 
-          new Date(b.latest_message_time).getTime() - new Date(a.latest_message_time).getTime()
-        );
-
-        setConversations(conversationsWithMessages);
-      }
-    } catch (error) {
-      console.error("Error fetching conversations:", error);
-    }
-  };
+  const conversations = useQuery(api.conversations.listWithMessages, {
+    platform: selectedPlatform === "all" ? undefined : selectedPlatform,
+    limit: 20,
+  });
 
   return (
     <>
@@ -144,28 +48,32 @@ const ConversationsSection = () => {
         </SelectContent>
       </Select>
       <div className="space-y-4 max-h-96 overflow-y-auto">
-        {conversations.length === 0 ? (
+        {!conversations || conversations.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
             No conversations yet
           </p>
         ) : (
           conversations.map((convo) => (
             <div
-              key={convo.id}
+              key={convo._id}
               className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors"
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{convo.platform || "web"}</Badge>
                   <span className="text-sm text-muted-foreground">
-                    {format(new Date(convo.latest_message_time || convo.start_time), "MMM dd, HH:mm")}
+                    {convo.latest_message_time
+                      ? format(new Date(convo.latest_message_time), "MMM dd, HH:mm")
+                      : convo.start_time
+                        ? format(new Date(convo.start_time), "MMM dd, HH:mm")
+                        : ""}
                   </span>
                 </div>
               </div>
 
               <div className="space-y-2">
                 {convo.messages.map((msg: any) => (
-                  <div key={msg.id} className="space-y-1">
+                  <div key={msg._id} className="space-y-1">
                     {selectedPlatform === "all" && (
                       <Badge variant="outline" className="text-xs">
                         {msg.platform}
@@ -179,15 +87,17 @@ const ConversationsSection = () => {
                       }`}
                     >
                       <span className="font-semibold text-xs block mb-1">
-                        {msg.role === "user" 
+                        {msg.role === "user"
                           ? (msg.sender_name || "Customer")
                           : "Becca"
                         }
                       </span>
                       <p>{msg.content}</p>
-                      <span className="text-xs text-muted-foreground block mt-1">
-                        {format(new Date(msg.timestamp), "HH:mm")}
-                      </span>
+                      {msg.timestamp && (
+                        <span className="text-xs text-muted-foreground block mt-1">
+                          {format(new Date(msg.timestamp), "HH:mm")}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}

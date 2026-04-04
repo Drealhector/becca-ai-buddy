@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { User, Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -13,7 +11,6 @@ import PhoneCallSection from "@/components/dashboard/PhoneCallSection";
 import HubBackgroundGenerator from "@/components/dashboard/HubBackgroundGenerator";
 import VoiceManagementSection from "@/components/dashboard/VoiceManagementSection";
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
-// InventorySection replaced by PropertiesSection for real estate
 import { PhoneConnectionDialog } from "@/components/dashboard/PhoneConnectionDialog";
 import FloatingAssistant from "@/components/dashboard/FloatingAssistant";
 import MatrixBackground from "@/components/dashboard/MatrixBackground";
@@ -24,6 +21,7 @@ import {
   ToggleLeft, Radio, Image, ChevronDown, ChevronRight,
   PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
+import SocialConnectSection from "@/components/dashboard/SocialConnectSection";
 import CRMSection from "@/components/dashboard/crm/CRMSection";
 import PropertiesSection from "@/components/dashboard/crm/PropertiesSection";
 import { Building2, Users } from "lucide-react";
@@ -32,8 +30,7 @@ import beccaBLogo from "@/assets/becca-b-new-logo.png";
 
 
 const Dashboard = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -379,6 +376,9 @@ const Dashboard = () => {
             <SectionCard id="channels" title="Channels" icon={Radio}
               infoText="Choose which platforms BECCA responds on — WhatsApp, Instagram, Facebook, or Telegram.">
               <ChannelToggles />
+              <div className="mt-4">
+                <SocialConnectSection />
+              </div>
             </SectionCard>
             <SectionCard id="properties" title="Properties" icon={Building2}
               infoText="Manage your real estate listings — apartments, houses, land, and commercial properties.">

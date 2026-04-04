@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ProductChat from "@/components/chat/ProductChat";
@@ -13,37 +14,14 @@ const ProductPage = () => {
   const [showInteractions, setShowInteractions] = useState(false);
   const [showChat, setShowChat] = useState(false);
 
+  const convexProduct = useQuery(api.products.getBySlug, slug ? { link_slug: slug } : "skip");
+
   useEffect(() => {
-    fetchProduct();
-  }, [slug]);
-
-  const fetchProduct = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("link_slug", slug)
-        .single();
-
-      if (error) throw error;
-      setProduct(data);
-
-      // Fetch interactions
-      const { data: interactionsData } = await supabase
-        .from("customer_interactions")
-        .select("*")
-        .eq("product_id", data.id)
-        .order("timestamp", { ascending: false });
-
-      if (interactionsData) {
-        setInteractions(interactionsData);
-      }
-    } catch (error) {
-      console.error("Error fetching product:", error);
-    } finally {
+    if (convexProduct !== undefined) {
+      setProduct(convexProduct);
       setLoading(false);
     }
-  };
+  }, [convexProduct]);
 
   if (loading) {
     return (

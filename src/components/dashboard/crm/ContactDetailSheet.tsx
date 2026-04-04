@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -84,57 +85,26 @@ const LEAD_STATUS_COLORS: Record<string, string> = {
 };
 
 export const ContactDetailSheet = ({ contact, open, onOpenChange }: ContactDetailSheetProps) => {
-  const [leads, setLeads] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
+  const leads = useQuery(api.leads.listByContact, contact?._id ? { contact_id: contact._id } : "skip") ?? [];
+  const activities = useQuery(api.activities.listByContact, contact?._id ? { contact_id: contact._id } : "skip") ?? [];
+  const updateContact = useMutation(api.contacts.update);
+
   const [notes, setNotes] = useState(contact.notes || "");
   const [tags, setTags] = useState<string[]>(contact.tags || []);
   const [newTag, setNewTag] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
 
   useEffect(() => {
-    if (open && contact?.id) {
-      fetchLeads();
-      fetchActivities();
+    if (open && contact?._id) {
       setNotes(contact.notes || "");
       setTags(contact.tags || []);
     }
-  }, [open, contact?.id]);
-
-  const fetchLeads = async () => {
-    try {
-      const { data } = await supabase
-        .from("leads" as any)
-        .select("*")
-        .eq("contact_id", contact.id)
-        .order("created_at", { ascending: false });
-      setLeads((data as any[]) || []);
-    } catch (error) {
-      console.error("Error fetching leads:", error);
-    }
-  };
-
-  const fetchActivities = async () => {
-    try {
-      const { data } = await supabase
-        .from("activities" as any)
-        .select("*")
-        .eq("contact_id", contact.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      setActivities((data as any[]) || []);
-    } catch (error) {
-      console.error("Error fetching activities:", error);
-    }
-  };
+  }, [open, contact?._id]);
 
   const handleSaveNotes = async () => {
     setSavingNotes(true);
     try {
-      const { error } = await supabase
-        .from("contacts" as any)
-        .update({ notes } as any)
-        .eq("id", contact.id);
-      if (error) throw error;
+      await updateContact({ id: contact._id, notes });
       toast.success("Notes saved");
     } catch (error) {
       console.error("Error saving notes:", error);
@@ -151,14 +121,10 @@ export const ContactDetailSheet = ({ contact, open, onOpenChange }: ContactDetai
     setTags(updatedTags);
     setNewTag("");
     try {
-      const { error } = await supabase
-        .from("contacts" as any)
-        .update({ tags: updatedTags } as any)
-        .eq("id", contact.id);
-      if (error) throw error;
+      await updateContact({ id: contact._id, tags: updatedTags });
     } catch (error) {
       console.error("Error updating tags:", error);
-      setTags(tags); // revert
+      setTags(tags);
       toast.error("Failed to update tags");
     }
   };
@@ -167,14 +133,10 @@ export const ContactDetailSheet = ({ contact, open, onOpenChange }: ContactDetai
     const updatedTags = tags.filter((t) => t !== tagToRemove);
     setTags(updatedTags);
     try {
-      const { error } = await supabase
-        .from("contacts" as any)
-        .update({ tags: updatedTags } as any)
-        .eq("id", contact.id);
-      if (error) throw error;
+      await updateContact({ id: contact._id, tags: updatedTags });
     } catch (error) {
       console.error("Error updating tags:", error);
-      setTags(tags); // revert
+      setTags(tags);
       toast.error("Failed to update tags");
     }
   };

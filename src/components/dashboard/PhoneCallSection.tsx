@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,11 +12,13 @@ import { AnalyzeCallTranscriptsDialog } from "./AnalyzeCallTranscriptsDialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { getAuthHeaders } from "@/lib/auth-fetch";
 
 const MY_PHONE_NUMBER = "+2342093940544";
 
 const PhoneCallSection = () => {
-  const [callHistory, setCallHistory] = useState<any[]>([]);
   const [showMakeCall, setShowMakeCall] = useState(false);
   const [showScheduleCall, setShowScheduleCall] = useState(false);
   const [showQueuedCalls, setShowQueuedCalls] = useState(false);
@@ -29,7 +30,6 @@ const PhoneCallSection = () => {
   const [scheduleHour, setScheduleHour] = useState("");
   const [scheduleMinute, setScheduleMinute] = useState("");
   const [schedulePeriod, setSchedulePeriod] = useState<"AM" | "PM">("AM");
-  const [scheduledCalls, setScheduledCalls] = useState<any[]>([]);
   const [isInCall, setIsInCall] = useState(false);
   const [callStatus, setCallStatus] = useState<"calling" | "connected" | null>(null);
   const [callDuration, setCallDuration] = useState(0);
@@ -45,29 +45,19 @@ const PhoneCallSection = () => {
   const [playingCallId, setPlayingCallId] = useState<string | null>(null);
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
   const countdownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [, forceUpdate] = useState(0);
 
-  useEffect(() => {
-    fetchCallHistory();
-    fetchScheduledCalls();
+  // Convex reactive queries (auto-update, no manual fetch needed)
+  const callHistory = useQuery(api.callHistory.list, { limit: 100 }) ?? [];
+  const scheduledCalls = useQuery(api.scheduledCalls.listPending) ?? [];
+  const deleteCall = useMutation(api.callHistory.remove);
+  const createScheduledCall = useMutation(api.scheduledCalls.create);
+  const removeScheduledCall = useMutation(api.scheduledCalls.remove);
 
-    const channel = supabase
-      .channel("call-history-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "call_history" },
-        () => fetchCallHistory()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // Countdown timer for scheduled calls - update every second
+  // Countdown timer for scheduled calls
   useEffect(() => {
     countdownRef.current = setInterval(() => {
-      setScheduledCalls(prev => [...prev]); // force re-render for countdown
+      forceUpdate((n) => n + 1);
     }, 1000);
     return () => {
       if (countdownRef.current) clearInterval(countdownRef.current);
@@ -86,38 +76,13 @@ const PhoneCallSection = () => {
     return () => clearInterval(interval);
   }, [isInCall, callStatus, callStartTime]);
 
-  const fetchCallHistory = async () => {
-    try {
-      const { data } = await supabase
-        .from("call_history")
-        .select("*")
-        .order("timestamp", { ascending: false })
-        .limit(100);
-      setCallHistory(data || []);
-    } catch (error) {
-      console.error("Error fetching call history:", error);
-    }
-  };
-
-  const fetchScheduledCalls = async () => {
-    try {
-      const { data } = await supabase
-        .from("scheduled_calls")
-        .select("*")
-        .eq("status", "pending")
-        .order("scheduled_at", { ascending: true });
-      setScheduledCalls(data || []);
-    } catch (error) {
-      console.error("Error fetching scheduled calls:", error);
-    }
-  };
-
   const formatCallDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // Telnyx outbound call via Telnyx AI Assistant API
   const handleMakeCall = async () => {
     if (!callTopic || !callNumber) {
       toast.error("Please enter both a purpose and a phone number");
@@ -129,22 +94,25 @@ const PhoneCallSection = () => {
     setShowMakeCall(false);
 
     try {
-      const { data, error } = await supabase.functions.invoke("vapi-outbound-call", {
-        body: { toNumber: callNumber, purpose: callTopic },
+      const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL;
+      const response = await fetch(`${CONVEX_SITE_URL}/telnyx/outbound-call`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ to_number: callNumber, purpose: callTopic }),
       });
 
-      if (error) throw error;
+      const data = await response.json();
 
       if (data?.success) {
         setCallStatus("connected");
         setCallStartTime(new Date());
-        setCurrentCallId(data.callId);
+        setCurrentCallId(data.call_id);
         toast.success(`Outbound call initiated to ${callNumber}`);
       } else {
         throw new Error(data?.error || "Call failed");
       }
     } catch (error: any) {
-      console.error("Error making Vapi call:", error);
+      console.error("Error making call:", error);
       setIsInCall(false);
       setCallStatus(null);
       setCallTopic("");
@@ -170,14 +138,11 @@ const PhoneCallSection = () => {
     }
 
     try {
-      const { error } = await supabase.from("scheduled_calls").insert({
+      await createScheduledCall({
         phone_number: scheduleNumber,
         purpose: scheduleTopic,
         scheduled_at: scheduledAt.toISOString(),
-        status: "pending",
       });
-
-      if (error) throw error;
 
       toast.success(`Call scheduled for ${format(scheduledAt, "MMM dd, yyyy HH:mm")}`);
       setScheduleTopic("");
@@ -187,18 +152,16 @@ const PhoneCallSection = () => {
       setScheduleMinute("");
       setSchedulePeriod("AM");
       setShowScheduleCall(false);
-      fetchScheduledCalls();
     } catch (error) {
       console.error("Error scheduling call:", error);
       toast.error("Failed to schedule call");
     }
   };
 
-  const handleRemoveScheduledCall = async (callId: string) => {
+  const handleRemoveScheduledCall = async (callId: any) => {
     try {
-      await supabase.from("scheduled_calls").delete().eq("id", callId);
+      await removeScheduledCall({ id: callId });
       toast.success("Scheduled call removed");
-      fetchScheduledCalls();
     } catch (error) {
       console.error("Error removing scheduled call:", error);
       toast.error("Failed to remove scheduled call");
@@ -223,26 +186,20 @@ const PhoneCallSection = () => {
   };
 
   const handleEndCall = async () => {
-    console.log("Ending call, currentCallId:", currentCallId);
-    
     if (currentCallId) {
       try {
-        const { data, error } = await supabase.functions.invoke("vapi-outbound-call", {
-          body: { action: "end", callId: currentCallId },
+        const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL;
+        await fetch(`${CONVEX_SITE_URL}/telnyx/end-call`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+          body: JSON.stringify({ call_id: currentCallId }),
         });
-        console.log("End call response:", data, error);
-        if (error) {
-          console.error("Error from end call function:", error);
-          toast.error("Failed to end call");
-        } else {
-          toast.success("Call ended");
-        }
+        toast.success("Call ended");
       } catch (error) {
         console.error("Error ending call:", error);
         toast.error("Failed to end call");
       }
     } else {
-      console.warn("No currentCallId to end");
       toast.success("Call ended");
     }
 
@@ -269,9 +226,9 @@ const PhoneCallSection = () => {
     }
   };
 
-  const handleDeleteCall = async (callId: string) => {
+  const handleDeleteCall = async (callId: any) => {
     try {
-      await supabase.from("call_history").delete().eq("id", callId);
+      await deleteCall({ id: callId });
       toast.success("Call deleted");
       setSelectedCallId(null);
     } catch (error) {
@@ -281,15 +238,11 @@ const PhoneCallSection = () => {
   };
 
   const handleViewTranscript = async (call: any) => {
-    const { data: transcript } = await supabase
-      .from("transcripts")
-      .select("*")
-      .eq("conversation_id", call.conversation_id)
-      .single();
-
+    // Transcript data comes from Convex reactively via call_history
+    // For now show the topic as transcript summary
     setSelectedCallTranscript({
       ...call,
-      transcript: transcript?.transcript_text || "No transcript available for this call"
+      transcript: call.topic || "No transcript available for this call"
     });
     setShowTranscriptDialog(true);
   };
@@ -300,7 +253,7 @@ const PhoneCallSection = () => {
       return;
     }
 
-    if (playingCallId === call.id) {
+    if (playingCallId === call._id) {
       if (audioRef) {
         audioRef.pause();
         audioRef.currentTime = 0;
@@ -319,7 +272,7 @@ const PhoneCallSection = () => {
     audio.onended = () => { setPlayingCallId(null); setAudioRef(null); };
     audio.onerror = () => { toast.error("Failed to play recording"); setPlayingCallId(null); setAudioRef(null); };
     audio.play();
-    setPlayingCallId(call.id);
+    setPlayingCallId(call._id);
     setAudioRef(audio);
   };
 
@@ -328,22 +281,22 @@ const PhoneCallSection = () => {
 
   const renderCallTile = (call: any) => (
     <div
-      key={call.id}
+      key={call._id}
       className={`p-3 border rounded-lg hover:bg-muted/50 transition-all relative min-h-[72px] ${
-        selectedCallId === call.id ? "border-destructive" : "border-border"
+        selectedCallId === call._id ? "border-destructive" : "border-border"
       }`}
-      onMouseDown={() => handleLongPressStart(call.id)}
+      onMouseDown={() => handleLongPressStart(call._id)}
       onMouseUp={handleLongPressEnd}
       onMouseLeave={handleLongPressEnd}
-      onTouchStart={() => handleLongPressStart(call.id)}
+      onTouchStart={() => handleLongPressStart(call._id)}
       onTouchEnd={handleLongPressEnd}
     >
-      {selectedCallId === call.id && (
+      {selectedCallId === call._id && (
         <Button
           size="icon"
           variant="destructive"
           className="absolute top-2 right-2 h-6 w-6"
-          onClick={() => handleDeleteCall(call.id)}
+          onClick={() => handleDeleteCall(call._id)}
         >
           <Trash2 className="h-3 w-3" />
         </Button>
@@ -371,7 +324,7 @@ const PhoneCallSection = () => {
               onClick={() => handlePlayRecording(call)}
               className="h-5 w-5 p-0"
             >
-              {playingCallId === call.id ? (
+              {playingCallId === call._id ? (
                 <Pause className="h-3 w-3 text-primary" />
               ) : (
                 <Play className="h-3 w-3 text-primary" />
@@ -381,7 +334,7 @@ const PhoneCallSection = () => {
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        {format(new Date(call.timestamp), "MMM dd, HH:mm")}
+        {call.timestamp ? format(new Date(call.timestamp), "MMM dd, HH:mm") : ""}
       </p>
       {call.topic && (
         <p className="text-xs mt-1 truncate">{call.topic}</p>
@@ -397,9 +350,9 @@ const PhoneCallSection = () => {
           <div className="bg-primary/10 rounded-full p-20 mb-8 shadow-glow">
             <Phone className="h-24 w-24 text-primary" />
           </div>
-          
+
           <h2 className="text-3xl font-bold mb-2">{callNumber}</h2>
-          
+
           {callStatus === "calling" ? (
             <p className="text-xl text-muted-foreground mb-8 animate-pulse">Calling...</p>
           ) : (
@@ -504,23 +457,11 @@ const PhoneCallSection = () => {
       {showMakeCall && (
         <div className="mb-6 p-4 border border-border rounded-lg space-y-3">
           <p className="font-medium">What do you want the AI to talk about?</p>
-          <Input
-            value={callTopic}
-            onChange={(e) => setCallTopic(e.target.value)}
-            placeholder="Topic or purpose of the call"
-          />
-          <Input
-            value={callNumber}
-            onChange={(e) => setCallNumber(e.target.value)}
-            placeholder="Phone number (e.g., +1-555-123-4567)"
-          />
+          <Input value={callTopic} onChange={(e) => setCallTopic(e.target.value)} placeholder="Topic or purpose of the call" />
+          <Input value={callNumber} onChange={(e) => setCallNumber(e.target.value)} placeholder="Phone number (e.g., +1-555-123-4567)" />
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={handleMakeCall} className="flex-1 w-full">
-              Start Call
-            </Button>
-            <Button variant="outline" onClick={() => setShowMakeCall(false)} className="flex-1 w-full">
-              Cancel
-            </Button>
+            <Button onClick={handleMakeCall} className="flex-1 w-full">Start Call</Button>
+            <Button variant="outline" onClick={() => setShowMakeCall(false)} className="flex-1 w-full">Cancel</Button>
           </div>
         </div>
       )}
@@ -528,134 +469,57 @@ const PhoneCallSection = () => {
       {showScheduleCall && (
         <div className="mb-6 p-4 border border-border rounded-lg space-y-3">
           <p className="font-medium">Schedule a call for later</p>
-          <Input
-            value={scheduleTopic}
-            onChange={(e) => setScheduleTopic(e.target.value)}
-            placeholder="Topic or purpose of the call"
-          />
-          <Input
-            value={scheduleNumber}
-            onChange={(e) => setScheduleNumber(e.target.value)}
-            placeholder="Phone number (e.g., +1-555-123-4567)"
-          />
+          <Input value={scheduleTopic} onChange={(e) => setScheduleTopic(e.target.value)} placeholder="Topic or purpose of the call" />
+          <Input value={scheduleNumber} onChange={(e) => setScheduleNumber(e.target.value)} placeholder="Phone number (e.g., +1-555-123-4567)" />
           <div className="flex flex-col gap-2">
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !scheduleDate && "text-muted-foreground"
-                  )}
-                >
+                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !scheduleDate && "text-muted-foreground")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {scheduleDate ? format(scheduleDate, "PPP") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={scheduleDate}
-                  onSelect={setScheduleDate}
-                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
+                <Calendar mode="single" selected={scheduleDate} onSelect={setScheduleDate} disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))} initialFocus className={cn("p-3 pointer-events-auto")} />
               </PopoverContent>
             </Popover>
             <div className="flex gap-2 items-center">
-              <Input
-                type="number"
-                min="1"
-                max="12"
-                value={scheduleHour}
-                onChange={(e) => setScheduleHour(e.target.value)}
-                placeholder="HH"
-                className="w-20 text-center"
-              />
+              <Input type="number" min="1" max="12" value={scheduleHour} onChange={(e) => setScheduleHour(e.target.value)} placeholder="HH" className="w-20 text-center" />
               <span className="text-lg font-bold">:</span>
-              <Input
-                type="number"
-                min="0"
-                max="59"
-                value={scheduleMinute}
-                onChange={(e) => setScheduleMinute(e.target.value)}
-                placeholder="MM"
-                className="w-20 text-center"
-              />
-              <Button
-                type="button"
-                variant={schedulePeriod === "AM" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSchedulePeriod("AM")}
-              >
-                AM
-              </Button>
-              <Button
-                type="button"
-                variant={schedulePeriod === "PM" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSchedulePeriod("PM")}
-              >
-                PM
-              </Button>
+              <Input type="number" min="0" max="59" value={scheduleMinute} onChange={(e) => setScheduleMinute(e.target.value)} placeholder="MM" className="w-20 text-center" />
+              <Button type="button" variant={schedulePeriod === "AM" ? "default" : "outline"} size="sm" onClick={() => setSchedulePeriod("AM")}>AM</Button>
+              <Button type="button" variant={schedulePeriod === "PM" ? "default" : "outline"} size="sm" onClick={() => setSchedulePeriod("PM")}>PM</Button>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={handleScheduleCall} className="flex-1 w-full">
-              Schedule Call
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowQueuedCalls(!showQueuedCalls)}
-              className="relative w-full sm:w-auto"
-            >
+            <Button onClick={handleScheduleCall} className="flex-1 w-full">Schedule Call</Button>
+            <Button variant="outline" onClick={() => setShowQueuedCalls(!showQueuedCalls)} className="relative w-full sm:w-auto">
               Scheduled Calls
               {scheduledCalls.length > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                >
-                  {scheduledCalls.length}
-                </Badge>
+                <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">{scheduledCalls.length}</Badge>
               )}
             </Button>
-            <Button variant="outline" onClick={() => setShowScheduleCall(false)} className="w-full sm:w-auto">
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setShowScheduleCall(false)} className="w-full sm:w-auto">Cancel</Button>
           </div>
 
           {showQueuedCalls && (
             <>
             {scheduledCalls.length === 0 ? (
-              <div className="mt-4 p-3 border border-border rounded-lg bg-muted/50 text-center text-sm text-muted-foreground">
-                No scheduled calls yet
-              </div>
+              <div className="mt-4 p-3 border border-border rounded-lg bg-muted/50 text-center text-sm text-muted-foreground">No scheduled calls yet</div>
             ) : (
             <div className="mt-4 p-3 border border-border rounded-lg bg-muted/50">
               <h4 className="font-semibold text-sm mb-3">Scheduled Calls</h4>
               <ScrollArea className="h-48">
                 <div className="space-y-2">
                   {scheduledCalls.map((call) => (
-                    <div
-                      key={call.id}
-                      className="flex items-center justify-between p-3 border border-border rounded bg-background"
-                    >
+                    <div key={call._id} className="flex items-center justify-between p-3 border border-border rounded bg-background">
                       <div className="flex-1">
                         <p className="font-medium text-sm">{call.purpose}</p>
                         <p className="text-xs text-muted-foreground">{call.phone_number}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(call.scheduled_at), "MMM dd, yyyy HH:mm")}
-                        </p>
-                        <p className="text-xs font-semibold mt-1" style={{color:"rgb(0,220,255)"}}>
-                          ⏳ {getTimeLeft(call.scheduled_at)}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{format(new Date(call.scheduled_at), "MMM dd, yyyy HH:mm")}</p>
+                        <p className="text-xs font-semibold mt-1" style={{color:"rgb(0,220,255)"}}>⏳ {getTimeLeft(call.scheduled_at)}</p>
                       </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleRemoveScheduledCall(call.id)}
-                      >
+                      <Button size="icon" variant="ghost" onClick={() => handleRemoveScheduledCall(call._id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </div>
@@ -670,7 +534,6 @@ const PhoneCallSection = () => {
       )}
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Incoming Calls */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <PhoneIncoming className="h-5 w-5" style={{color:"rgb(0,220,255)"}} />
@@ -685,7 +548,6 @@ const PhoneCallSection = () => {
           </div>
         </div>
 
-        {/* Outgoing Calls */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <PhoneOutgoing className="h-5 w-5 text-blue-600" />
@@ -713,19 +575,13 @@ const PhoneCallSection = () => {
                 <p className="text-sm text-muted-foreground mb-2">
                   {selectedCallTranscript?.timestamp && format(new Date(selectedCallTranscript.timestamp), "MMM dd, yyyy HH:mm")}
                 </p>
-                <p className="text-sm font-medium mb-2">
-                  Duration: {selectedCallTranscript?.duration_minutes || 0} minutes
-                </p>
+                <p className="text-sm font-medium mb-2">Duration: {selectedCallTranscript?.duration_minutes || 0} minutes</p>
                 {selectedCallTranscript?.topic && (
-                  <p className="text-sm mb-3">
-                    <span className="font-medium">Topic:</span> {selectedCallTranscript.topic}
-                  </p>
+                  <p className="text-sm mb-3"><span className="font-medium">Topic:</span> {selectedCallTranscript.topic}</p>
                 )}
                 <div className="mt-3 p-3 bg-muted/50 rounded">
                   <p className="text-xs text-muted-foreground mb-1">Transcript:</p>
-                  <p className="text-sm whitespace-pre-wrap">
-                    {selectedCallTranscript?.transcript || "No transcript available for this call"}
-                  </p>
+                  <p className="text-sm whitespace-pre-wrap">{selectedCallTranscript?.transcript || "No transcript available for this call"}</p>
                 </div>
               </div>
             </div>
@@ -733,10 +589,7 @@ const PhoneCallSection = () => {
         </DialogContent>
       </Dialog>
 
-      <AnalyzeCallTranscriptsDialog
-        open={analyzeDialogOpen}
-        onOpenChange={setAnalyzeDialogOpen}
-      />
+      <AnalyzeCallTranscriptsDialog open={analyzeDialogOpen} onOpenChange={setAnalyzeDialogOpen} />
     </Card>
   );
 };

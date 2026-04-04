@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useConversation } from "@elevenlabs/react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { toast } from "sonner";
 import beccaBLogo from "@/assets/becca-b-new-logo.png";
 
@@ -33,8 +35,115 @@ const FloatingAssistant = ({
   const recognitionRef = useRef<any>(null);
   const hasHadCallRef = useRef<boolean>(false);
 
-  // ElevenLabs conversation hook
+  // --- User name memory (persists across sessions via localStorage) ---
+  const USER_NAME_KEY = "becca_user_name";
+  const [userName, setUserName] = useState<string>(() => localStorage.getItem("becca_user_name") || "");
+
+  const saveUserName = useCallback((name: string) => {
+    const trimmed = name.trim();
+    if (trimmed) {
+      localStorage.setItem(USER_NAME_KEY, trimmed);
+      setUserName(trimmed);
+    }
+  }, []);
+
+  const clearUserName = useCallback(() => {
+    localStorage.removeItem(USER_NAME_KEY);
+    setUserName("");
+  }, []);
+
+  // --- Live dashboard data from Convex ---
+  const activeLeadsCount = useQuery(api.leads.countActive) ?? 0;
+  const leadsByStatus = useQuery(api.leads.countByStatus) ?? {};
+  const contactsCount = useQuery(api.contacts.count, {}) ?? 0;
+  const revenueThisMonth = useQuery(api.deals.revenueThisMonth) ?? 0;
+  const closedDealsThisMonth = useQuery(api.deals.closedThisMonth) ?? 0;
+  const overdueActivitiesCount = useQuery(api.activities.countOverdue) ?? 0;
+  const upcomingActivities = useQuery(api.activities.listUpcoming) ?? [];
+  const recentConversations = useQuery(api.conversations.list, { limit: 10 }) ?? [];
+  const recentCalls = useQuery(api.callHistory.list, { limit: 10 }) ?? [];
+  const propertiesList = useQuery(api.properties.list, {}) ?? [];
+  const customersList = useQuery(api.callers.list, { limit: 50 }) ?? [];
+
+  // --- Refs to keep closures fresh inside useConversation callbacks ---
+  const statsRef = useRef<any>({});
+  useEffect(() => {
+    statsRef.current = {
+      activeLeadsCount, leadsByStatus, contactsCount, revenueThisMonth,
+      closedDealsThisMonth, overdueActivitiesCount, upcomingActivities,
+      recentConversations, recentCalls, propertiesList, customersList,
+    };
+  }, [activeLeadsCount, leadsByStatus, contactsCount, revenueThisMonth,
+      closedDealsThisMonth, overdueActivitiesCount, upcomingActivities,
+      recentConversations, recentCalls, propertiesList, customersList]);
+
+  const userNameRef = useRef(userName);
+  useEffect(() => { userNameRef.current = userName; }, [userName]);
+
+  const isActiveRef = useRef(isActive);
+  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
+
+  const conversationRef = useRef<any>(null);
+
+  // ElevenLabs conversation hook — with client tools for dashboard data, name memory, and auto-disconnect
   const conversation = useConversation({
+    clientTools: {
+      // Tool: Return live dashboard metrics to the agent
+      getDashboardStats: async () => {
+        const s = statsRef.current;
+        return JSON.stringify({
+          activeLeads: s.activeLeadsCount,
+          leadsByStatus: s.leadsByStatus,
+          totalContacts: s.contactsCount,
+          revenueThisMonth: s.revenueThisMonth,
+          closedDealsThisMonth: s.closedDealsThisMonth,
+          overdueActivities: s.overdueActivitiesCount,
+          upcomingActivitiesCount: (s.upcomingActivities || []).length,
+          recentConversationsCount: (s.recentConversations || []).length,
+          recentCallsCount: (s.recentCalls || []).length,
+          totalProperties: (s.propertiesList || []).length,
+          totalCustomers: (s.customersList || []).length,
+        });
+      },
+
+      // Tool: Return upcoming activity details
+      getUpcomingActivities: async () => {
+        const activities = (statsRef.current.upcomingActivities || []).slice(0, 5);
+        return JSON.stringify(activities.map((a: any) => ({
+          title: a.title || a.activity_type || "Untitled",
+          type: a.activity_type || a.type,
+          scheduledAt: a.scheduled_at,
+        })));
+      },
+
+      // Tool: Save user's name to localStorage for future sessions
+      saveUserName: async (params: any) => {
+        const name = typeof params === "string" ? params : params?.name || params?.user_name || "";
+        if (name.trim()) {
+          saveUserName(name.trim());
+          return `Saved. The user's name is ${name.trim()}.`;
+        }
+        return "No name provided.";
+      },
+
+      // Tool: Clear previously saved name (for corrections)
+      clearUserName: async () => {
+        clearUserName();
+        return "Previous name cleared.";
+      },
+
+      // Tool: End the conversation session gracefully
+      endConversation: async () => {
+        // Give the agent 2.5s to finish its goodbye message before disconnecting
+        setTimeout(() => {
+          if (conversationRef.current) {
+            conversationRef.current.endSession();
+          }
+        }, 2500);
+        return "Session ending shortly.";
+      },
+    },
+
     onConnect: () => {
       console.log("BECCA assistant: Connected");
       setIsLoading(false);
@@ -59,7 +168,30 @@ const FloatingAssistant = ({
       toggleLockRef.current = false;
       toast.error("Connection failed. Please try again.");
     },
+    // Fallback bye-detection: if user says goodbye but agent doesn't call endConversation
+    onMessage: (props: any) => {
+      if (props.source === "user" || props.role === "user") {
+        const msg = (props.message || "").toLowerCase().trim();
+        const farewells = ["bye", "goodbye", "good bye", "that's all", "thats all",
+          "nothing else", "i'm done", "im done", "that will be all", "end session"];
+        const isBye = farewells.includes(msg) ||
+          msg.endsWith(" bye") || msg.endsWith(" goodbye") ||
+          msg.startsWith("bye ") || msg.startsWith("goodbye ");
+        if (isBye) {
+          // Wait 5s for agent to say goodbye and call endConversation tool
+          // If still active after that, force disconnect
+          setTimeout(() => {
+            if (isActiveRef.current && conversationRef.current) {
+              conversationRef.current.endSession();
+            }
+          }, 5000);
+        }
+      }
+    },
   });
+
+  // Keep conversationRef in sync
+  useEffect(() => { conversationRef.current = conversation; }, [conversation]);
 
   // "Hey Becca" wake word detection using Web Speech API
   useEffect(() => {
@@ -236,8 +368,16 @@ const FloatingAssistant = ({
       // Request microphone permission
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Start ElevenLabs conversation
-      await conversation.startSession({ agentId } as any);
+      // Start ElevenLabs conversation with user context and dynamic variables
+      const businessName = sessionStorage.getItem("becca_business_name") || "your business";
+      await conversation.startSession({
+        agentId,
+        dynamicVariables: {
+          user_name: userNameRef.current || "there",
+          business_name: businessName,
+          has_user_name: userNameRef.current ? "yes" : "no",
+        },
+      } as any);
     } catch (error: any) {
       console.error("Failed to start BECCA:", error);
       setIsLoading(false);
@@ -250,7 +390,7 @@ const FloatingAssistant = ({
         toast.error("Failed to connect. Please try again.");
       }
     }
-  }, [agentId, isActive, conversation]);
+  }, [agentId, isActive, conversation, saveUserName, clearUserName]);
 
   useEffect(() => {
     if (isDragging) {

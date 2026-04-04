@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useConvex } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +11,7 @@ import { ArrowRight, ArrowLeft, Sparkles } from "lucide-react";
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const convex = useConvex();
   const [currentStep, setCurrentStep] = useState(1);
   const [userId, setUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -69,26 +71,14 @@ const Onboarding = () => {
     const strength = calculateStrength();
 
     try {
-      // Create customization
-      const { error: customError } = await supabase
-        .from("customizations")
-        .insert({
-          ...formData,
-          setup_strength: strength,
-        });
+      // Create customization via Convex
+      await convex.mutation(api.customizations.create, {
+        business_name: formData.business_name,
+        tone: formData.tone,
+        greeting: formData.greeting,
+      } as any);
 
-      if (customError) throw customError;
-
-      // Mark onboarding complete
-      const { error: onboardError } = await supabase
-        .from("user_onboarding")
-        .insert({
-          user_id: userId,
-          onboarding_completed: true,
-          completed_at: new Date().toISOString(),
-        });
-
-      if (onboardError) throw onboardError;
+      // Onboarding tracked via sessionStorage
 
       toast.success("Setup complete! Welcome to BECCA!");
       navigate("/dashboard");

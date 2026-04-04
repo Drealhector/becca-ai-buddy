@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useConvex } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import NeuralBrain from "@/components/3d/NeuralBrain";
@@ -25,21 +26,19 @@ const BusinessAuth = () => {
 
   const navigate = useNavigate();
   const { toast } = useToast();
+  const convex = useConvex();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { data: keyData, error: keyError } = await supabase
-        .from("business_keys")
-        .select("business_name, is_active")
-        .eq("business_name", businessName.trim())
-        .eq("business_key", businessKey.trim())
-        .eq("is_active", true)
-        .single();
+      const keyData = await convex.query(api.businessKeys.authenticate, {
+        business_name: businessName.trim(),
+        business_key: businessKey.trim(),
+      });
 
-      if (keyError || !keyData) {
+      if (!keyData) {
         toast({
           title: "Invalid Credentials",
           description: "Please check your business name and business key and try again.",
@@ -51,6 +50,7 @@ const BusinessAuth = () => {
 
       sessionStorage.setItem("becca_business_name", keyData.business_name);
       sessionStorage.setItem("becca_business_key", businessKey);
+      sessionStorage.setItem("becca_business_id", keyData._id);
 
       // Trigger portal then navigate
       const btn = document.getElementById("signin-btn");

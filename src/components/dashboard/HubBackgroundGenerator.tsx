@@ -3,7 +3,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { getAuthHeaders } from "@/lib/auth-fetch";
+const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL;
 import { toast } from "sonner";
 import {
   Upload,
@@ -42,24 +45,21 @@ const HubBackgroundGenerator = () => {
     fetchBackgrounds();
   }, []);
 
-  const fetchBackgrounds = async () => {
-    try {
-      const { data } = await supabase
-        .from("customizations")
-        .select("hub_bg_desktop_url, hub_bg_tablet_url, hub_bg_phone_url")
-        .limit(1)
-        .single();
-      if (data) {
-        setBackgrounds({
-          desktop: (data as any).hub_bg_desktop_url || undefined,
-          tablet: (data as any).hub_bg_tablet_url || undefined,
-          phone: (data as any).hub_bg_phone_url || undefined,
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching backgrounds:", error);
+  const customizations = useQuery(api.customizations.get, {});
+  const updateCustomizations = useMutation(api.customizations.update);
+  const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
+
+  useEffect(() => {
+    if (customizations) {
+      setBackgrounds({
+        desktop: customizations.hub_bg_desktop_url || undefined,
+        tablet: customizations.hub_bg_tablet_url || undefined,
+        phone: customizations.hub_bg_phone_url || undefined,
+      });
     }
-  };
+  }, [customizations]);
+
+  const fetchBackgrounds = async () => {};
 
   const handleFileUpload = async (file: File) => {
     setUploading(true);
@@ -67,29 +67,23 @@ const HubBackgroundGenerator = () => {
       const fileExt = file.name.split(".").pop();
       const fileName = `hub-bg-${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("logos")
-        .upload(fileName, file, { upsert: true });
+      // Upload to Convex storage
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await result.json();
+      const publicUrl = `${import.meta.env.VITE_CONVEX_URL}/api/storage/${storageId}`;
 
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from("logos").getPublicUrl(fileName);
-      const publicUrl = urlData.publicUrl;
-
-      // Use the same image for all 3 device sizes when uploading manually
-      const { data: custData } = await supabase.from("customizations").select("id").single();
-      if (!custData?.id) throw new Error("No customizations found");
-
-      const { error: updateError } = await supabase
-        .from("customizations")
-        .update({
-          hub_bg_desktop_url: publicUrl,
-          hub_bg_tablet_url: publicUrl,
-          hub_bg_phone_url: publicUrl,
-        } as any)
-        .eq("id", custData.id);
-
-      if (updateError) throw updateError;
+      if (!customizations?._id) throw new Error("No customizations found");
+      await updateCustomizations({
+        id: customizations._id,
+        hub_bg_desktop_url: publicUrl,
+        hub_bg_tablet_url: publicUrl,
+        hub_bg_phone_url: publicUrl,
+      });
 
       setBackgrounds({ desktop: publicUrl, tablet: publicUrl, phone: publicUrl });
       toast.success("Hub background uploaded!");
@@ -110,10 +104,13 @@ const HubBackgroundGenerator = () => {
     }
     setGeneratingPrompt(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-logo", {
-        body: { action: "generate_bg_prompt", businessInfo },
+      const res = await fetch(`${CONVEX_SITE_URL}/generate-logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ action: "generate_bg_prompt", businessInfo }),
       });
-      if (error) throw error;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
       if (!data?.prompt) throw new Error("No prompt generated");
       setGeneratedPrompt(data.prompt);
       setStep("review");
@@ -133,10 +130,13 @@ const HubBackgroundGenerator = () => {
     }
     setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-logo", {
-        body: { action: "generate_hub_background", prompt: p },
+      const res = await fetch(`${CONVEX_SITE_URL}/generate-logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ action: "generate_hub_background", prompt: p }),
       });
-      if (error) throw error;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
       if (!data?.success) throw new Error("Generation failed");
 
       setBackgrounds(data.urls);

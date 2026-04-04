@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL;
 import { toast } from "sonner";
+import { getAuthHeaders } from "@/lib/auth-fetch";
 import { Sparkles, User, Loader2, Copy, RefreshCw, Upload, X } from "lucide-react";
 
 type Step = "choose" | "new_input" | "new_result" | "human_name" | "human_confirm" | "human_result" | "refine";
@@ -163,19 +164,20 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
       // Parse uploaded files
       const parsedFiles = await parseUploadedFiles(uploadedFiles);
       
-      const { data, error } = await supabase.functions.invoke("create-character", {
-        body: { 
-          type: "generate_new", 
-          input: { 
+      const response = await fetch(`${CONVEX_SITE_URL}/create-character`, { method: "POST", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({
+          type: "generate_new",
+          input: {
             description: newDescription,
             businessName: newBusinessName.trim(),
             assistantName: newAssistantName.trim(),
             uploadedFiles: parsedFiles
-          } 
-        }
+          }
+        })
       });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error("Request failed");
+      const data = await response.json();
       setGeneratedCharacter(data.result);
       setStep("new_result");
       toast.success("Character created!");
@@ -196,14 +198,15 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-character", {
-        body: { 
-          type: "search_human", 
-          input: { name: humanName, context: humanContext } 
-        }
+      const response = await fetch(`${CONVEX_SITE_URL}/create-character`, { method: "POST", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({
+          type: "search_human",
+          input: { name: humanName, context: humanContext }
+        })
       });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error("Request failed");
+      const data = await response.json();
       setHumanInfo(data.result);
       setStep("human_confirm");
       toast.success("Person found!");
@@ -226,14 +229,15 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-character", {
-        body: { 
-          type: "create_human_character", 
-          input: { name: humanName, info: humanInfo, businessName: humanBusinessName.trim() } 
-        }
+      const response = await fetch(`${CONVEX_SITE_URL}/create-character`, { method: "POST", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({
+          type: "create_human_character",
+          input: { name: humanName, info: humanInfo, businessName: humanBusinessName.trim() }
+        })
       });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error("Request failed");
+      const data = await response.json();
       setGeneratedCharacter(data.result);
       setHumanConfirmed(true);
       setStep("human_result");
@@ -258,21 +262,22 @@ export const AICharacterCreatorDialog = ({ open, onOpenChange, onCopyToPersonali
       // Parse uploaded files for refine
       const parsedFiles = await parseUploadedFiles(refineUploadedFiles);
       
-      const { data, error } = await supabase.functions.invoke("create-character", {
-        body: { 
-          type: "refine", 
-          input: { 
+      const response = await fetch(`${CONVEX_SITE_URL}/create-character`, { method: "POST", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({
+          type: "refine",
+          input: {
             basePersonality: generatedCharacter,
             task: refineTask,
             link: refineLink,
             businessInfo: refineBusinessInfo,
             businessName: refineBusinessName.trim(),
             uploadedFiles: parsedFiles
-          } 
-        }
+          }
+        })
       });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error("Request failed");
+      const data = await response.json();
       setGeneratedCharacter(data.result);
       toast.success("Character refined!");
       setStep(characterType === "new" ? "new_result" : "human_result");

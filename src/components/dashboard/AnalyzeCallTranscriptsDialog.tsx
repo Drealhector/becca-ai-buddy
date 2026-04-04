@@ -10,8 +10,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { CalendarIcon, Loader2, Brain, Phone } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { toast } from "sonner";
+import { getAuthHeaders } from "@/lib/auth-fetch";
 
 interface AnalyzeCallTranscriptsDialogProps {
   open: boolean;
@@ -113,28 +115,12 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
       const [endHour, endMin] = endTime.split(":").map(Number);
       end.setHours(endHour, endMin, 0, 0);
 
-      // Fetch call history first
-      const { data: callData, error: callError } = await supabase
-        .from("call_history")
-        .select("*")
-        .in("type", selectedCallTypes)
-        .gte("timestamp", start.toISOString())
-        .lte("timestamp", end.toISOString())
-        .order("timestamp", { ascending: false });
+      // Transcripts come from Convex — placeholder for now
+      const transcriptData = [] as any[];
+      // TODO: Query Convex transcripts by date range
 
-      if (callError) throw callError;
-
-      // Fetch transcripts for these calls
-      const { data: transcriptData, error: transcriptError } = await supabase
-        .from("transcripts")
-        .select("*")
-        .gte("timestamp", start.toISOString())
-        .lte("timestamp", end.toISOString());
-
-      if (transcriptError) throw transcriptError;
-
-      setTranscripts(transcriptData || []);
-      setTranscriptCount((transcriptData || []).length);
+      setTranscripts(transcriptData);
+      setTranscriptCount(transcriptData.length);
       setAnalysisReady(true);
       toast.success(`Ready! Found ${(transcriptData || []).length} call transcripts`);
     } catch (error) {
@@ -155,22 +141,24 @@ export function AnalyzeCallTranscriptsDialog({ open, onOpenChange }: AnalyzeCall
     setExpandedTopics(new Set());
 
     try {
-      const { data, error } = await supabase.functions.invoke("analyze-conversations", {
-        body: { 
-          messages: transcripts.map(t => ({
+      const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL;
+      const res = await fetch(`${CONVEX_SITE_URL}/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({
+          messages: JSON.stringify(transcripts.map(t => ({
             content: t.transcript_text,
             timestamp: t.timestamp,
             role: "transcript",
             platform: "Phone Call"
-          })), 
+          }))),
           question,
-          conversationHistory
-        },
+          conversationHistory,
+        }),
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
 
-      if (error) throw error;
-
-      // Store this Q&A in conversation history
       setConversationHistory(prev => [...prev, { question, answer: data.analysis }]);
       setAnalysis(data.analysis);
       setCustomQuestion(""); // Clear the input after successful question

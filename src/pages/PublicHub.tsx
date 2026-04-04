@@ -1,22 +1,21 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { useIsMobile } from "@/hooks/use-mobile";
 import hubBackground from "@/assets/hub-background.jpg";
-import CallHectorUI from "@/components/dashboard/CallHectorUI";
 
 const PublicHub = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [customization, setCustomization] = useState<any>(null);
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [hiddenLinks, setHiddenLinks] = useState<string[]>([]);
   const [showCallDialog, setShowCallDialog] = useState(false);
   const [bgUrl, setBgUrl] = useState(hubBackground);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Use Convex reactive queries directly — no manual fetchData needed
+  const customization = useQuery(api.customizations.get, {});
+  const convexProducts = useQuery(api.products.list, {});
+  const products = (convexProducts as any[]) || [];
+  const loading = customization === undefined;
 
   useEffect(() => {
     // Load hidden links from localStorage and listen for changes
@@ -26,39 +25,14 @@ const PublicHub = () => {
         setHiddenLinks(JSON.parse(stored));
       }
     };
-    
+
     loadHiddenLinks();
-    
+
     // Listen for storage changes from other tabs/windows
     window.addEventListener('storage', loadHiddenLinks);
-    
+
     return () => window.removeEventListener('storage', loadHiddenLinks);
   }, []);
-
-  const fetchData = async () => {
-    try {
-      const { data: customData, error: customError } = await supabase
-        .from("customizations")
-        .select("*")
-        .limit(1)
-        .maybeSingle();
-
-      if (customError) throw customError;
-      setCustomization(customData);
-
-      const { data: productData, error: productError } = await supabase
-        .from("products")
-        .select("*")
-        .order('created_at', { ascending: false });
-
-      if (productError) throw productError;
-      setProducts(productData || []);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const links = [
     { 
@@ -265,7 +239,7 @@ const PublicHub = () => {
         </div>
       </div>
 
-      {showCallDialog && <CallHectorUI onClose={() => setShowCallDialog(false)} />}
+      {/* Call dialog replaced — calls go through Telnyx phone directly */}
     </div>
   );
 };

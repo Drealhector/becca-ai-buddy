@@ -18,7 +18,8 @@ import {
   DollarSign,
   AlertCircle,
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
 
 // ---------- types ----------
 interface MetricCard {
@@ -133,129 +134,56 @@ const AnalyticsSection: React.FC = () => {
   const [sourceData, setSourceData] = useState<SourceRow[]>([]);
   const [revenueData, setRevenueData] = useState<RevenueRow[]>([]);
 
+  // Convex reactive queries for analytics
+  const totalContactsQ = useQuery(api.contacts.count, {}) ?? 0;
+  const activeLeadsQ = useQuery(api.leads.countActive) ?? 0;
+  const hotLeadsQ = useQuery(api.contacts.count, { temperature: "hot" }) ?? 0;
+  const overdueQ = useQuery(api.activities.countOverdue) ?? 0;
+  const revenueQ = useQuery(api.deals.revenueThisMonth) ?? 0;
+  const closedDealsQ = useQuery(api.deals.closedThisMonth) ?? 0;
+  const leadStatusCounts = useQuery(api.leads.countByStatus) ?? {};
+  const allContacts = useQuery(api.contacts.list, {}) ?? [];
+  const allDeals = useQuery(api.deals.list, {}) ?? [];
+
   useEffect(() => {
-    fetchMetrics();
-    fetchPipeline();
-    fetchSources();
-    fetchMonthlyRevenue();
-  }, []);
+    setTotalContacts(totalContactsQ);
+    setActiveLeads(activeLeadsQ);
+    setHotLeads(hotLeadsQ);
+    setOverdueFollowups(overdueQ);
+    setRevenueThisMonth(revenueQ);
+    setDealsThisMonth(closedDealsQ);
 
-  // ---- data fetching ----
-  async function fetchMetrics() {
-    const { start, end } = getMonthRange();
-
-    // Total contacts
-    const { count: contactCount } = await supabase
-      .from('contacts' as any)
-      .select('*', { count: 'exact', head: true });
-    setTotalContacts(contactCount ?? 0);
-
-    // Active leads
-    const { count: leadCount } = await supabase
-      .from('leads' as any)
-      .select('*', { count: 'exact', head: true })
-      .not('status', 'in', '("closed_won","closed_lost")');
-    setActiveLeads(leadCount ?? 0);
-
-    // Hot leads
-    const { count: hotCount } = await supabase
-      .from('contacts' as any)
-      .select('*', { count: 'exact', head: true })
-      .eq('lead_temperature', 'hot');
-    setHotLeads(hotCount ?? 0);
-
-    // Deals this month
-    const { count: dealCount } = await supabase
-      .from('deals' as any)
-      .select('*', { count: 'exact', head: true })
-      .eq('stage', 'closed_won')
-      .gte('actual_close_date', start)
-      .lte('actual_close_date', end);
-    setDealsThisMonth(dealCount ?? 0);
-
-    // Revenue this month
-    const { data: revRows } = await supabase
-      .from('deals' as any)
-      .select('deal_value')
-      .eq('stage', 'closed_won')
-      .gte('actual_close_date', start)
-      .lte('actual_close_date', end);
-    const rev = (revRows ?? []).reduce(
-      (sum: number, r: any) => sum + (Number(r.deal_value) || 0),
-      0,
-    );
-    setRevenueThisMonth(rev);
-
-    // Overdue follow-ups
-    const { count: overdueCount } = await supabase
-      .from('activities' as any)
-      .select('*', { count: 'exact', head: true })
-      .eq('is_completed', false)
-      .lt('scheduled_at', new Date().toISOString());
-    setOverdueFollowups(overdueCount ?? 0);
-  }
-
-  async function fetchPipeline() {
-    const { data: leads } = await supabase
-      .from('leads' as any)
-      .select('status');
-    if (!leads) return;
-
-    const counts: Record<string, number> = {};
-    (leads as any[]).forEach((l) => {
-      counts[l.status] = (counts[l.status] || 0) + 1;
-    });
-
+    // Pipeline data
     setPipelineData(
       PIPELINE_STAGES.map((s) => ({
         stage: s.label,
-        count: counts[s.key] || 0,
+        count: (leadStatusCounts as any)[s.key] || 0,
         color: s.color,
       })),
     );
-  }
 
-  async function fetchSources() {
-    const { data: contacts } = await supabase
-      .from('contacts' as any)
-      .select('source');
-    if (!contacts) return;
-
-    const counts: Record<string, number> = {};
-    (contacts as any[]).forEach((c) => {
-      if (c.source) counts[c.source] = (counts[c.source] || 0) + 1;
+    // Source data
+    const sourceCounts: Record<string, number> = {};
+    allContacts.forEach((c: any) => {
+      if (c.source) sourceCounts[c.source] = (sourceCounts[c.source] || 0) + 1;
     });
-
     setSourceData(
       LEAD_SOURCES.map((s) => ({
         source: s.label,
-        count: counts[s.key] || 0,
+        count: sourceCounts[s.key] || 0,
         color: s.color,
       })),
     );
-  }
 
-  async function fetchMonthlyRevenue() {
+    // Monthly revenue
     const months = getLast6Months();
-    const firstMonth = months[0];
-    const lastMonth = months[months.length - 1];
-    const rangeStart = new Date(firstMonth.year, firstMonth.month - 1, 1).toISOString();
-    const rangeEnd = new Date(lastMonth.year, lastMonth.month, 0, 23, 59, 59).toISOString();
-
-    const { data: deals } = await supabase
-      .from('deals' as any)
-      .select('deal_value, actual_close_date')
-      .eq('stage', 'closed_won')
-      .gte('actual_close_date', rangeStart)
-      .lte('actual_close_date', rangeEnd);
-
     const buckets: Record<string, number> = {};
     months.forEach((m) => {
       buckets[`${m.year}-${m.month}`] = 0;
     });
 
-    (deals ?? []).forEach((d: any) => {
-      if (!d.actual_close_date) return;
+    allDeals.forEach((d: any) => {
+      if (d.stage !== 'closed_won' || !d.actual_close_date) return;
       const dt = new Date(d.actual_close_date);
       const key = `${dt.getFullYear()}-${dt.getMonth() + 1}`;
       if (key in buckets) {
@@ -269,7 +197,7 @@ const AnalyticsSection: React.FC = () => {
         revenue: buckets[`${m.year}-${m.month}`],
       })),
     );
-  }
+  }, [totalContactsQ, activeLeadsQ, hotLeadsQ, overdueQ, revenueQ, closedDealsQ, leadStatusCounts, allContacts, allDeals]);
 
   // ---- metric cards definition ----
   const metrics: MetricCard[] = [

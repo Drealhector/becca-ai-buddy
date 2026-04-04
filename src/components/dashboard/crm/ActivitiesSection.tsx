@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation, useConvex } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -100,14 +101,28 @@ const ACTIVITY_TYPE_CONFIG: Record<
 };
 
 const ActivitiesSection = () => {
-  const [upcoming, setUpcoming] = useState<Activity[]>([]);
-  const [overdue, setOverdue] = useState<Activity[]>([]);
-  const [completed, setCompleted] = useState<Activity[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const upcoming = useQuery(api.activities.listUpcoming) ?? [];
+  const overdue = useQuery(api.activities.listOverdue) ?? [];
+  const completed = useQuery(api.activities.listCompleted, { limit: 20 }) ?? [];
+  const contactsList = useQuery(api.contacts.list, {}) ?? [];
+  const markCompleteMutation = useMutation(api.activities.markComplete);
+  const createActivity = useMutation(api.activities.create);
+  const convex = useConvex();
+
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [contactMap, setContactMap] = useState<Record<string, string>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("upcoming");
+
+  const contacts: Contact[] = contactsList.map((c: any) => ({
+    id: c._id,
+    name: c.full_name || c.name || "",
+    phone: c.phone,
+  }));
+
+  const contactMap: Record<string, string> = {};
+  contacts.forEach((c) => {
+    contactMap[c.id] = c.name;
+  });
 
   // Form state
   const [formType, setFormType] = useState<ActivityType>("task");
@@ -118,119 +133,35 @@ const ActivitiesSection = () => {
   const [formScheduledAt, setFormScheduledAt] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchActivities = useCallback(async () => {
-    const now = new Date().toISOString();
-
-    const [upcomingRes, overdueRes, completedRes] = await Promise.all([
-      supabase
-        .from("activities" as any)
-        .select("*")
-        .eq("is_completed", false)
-        .gte("scheduled_at", now)
-        .order("scheduled_at", { ascending: true }),
-      supabase
-        .from("activities" as any)
-        .select("*")
-        .eq("is_completed", false)
-        .lt("scheduled_at", now)
-        .order("scheduled_at", { ascending: false }),
-      supabase
-        .from("activities" as any)
-        .select("*")
-        .eq("is_completed", true)
-        .order("completed_at", { ascending: false })
-        .limit(20),
-    ]);
-
-    setUpcoming((upcomingRes.data as Activity[] | null) || []);
-    setOverdue((overdueRes.data as Activity[] | null) || []);
-    setCompleted((completedRes.data as Activity[] | null) || []);
-  }, []);
-
-  const fetchContacts = useCallback(async () => {
-    const { data } = await supabase
-      .from("contacts" as any)
-      .select("id, name, phone")
-      .order("name", { ascending: true });
-
-    const contactList = (data as Contact[] | null) || [];
-    setContacts(contactList);
-
-    const map: Record<string, string> = {};
-    contactList.forEach((c) => {
-      map[c.id] = c.name;
-    });
-    setContactMap(map);
-  }, []);
-
-  const fetchLeadsForContact = useCallback(async (contactId: string) => {
-    if (!contactId) {
+  useEffect(() => {
+    if (formContactId) {
+      convex.query(api.leads.listByContact, { contact_id: formContactId as any }).then((data) => {
+        setLeads((data || []).map((l: any) => ({ id: l._id, property_interest: l.property_interest, status: l.status })));
+      });
+    } else {
       setLeads([]);
-      return;
     }
-    const { data } = await supabase
-      .from("leads" as any)
-      .select("id, property_interest, status")
-      .eq("contact_id", contactId);
-
-    setLeads((data as Lead[] | null) || []);
-  }, []);
-
-  useEffect(() => {
-    fetchActivities();
-    fetchContacts();
-
-    const channel = supabase
-      .channel("activities-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "activities",
-        },
-        () => {
-          fetchActivities();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchActivities, fetchContacts]);
-
-  useEffect(() => {
-    fetchLeadsForContact(formContactId);
-  }, [formContactId, fetchLeadsForContact]);
+  }, [formContactId, convex]);
 
   const handleComplete = async (id: string) => {
-    await supabase
-      .from("activities" as any)
-      .update({
-        is_completed: true,
-        completed_at: new Date().toISOString(),
-      } as any)
-      .eq("id", id);
-
-    fetchActivities();
+    await markCompleteMutation({ id: id as any });
   };
 
   const handleSubmit = async () => {
     if (!formTitle.trim() || !formScheduledAt) return;
     setSubmitting(true);
 
-    await supabase.from("activities" as any).insert({
+    await createActivity({
       activity_type: formType,
       title: formTitle.trim(),
-      description: formDescription.trim() || null,
-      contact_id: formContactId || null,
-      lead_id: formLeadId || null,
+      description: formDescription.trim() || undefined,
+      contact_id: formContactId ? formContactId as any : undefined,
+      lead_id: formLeadId ? formLeadId as any : undefined,
       scheduled_at: new Date(formScheduledAt).toISOString(),
       is_completed: false,
       is_ai_generated: false,
       created_by: "manual",
-    } as any);
+    });
 
     setFormType("task");
     setFormTitle("");
@@ -240,7 +171,6 @@ const ActivitiesSection = () => {
     setFormScheduledAt("");
     setSubmitting(false);
     setDialogOpen(false);
-    fetchActivities();
   };
 
   const formatRelativeTime = (dateStr: string | null) => {

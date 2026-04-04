@@ -4,7 +4,11 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { getAuthHeaders } from "@/lib/auth-fetch";
+
+const CONVEX_SITE_URL = import.meta.env.VITE_CONVEX_SITE_URL;
 
 interface Message {
   role: "user" | "assistant";
@@ -22,9 +26,18 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
   const [isLoading, setIsLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Get greeting from Convex (single personality source)
+  const customizations = useQuery(api.customizations.get, {});
+
   useEffect(() => {
-    initializeChat();
-  }, []);
+    if (customizations !== undefined) {
+      const greetingMessage = customizations?.greeting || "Hi! How can I help you today?";
+      if (messages.length === 0) {
+        addMessage("assistant", greetingMessage);
+      }
+      setIsLoading(false);
+    }
+  }, [customizations]);
 
   useEffect(() => {
     scrollToBottom();
@@ -33,28 +46,6 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
   const scrollToBottom = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
-  const initializeChat = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch the greeting/personality from dashboard customizations
-      const { data: customData } = await supabase
-        .from("customizations")
-        .select("greeting, assistant_personality")
-        .limit(1)
-        .maybeSingle();
-
-      // Use the greeting or personality as the first message
-      const greetingMessage = customData?.greeting || customData?.assistant_personality || "Hi! How can I help you today?";
-      
-      addMessage("assistant", greetingMessage);
-    } catch (error) {
-      console.error("Error loading greeting:", error);
-      addMessage("assistant", "Hi! How can I help you today?");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -71,19 +62,19 @@ const BeccaChatDialog: React.FC<BeccaChatDialogProps> = ({ onClose }) => {
     setIsLoading(true);
 
     try {
-      // Send message to Vapi through edge function
-      const { data, error } = await supabase.functions.invoke('vapi-text-chat', {
-        body: { 
+      // Call Convex web-chat endpoint (unified AI + memory + CRM)
+      const response = await fetch(`${CONVEX_SITE_URL}/web-chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({
           message: userMessage,
-          conversationHistory: messages.map(m => ({
-            role: m.role,
-            content: m.content
-          }))
-        }
+          sender_name: "Dashboard User",
+        }),
       });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error("Failed to get AI response");
 
+      const data = await response.json();
       if (data?.response) {
         addMessage("assistant", data.response);
       }

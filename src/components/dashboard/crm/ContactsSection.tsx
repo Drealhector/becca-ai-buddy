@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,9 @@ const TAG_COLORS: Record<string, string> = {
 const ALL_TAGS: TagFilter[] = ["buyer", "seller", "investor", "VIP"];
 
 const ContactsSection = () => {
-  const [contacts, setContacts] = useState<any[]>([]);
+  const contacts = useQuery(api.contacts.list, {}) ?? [];
+  const createContact = useMutation(api.contacts.create);
+
   const [search, setSearch] = useState("");
   const [tempFilter, setTempFilter] = useState<TemperatureFilter>("all");
   const [tagFilters, setTagFilters] = useState<TagFilter[]>([]);
@@ -70,42 +73,6 @@ const ContactsSection = () => {
   const [formTags, setFormTags] = useState<string[]>([]);
   const [formSource, setFormSource] = useState("manual");
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    fetchContacts();
-
-    const channel = supabase
-      .channel("contacts-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "contacts" },
-        () => {
-          fetchContacts();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchContacts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("contacts" as any)
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching contacts:", error);
-        return;
-      }
-      setContacts((data as any[]) || []);
-    } catch (error) {
-      console.error("Error fetching contacts:", error);
-    }
-  };
 
   const toggleTag = (tag: TagFilter) => {
     setTagFilters((prev) =>
@@ -150,17 +117,15 @@ const ContactsSection = () => {
     }
     setSaving(true);
     try {
-      const record: any = {
+      await createContact({
         full_name: formName.trim(),
-        phone: formPhone.trim() || null,
-        email: formEmail.trim() || null,
+        phone: formPhone.trim() || undefined,
+        email: formEmail.trim() || undefined,
         tags: formTags,
         source: formSource,
         temperature: "warm",
         lead_score: 50,
-      };
-      const { error } = await supabase.from("contacts" as any).insert(record);
-      if (error) throw error;
+      });
       toast.success("Contact added");
       setShowAddDialog(false);
       resetForm();
@@ -264,7 +229,7 @@ const ContactsSection = () => {
                 const temp = TEMPERATURE_CONFIG[contact.temperature] || TEMPERATURE_CONFIG.warm;
                 return (
                   <div
-                    key={contact.id}
+                    key={contact._id}
                     onClick={() => openContactDetail(contact)}
                     className="p-3 rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm hover:bg-white/10 hover:border-cyan-500/30 transition-all cursor-pointer group"
                   >

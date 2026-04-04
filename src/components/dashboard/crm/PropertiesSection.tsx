@@ -29,7 +29,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { toast } from "sonner";
 import {
   Building2,
@@ -114,7 +115,6 @@ function formatPrice(
 // --- Component ---
 
 const PropertiesSection = () => {
-  const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
@@ -143,39 +143,11 @@ const PropertiesSection = () => {
   const [formFeatures, setFormFeatures] = useState("");
   const [formImages, setFormImages] = useState("");
 
-  // --- Data fetching ---
-
-  useEffect(() => {
-    fetchProperties();
-
-    const channel = supabase
-      .channel("properties-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "properties" },
-        () => {
-          fetchProperties();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchProperties = async () => {
-    const { data, error } = await supabase
-      .from("properties" as any)
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching properties:", error);
-      return;
-    }
-    setProperties((data as any[]) || []);
-  };
+  // --- Convex reactive data ---
+  const properties = useQuery(api.properties.list, {}) ?? [];
+  const createProperty = useMutation(api.properties.create);
+  const updateProperty = useMutation(api.properties.update);
+  const deleteProperty = useMutation(api.properties.remove);
 
   // --- Filtered data ---
 
@@ -278,17 +250,10 @@ const PropertiesSection = () => {
 
     try {
       if (editingProperty) {
-        const { error } = await supabase
-          .from("properties" as any)
-          .update(record)
-          .eq("id", editingProperty.id);
-        if (error) throw error;
+        await updateProperty({ id: editingProperty._id || editingProperty.id, ...record } as any);
         toast.success("Property updated");
       } else {
-        const { error } = await supabase
-          .from("properties" as any)
-          .insert(record);
-        if (error) throw error;
+        await createProperty(record as any);
         toast.success("Property added");
       }
       setShowAddDialog(false);
@@ -304,11 +269,7 @@ const PropertiesSection = () => {
   const handleDelete = async () => {
     if (!deletingId) return;
     try {
-      const { error } = await supabase
-        .from("properties" as any)
-        .delete()
-        .eq("id", deletingId);
-      if (error) throw error;
+      await deleteProperty({ id: deletingId as any });
       toast.success("Property deleted");
     } catch (error) {
       console.error("Error deleting property:", error);

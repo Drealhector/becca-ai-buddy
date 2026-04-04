@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useRef } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -123,8 +124,6 @@ function formatDealValue(value: number | null | undefined): string {
 // --- Component ---
 
 const PipelineSection = () => {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
   const [draggedLead, setDraggedLead] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -138,102 +137,44 @@ const PipelineSection = () => {
   const [submitting, setSubmitting] = useState(false);
   const dragCounter = useRef<Record<string, number>>({});
 
-  // Fetch leads with contact names and deal values
-  const fetchLeads = useCallback(async () => {
-    try {
-      const { data: leadsData, error } = await supabase
-        .from("leads" as any)
-        .select("*")
-        .order("updated_at", { ascending: false });
+  // Convex reactive queries
+  const rawLeads = useQuery(api.leads.list, {}) ?? [];
+  const rawContacts = useQuery(api.contacts.list, {}) ?? [];
+  const rawDeals = useQuery(api.deals.list, {}) ?? [];
+  const updateLeadStatus = useMutation(api.leads.updateStatus);
+  const createLead = useMutation(api.leads.create);
 
-      if (error) {
-        console.error("Error fetching leads:", error);
-        return;
-      }
+  // Build contact map and deal map for enrichment
+  const contactMap: Record<string, { full_name: string; lead_temperature?: string }> = {};
+  rawContacts.forEach((c: any) => {
+    contactMap[c._id] = { full_name: c.full_name || c.name || "", lead_temperature: c.lead_temperature || c.temperature };
+  });
 
-      const leadsArr = (leadsData || []) as any[];
-
-      // Gather unique contact IDs
-      const contactIds = [
-        ...new Set(leadsArr.filter((l) => l.contact_id).map((l) => l.contact_id)),
-      ];
-
-      // Fetch contacts for names
-      let contactMap: Record<string, { full_name: string; lead_temperature?: string }> = {};
-      if (contactIds.length > 0) {
-        const { data: contactsData } = await supabase
-          .from("contacts" as any)
-          .select("id, full_name, lead_temperature")
-          .in("id", contactIds);
-        (contactsData || []).forEach((c: any) => {
-          contactMap[c.id] = { full_name: c.full_name, lead_temperature: c.lead_temperature };
-        });
-      }
-
-      // Fetch deal values
-      const leadIds = leadsArr.map((l) => l.id);
-      let dealMap: Record<string, number> = {};
-      if (leadIds.length > 0) {
-        const { data: dealsData } = await supabase
-          .from("deals" as any)
-          .select("lead_id, value")
-          .in("lead_id", leadIds);
-        (dealsData || []).forEach((d: any) => {
-          if (d.lead_id && d.value != null) {
-            dealMap[d.lead_id] = d.value;
-          }
-        });
-      }
-
-      const enriched: Lead[] = leadsArr.map((l) => ({
-        ...l,
-        contact_name: l.contact_id && contactMap[l.contact_id]
-          ? contactMap[l.contact_id].full_name
-          : undefined,
-        contact_lead_temperature: l.contact_id && contactMap[l.contact_id]
-          ? contactMap[l.contact_id].lead_temperature
-          : undefined,
-        deal_value: dealMap[l.id] ?? null,
-      }));
-
-      setLeads(enriched);
-    } catch (err) {
-      console.error("Error fetching leads:", err);
+  const dealMap: Record<string, number> = {};
+  rawDeals.forEach((d: any) => {
+    if (d.lead_id && d.deal_value != null) {
+      dealMap[d.lead_id] = d.deal_value;
     }
-  }, []);
+  });
 
-  // Fetch contacts for the add dialog
-  const fetchContacts = useCallback(async () => {
-    try {
-      const { data } = await supabase
-        .from("contacts" as any)
-        .select("id, full_name, lead_temperature")
-        .order("full_name", { ascending: true });
-      setContacts((data || []) as Contact[]);
-    } catch (err) {
-      console.error("Error fetching contacts:", err);
-    }
-  }, []);
+  // Enrich leads with contact names and deal values
+  const leads: Lead[] = rawLeads.map((l: any) => ({
+    ...l,
+    id: l._id,
+    contact_name: l.contact_id && contactMap[l.contact_id]
+      ? contactMap[l.contact_id].full_name
+      : undefined,
+    contact_lead_temperature: l.contact_id && contactMap[l.contact_id]
+      ? contactMap[l.contact_id].lead_temperature
+      : undefined,
+    deal_value: dealMap[l._id] ?? l.deal_value ?? null,
+  }));
 
-  useEffect(() => {
-    fetchLeads();
-    fetchContacts();
-
-    const channel = supabase
-      .channel("leads-pipeline-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "leads" },
-        () => {
-          fetchLeads();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchLeads, fetchContacts]);
+  const contacts: Contact[] = rawContacts.map((c: any) => ({
+    id: c._id,
+    full_name: c.full_name || c.name || "",
+    lead_temperature: c.lead_temperature || c.temperature,
+  }));
 
   // --- Drag and Drop ---
 
@@ -290,35 +231,19 @@ const PipelineSection = () => {
 
     const fromStage = lead.status;
 
-    // Optimistic update
-    setLeads((prev) =>
-      prev.map((l) =>
-        l.id === leadId
-          ? { ...l, status: toStage, updated_at: new Date().toISOString() }
-          : l
-      )
-    );
+    // Let Convex reactivity handle the UI update after mutation
     setDragOverStage(null);
     setDraggedLead(null);
     dragCounter.current = {};
 
     try {
-      // Update lead status
-      await supabase
-        .from("leads" as any)
-        .update({ status: toStage, updated_at: new Date().toISOString() } as any)
-        .eq("id", leadId);
-
-      // Insert stage history
-      await supabase.from("lead_stage_history" as any).insert({
-        lead_id: leadId,
-        from_stage: fromStage,
-        to_stage: toStage,
+      await updateLeadStatus({
+        id: leadId as any,
+        status: toStage,
         changed_by: "manual",
-      } as any);
+      });
     } catch (err) {
       console.error("Error updating lead stage:", err);
-      fetchLeads(); // Rollback on error
     }
   };
 
@@ -328,18 +253,16 @@ const PipelineSection = () => {
     if (!formData.title.trim()) return;
     setSubmitting(true);
     try {
-      await supabase.from("leads" as any).insert({
+      await createLead({
         title: formData.title.trim(),
-        contact_id: formData.contact_id || null,
+        contact_id: formData.contact_id ? formData.contact_id as any : undefined,
         lead_type: formData.lead_type,
         priority: formData.priority,
-        source: formData.source.trim() || null,
-        status: "new",
-      } as any);
+        source: formData.source.trim() || undefined,
+      });
 
       setFormData({ title: "", contact_id: "", lead_type: "buyer", priority: "medium", source: "" });
       setAddDialogOpen(false);
-      fetchLeads();
     } catch (err) {
       console.error("Error adding lead:", err);
     } finally {
