@@ -134,10 +134,12 @@ const FloatingAssistant = ({
 
       // Tool: End the conversation session gracefully
       endConversation: async () => {
+        // Guard: only end once
+        if (!isActiveRef.current) return "Already disconnected.";
         // Give the agent 2.5s to finish its goodbye message before disconnecting
         setTimeout(() => {
-          if (conversationRef.current) {
-            conversationRef.current.endSession();
+          if (isActiveRef.current && conversationRef.current) {
+            try { conversationRef.current.endSession(); } catch (e) { console.error("endSession error:", e); }
           }
         }, 2500);
         return "Session ending shortly.";
@@ -168,23 +170,19 @@ const FloatingAssistant = ({
       toggleLockRef.current = false;
       toast.error("Connection failed. Please try again.");
     },
-    // Fallback bye-detection: if user says goodbye but agent doesn't call endConversation
+    // Fallback bye-detection: only triggers on very short, clear farewell messages
+    // The agent's endConversation tool is the primary disconnect mechanism
     onMessage: (props: any) => {
       if (props.source === "user" || props.role === "user") {
         const msg = (props.message || "").toLowerCase().trim();
-        const farewells = ["bye", "goodbye", "good bye", "that's all", "thats all",
-          "nothing else", "i'm done", "im done", "that will be all", "end session"];
-        const isBye = farewells.includes(msg) ||
-          msg.endsWith(" bye") || msg.endsWith(" goodbye") ||
-          msg.startsWith("bye ") || msg.startsWith("goodbye ");
-        if (isBye) {
-          // Wait 5s for agent to say goodbye and call endConversation tool
-          // If still active after that, force disconnect
+        // Only exact short farewell phrases (max ~3 words) — avoids false positives
+        const exactFarewells = ["bye", "goodbye", "good bye", "bye bye", "see you", "see ya"];
+        if (exactFarewells.includes(msg)) {
           setTimeout(() => {
             if (isActiveRef.current && conversationRef.current) {
-              conversationRef.current.endSession();
+              try { conversationRef.current.endSession(); } catch (e) { console.error("endSession error:", e); }
             }
-          }, 5000);
+          }, 6000);
         }
       }
     },
