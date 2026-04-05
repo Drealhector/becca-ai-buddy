@@ -60,10 +60,11 @@ const FloatingAssistant = ({
   const closedDealsThisMonth = useQuery(api.deals.closedThisMonth) ?? 0;
   const overdueActivitiesCount = useQuery(api.activities.countOverdue) ?? 0;
   const upcomingActivities = useQuery(api.activities.listUpcoming) ?? [];
-  const recentConversations = useQuery(api.conversations.list, { limit: 10 }) ?? [];
+  const recentConversations = useQuery(api.conversations.listWithMessages, { limit: 10 }) ?? [];
   const recentCalls = useQuery(api.callHistory.list, { limit: 10 }) ?? [];
   const propertiesList = useQuery(api.properties.list, {}) ?? [];
   const customersList = useQuery(api.callers.list, { limit: 50 }) ?? [];
+  const recentTranscripts = useQuery(api.transcripts.list) ?? [];
 
   // --- Refs to keep closures fresh inside useConversation callbacks ---
   const statsRef = useRef<any>({});
@@ -71,11 +72,11 @@ const FloatingAssistant = ({
     statsRef.current = {
       activeLeadsCount, leadsByStatus, contactsCount, revenueThisMonth,
       closedDealsThisMonth, overdueActivitiesCount, upcomingActivities,
-      recentConversations, recentCalls, propertiesList, customersList,
+      recentConversations, recentCalls, propertiesList, customersList, recentTranscripts,
     };
   }, [activeLeadsCount, leadsByStatus, contactsCount, revenueThisMonth,
       closedDealsThisMonth, overdueActivitiesCount, upcomingActivities,
-      recentConversations, recentCalls, propertiesList, customersList]);
+      recentConversations, recentCalls, propertiesList, customersList, recentTranscripts]);
 
   const userNameRef = useRef(userName);
   useEffect(() => { userNameRef.current = userName; }, [userName]);
@@ -87,7 +88,7 @@ const FloatingAssistant = ({
   const silenceTimerRef = useRef<any>(null);
   const userHasSpokenRef = useRef<boolean>(false);
   const agentTurnCountRef = useRef<number>(0);
-  const SILENCE_TIMEOUT_MS = 8000; // 8 seconds of silence after agent finishes speaking = auto-disconnect
+  const SILENCE_TIMEOUT_MS = 15000; // 15 seconds of silence after agent finishes speaking = auto-disconnect
 
   // ElevenLabs conversation hook — with client tools for dashboard data, name memory, and auto-disconnect
   const conversation = useConversation({
@@ -117,6 +118,58 @@ const FloatingAssistant = ({
           title: a.title || a.activity_type || "Untitled",
           type: a.activity_type || a.type,
           scheduledAt: a.scheduled_at,
+        })));
+      },
+
+      // Tool: Return recent conversations with full messages
+      getRecentConversations: async () => {
+        const convos = (statsRef.current.recentConversations || []).slice(0, 5);
+        return JSON.stringify(convos.map((c: any) => ({
+          platform: c.platform || "unknown",
+          startTime: c.start_time,
+          endTime: c.end_time,
+          summary: c.summary,
+          latestMessageTime: c.latest_message_time,
+          messages: (c.messages || []).slice(0, 10).map((m: any) => ({
+            role: m.role,
+            senderName: m.sender_name,
+            content: m.content,
+            timestamp: m.timestamp,
+            platform: m.platform,
+          })),
+        })));
+      },
+
+      // Tool: Return recent calls with details and transcripts
+      getRecentCalls: async () => {
+        const s = statsRef.current;
+        const calls = (s.recentCalls || []).slice(0, 5);
+        const transcripts = s.recentTranscripts || [];
+        return JSON.stringify(calls.map((call: any) => {
+          const transcript = transcripts.find((t: any) => t.conversation_id === call.conversation_id);
+          return {
+            type: call.type,
+            number: call.number,
+            topic: call.topic,
+            durationMinutes: call.duration_minutes,
+            timestamp: call.timestamp,
+            transcriptText: transcript?.transcript_text || null,
+            callerInfo: transcript?.caller_info || null,
+          };
+        }));
+      },
+
+      // Tool: Return recent customer/caller details
+      getRecentCustomers: async () => {
+        const customers = (statsRef.current.customersList || []).slice(0, 10);
+        return JSON.stringify(customers.map((c: any) => ({
+          name: c.name,
+          phone: c.phone,
+          callCount: c.call_count,
+          lastChannel: c.last_channel,
+          lastContactedAt: c.last_call_at,
+          firstContactedAt: c.first_contacted_at,
+          memorySummary: c.memory_summary,
         })));
       },
 
