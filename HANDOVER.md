@@ -488,14 +488,143 @@ FLOATING BALL (Dashboard):
 - ~~**No voiceId validation on voice.deleteVoice**~~ — FIXED (Session 16): alphanumeric regex added
 - ~~**AICharacterCreatorDialog.tsx broken fetch calls**~~ — FIXED (Session 17): all 4 create-character fetch calls had `body: { ... }` instead of `body: JSON.stringify({ ... })` and wrong destructuring `const { data, error } = await fetch(...)` instead of proper `response.json()` pattern
 
-### BUILD STATUS (Verified 2026-04-04)
+### STAGE 17: Smart FloatingAssistant Ball + GitHub Deploy ✅ (Session 17 — 2026-04-05)
+
+**Made the floating brain ball intelligent — name memory, dashboard knowledge, full data access, auto-disconnect.**
+
+#### What Was Built
+
+**1. User Name Memory (localStorage persistence)**
+- Ball remembers user's name across sessions via `localStorage` key `becca_user_name`
+- `saveUserName` / `clearUserName` callbacks stored in `useConversation` `clientTools`
+- Name passed to ElevenLabs at session start via `dynamicVariables.user_name`
+- Agent greets returning users by name: `"Hello {{user_name}}!"`
+- Name correction flow: user says "that's not my name" → agent calls `clearUserName` then `saveUserName` with new name
+- **TESTED & WORKING** — user confirmed name save, delete, and correction all work
+
+**2. Live Dashboard Data Access (8 Client Tools)**
+- Ball has real-time access to ALL dashboard data via Convex reactive queries
+- Data exposed through ElevenLabs client tools (agent calls them on demand):
+
+| Tool | Type | What It Returns |
+|------|------|----------------|
+| `getDashboardStats` | Blocking | Leads count, contacts, revenue, deals, activities, properties, calls, conversations |
+| `getUpcomingActivities` | Blocking | Next 5 scheduled activities with title, type, time |
+| `getRecentConversations` | Blocking | Last 5 conversations with full messages (sender, content, timestamp, platform) |
+| `getRecentCalls` | Blocking | Last 5 calls with type, number, duration, timestamp, full transcript text |
+| `getRecentCustomers` | Blocking | Last 10 customers with name, phone, interaction count, channels, AI memory summary |
+| `saveUserName` | Fire-and-forget | Saves name to localStorage (param: `name`) |
+| `clearUserName` | Fire-and-forget | Clears stored name |
+| `endConversation` | Fire-and-forget | Ends session after 2.5s delay |
+
+**3. Silence-Based Auto-Disconnect**
+- NO keyword/word detection for farewells (removed — too many false positives)
+- Agent handles goodbye intent naturally via `endConversation` tool (LLM understands context)
+- Silence timer: 15 seconds of silence after agent has spoken at least twice → auto-disconnect
+- Timer resets every time agent starts speaking (tool calls, responses don't trigger it)
+- First greeting wait is protected — timer only starts after agent's 2nd speaking turn
+- `agentTurnCountRef` tracks agent speaking turns for this logic
+
+**4. ElevenLabs Portal Configuration**
+- 8 client tools registered in ElevenLabs portal (5 original + 3 new data tools)
+- 3 dynamic variables: `user_name`, `business_name`, `has_user_name` with test values
+- First message updated: `"Hello {{user_name}}! I'm BECCA, what brilliant task are we starting on today?"`
+- System prompt appended with: Personalization & Memory, Dashboard Data Access, Ending Conversations sections
+- Agent published and Live 100%
+
+**5. GitHub + Vercel Deployment**
+- All code pushed to GitHub (`Drealhector/becca-ai-buddy`, branch `main`)
+- Vercel auto-deploys from GitHub on push
+- Added `VITE_CONVEX_URL` and `VITE_CONVEX_SITE_URL` to Vercel environment variables
+- Live at **www.becca.live**
+
+#### Files Modified in Session 17
+
+| File | Changes |
+|------|---------|
+| `src/components/dashboard/FloatingAssistant.tsx` | Added Convex imports, 12 useQuery subscriptions, localStorage name memory, 8 clientTools, dynamicVariables in startSession, silence-based auto-disconnect, stale-closure refs |
+| `src/components/dashboard/AICharacterCreatorDialog.tsx` | Fixed 4 broken fetch calls (JSON.stringify + response.json) |
+| `HANDOVER.md` | Added known issue #13 (Telnyx tool secret fallback), resolved issues |
+
+#### Key Architecture Decisions (Session 17)
+
+1. **Client tools over prompt stuffing** — Dashboard data fetched on-demand when agent asks, not crammed into the system prompt. Keeps prompt clean, data always fresh.
+2. **`dynamicVariables` for personalization** — User name and business name passed at session start via SDK's `dynamicVariables` field (v0.14.3 pattern). Portal prompt uses `{{user_name}}` placeholders.
+3. **Silence detection over keyword matching** — Keywords like "I'm done" caused false disconnects during name correction. Silence timer (15s) is more reliable. Agent's `endConversation` tool handles intentional goodbyes.
+4. **`agentTurnCountRef >= 2` gate** — Silence timer only starts after agent has spoken twice (greeting + first response). Prevents disconnecting users who take time to respond to the greeting.
+5. **`conversationRef` + `isActiveRef` guards** — All timeout callbacks use refs to prevent stale closures and double `endSession()` calls.
+6. **localStorage for name, not Convex** — Name memory is per-browser, not per-business. Simple and sufficient for single-tenant. Could move to Convex `callers` table for multi-tenant later.
+
+#### Convex Queries Used by FloatingAssistant
+
+```
+api.leads.countActive
+api.leads.countByStatus
+api.contacts.count
+api.deals.revenueThisMonth
+api.deals.closedThisMonth
+api.activities.countOverdue
+api.activities.listUpcoming
+api.conversations.listWithMessages (limit: 10)
+api.callHistory.list (limit: 10)
+api.properties.list
+api.callers.list (limit: 50)
+api.transcripts.list
+```
+
+#### ElevenLabs Agent State (Updated 2026-04-05)
+
+- **Agent ID:** `agent_0101kmaw6sfpevetxpkaafszph90`
+- **Agent Name:** "BECCA Dashboard Guide"
+- **LLM:** Gemini 2.5 Flash
+- **Voice:** "becca voice" (Primary)
+- **Status:** Live 100%, Published
+- **Tools:** 8 client tools (getDashboardStats, getUpcomingActivities, getRecentConversations, getRecentCalls, getRecentCustomers, saveUserName, clearUserName, endConversation)
+- **Dynamic Variables:** `user_name` (test: "there"), `business_name` (test: "Becca Real Estate"), `has_user_name` (test: "no")
+- **First Message:** `Hello {{user_name}}! I'm BECCA, what brilliant task are we starting on today?`
+- **System Prompt Additions:** Personalization & Memory, Dashboard Data Access (5 data tools), Ending Conversations
+
+#### Vercel Environment Variables (Updated 2026-04-05)
+
+| Variable | Scope | Status |
+|----------|-------|--------|
+| `VITE_CONVEX_URL` | All Environments | **NEW** — `https://diligent-nightingale-429.convex.cloud` |
+| `VITE_CONVEX_SITE_URL` | All Environments | **NEW** — `https://diligent-nightingale-429.convex.site` |
+| `VITE_ELEVENLABS_AGENT_ID` | Production | Existing (Mar 24) |
+| `VITE_VAPI_ASSISTANT_ID` | Production | Legacy (unused) |
+| `VITE_VAPI_PUBLIC_KEY` | Production | Legacy (unused) |
+| `VITE_SUPABASE_URL` | Production | Legacy (unused) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Production | Legacy (unused) |
+| `VITE_SUPABASE_PROJECT_ID` | Production | Legacy (unused) |
+
+#### Git Commits (Session 17)
+
+| Commit | Message |
+|--------|---------|
+| `dee2fdf` | Full Convex migration, security hardening, smart assistant ball |
+| `16ecc37` | Fix ball disconnect bug: strict farewell detection, guard double endSession |
+| `1a49264` | Replace farewell word detection with silence-based auto-disconnect |
+| `142a419` | Fix silence timer: track agent turns, increase timeout to 8s |
+| `b1c573a` | Add full data access tools, increase silence timeout to 15s |
+
+#### WHAT'S LEFT / PENDING FROM SESSION 17
+
+1. **ElevenLabs prompt update needs re-publish** — The 3 new tools (getRecentConversations, getRecentCalls, getRecentCustomers) were added in the portal and the system prompt was updated via JavaScript. Need to verify the prompt saved correctly and hit **Publish** in the ElevenLabs portal. The Chrome extension disconnected before publish could be confirmed.
+2. **Silence timeout tuning** — Currently 15 seconds. User reported 8s was too short (timed out while still talking). 15s may need further tuning based on real usage.
+3. **Legacy Vercel env vars** — `VITE_VAPI_*` and `VITE_SUPABASE_*` vars still exist in Vercel but are unused. Can be cleaned up.
+4. **Convex ALLOWED_ORIGIN** — Currently set to `http://localhost:5173`. For production, should be updated to `https://www.becca.live` so dashboard HTTP endpoints (sync-personality, sync-voice, etc.) work from the live domain.
+
+---
+
+### BUILD STATUS (Verified 2026-04-05)
 - **TypeScript:** 0 errors (`npx tsc --noEmit`)
-- **Vite build:** passes clean (`npx vite build` — 31.68s, only Tailwind CSS warnings)
-- **Bundle:** 2,524 KB (single chunk — code splitting recommended as future optimization)
+- **Vite build:** passes clean (~29s, 2,527 KB bundle)
+- **Deployed:** www.becca.live via Vercel (auto-deploy from GitHub main)
+- **GitHub:** `Drealhector/becca-ai-buddy` (main branch, commit `b1c573a`)
 
 ### MEMORY FILES (in `.claude/projects/.../memory/`)
 - `project_niche_decisions.md` — removed features, real estate focus
-- `feedback_no_github_push.md` — don't push to GitHub until user says
+- `feedback_no_github_push.md` — don't push to GitHub until user says (NOW LIFTED — pushed to GitHub in Session 17)
 - `project_n8n_channel_architecture.md` — how n8n worked, how Convex replaces it
 - `project_unified_memory.md` — one brain architecture
 - `feedback_scroll_pages.md` — always scroll full pages before concluding UI element missing
