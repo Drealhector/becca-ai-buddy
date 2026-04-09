@@ -58,6 +58,29 @@ export const update = mutation({
   },
 });
 
+// Call stats for analytics
+export const stats = query({
+  handler: async (ctx) => {
+    const calls = await ctx.db.query("call_history").collect();
+    let totalCalls = calls.length;
+    let incoming = 0;
+    let outgoing = 0;
+    let totalDuration = 0;
+    for (const c of calls) {
+      if (c.type === "incoming") incoming++;
+      else outgoing++;
+      totalDuration += c.duration_minutes || 0;
+    }
+    return {
+      totalCalls,
+      incoming,
+      outgoing,
+      avgDuration: totalCalls > 0 ? Math.round(totalDuration / totalCalls * 10) / 10 : 0,
+      totalDuration: Math.round(totalDuration * 10) / 10,
+    };
+  },
+});
+
 // Delete a call
 export const remove = mutation({
   args: { id: v.id("call_history") },

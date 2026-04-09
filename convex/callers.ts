@@ -77,10 +77,12 @@ export const upsert = mutation({
         last_channel: channel ?? existing.last_channel,
       };
 
-      // Update name only if we learn it and don't already have one
-      if (name && !existing.name) updates.name = name;
-      // Or always update if explicitly provided
-      if (name) updates.name = name;
+      // Update name — but filter out placeholder names that aren't real
+      const badNames = ["unknown", "there", "caller", "customer", "user", "anonymous"];
+      const isNewNameReal = name && !badNames.includes(name.toLowerCase().trim());
+      const hasRealName = existing.name && !badNames.includes(existing.name.toLowerCase().trim());
+      // Only overwrite with a real name. If we have a real name, still allow updates (person might correct spelling)
+      if (isNewNameReal) updates.name = name;
 
       // Append to memory summary (rolling, max 3000 chars)
       if (memory_summary) {

@@ -7,7 +7,10 @@ export const listUpcoming = query({
     const now = new Date().toISOString();
     const all = await ctx.db
       .query("activities")
-      .filter((q) => q.eq(q.field("is_completed"), false))
+      .filter((q) => q.and(
+        q.neq(q.field("is_completed"), true),
+        q.neq(q.field("completed"), true)
+      ))
       .order("asc")
       .collect();
     return all.filter((a) => a.scheduled_at && a.scheduled_at >= now);
@@ -20,7 +23,10 @@ export const listOverdue = query({
     const now = new Date().toISOString();
     const all = await ctx.db
       .query("activities")
-      .filter((q) => q.eq(q.field("is_completed"), false))
+      .filter((q) => q.and(
+        q.neq(q.field("is_completed"), true),
+        q.neq(q.field("completed"), true)
+      ))
       .order("desc")
       .collect();
     return all.filter((a) => a.scheduled_at && a.scheduled_at < now);
@@ -33,10 +39,24 @@ export const listCompleted = query({
   handler: async (ctx, { limit = 20 }) => {
     const all = await ctx.db
       .query("activities")
-      .filter((q) => q.eq(q.field("is_completed"), true))
+      .filter((q) => q.or(
+        q.eq(q.field("is_completed"), true),
+        q.eq(q.field("completed"), true)
+      ))
       .order("desc")
       .collect();
     return all.slice(0, limit);
+  },
+});
+
+// List all recent activities (regardless of completion status)
+export const listRecent = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit = 50 }) => {
+    return await ctx.db
+      .query("activities")
+      .order("desc")
+      .take(limit);
   },
 });
 
@@ -99,7 +119,10 @@ export const countOverdue = query({
     const now = new Date().toISOString();
     const all = await ctx.db
       .query("activities")
-      .filter((q) => q.eq(q.field("is_completed"), false))
+      .filter((q) => q.and(
+        q.neq(q.field("is_completed"), true),
+        q.neq(q.field("completed"), true)
+      ))
       .collect();
     return all.filter((a) => a.scheduled_at && a.scheduled_at < now).length;
   },

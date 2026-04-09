@@ -61,7 +61,7 @@ const TAG_COLORS: Record<string, string> = {
   buyer: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40",
   seller: "bg-violet-500/20 text-violet-400 border-violet-500/40",
   investor: "bg-amber-500/20 text-amber-400 border-amber-500/40",
-  VIP: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
+  renter: "bg-teal-500/20 text-teal-300 border-teal-500/40",
 };
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
@@ -383,17 +383,19 @@ export const ContactDetailSheet = ({ contact, open, onOpenChange }: ContactDetai
                 <p className="text-xs text-gray-500 py-2">No recent activities</p>
               ) : (
                 <div className="space-y-1.5">
-                  {activities.map((act) => (
+                  {activities.map((act: any) => {
+                    const actType = act.activity_type || act.type || "default";
+                    return (
                     <div
-                      key={act.id}
+                      key={act._id}
                       className="flex items-start gap-2.5 p-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/5 transition-colors"
                     >
                       <div className="mt-0.5">
-                        {ACTIVITY_ICONS[act.activity_type] || ACTIVITY_ICONS.default}
+                        {ACTIVITY_ICONS[actType] || ACTIVITY_ICONS.default}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-white truncate">
-                          {act.title || act.activity_type}
+                          {act.title || actType}
                         </p>
                         <p className="text-[10px] text-gray-500">
                           {act.created_at
@@ -402,7 +404,8 @@ export const ContactDetailSheet = ({ contact, open, onOpenChange }: ContactDetai
                         </p>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -192,14 +192,17 @@ export const processInteraction = mutation({
     }
 
     // Log CRM activity
+    const actType = args.platform === "phone" ? "call" : "message";
     await ctx.db.insert("activities", {
       business_id: args.business_id,
       contact_id: contactId,
-      type: args.platform === "phone" ? "call" : "message",
+      type: actType,
+      activity_type: actType,
       title: `${args.platform} ${args.platform === "phone" ? "call" : "conversation"}`,
       description: args.conversation_summary
         || `${args.sender_name || customerKey}: "${args.user_message.slice(0, 100)}..."`,
       completed: true,
+      is_completed: true,
       created_at: now,
       updated_at: now,
     });

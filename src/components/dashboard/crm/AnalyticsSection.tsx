@@ -17,6 +17,7 @@ import {
   Handshake,
   DollarSign,
   AlertCircle,
+  Phone,
 } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
@@ -60,12 +61,12 @@ const PIPELINE_STAGES: { key: string; label: string; color: string }[] = [
 ];
 
 const LEAD_SOURCES: { key: string; label: string; color: string }[] = [
-  { key: 'phone_call', label: 'Phone', color: '#06b6d4' },
+  { key: 'phone', label: 'Phone', color: '#06b6d4' },
   { key: 'whatsapp', label: 'WhatsApp', color: '#22c55e' },
   { key: 'instagram', label: 'Instagram', color: '#e879f9' },
   { key: 'facebook', label: 'Facebook', color: '#3b82f6' },
   { key: 'telegram', label: 'Telegram', color: '#38bdf8' },
-  { key: 'website', label: 'Website', color: '#f59e0b' },
+  { key: 'web', label: 'Website', color: '#f59e0b' },
   { key: 'manual', label: 'Manual', color: '#94a3b8' },
 ];
 
@@ -144,6 +145,7 @@ const AnalyticsSection: React.FC = () => {
   const leadStatusCounts = useQuery(api.leads.countByStatus) ?? {};
   const allContacts = useQuery(api.contacts.list, {}) ?? [];
   const allDeals = useQuery(api.deals.list, {}) ?? [];
+  const callStats = useQuery(api.callHistory.stats) ?? { totalCalls: 0, incoming: 0, outgoing: 0, avgDuration: 0, totalDuration: 0 };
 
   useEffect(() => {
     setTotalContacts(totalContactsQ);
@@ -223,16 +225,16 @@ const AnalyticsSection: React.FC = () => {
       glowColor: '0 0 20px rgba(249,115,22,0.5)',
     },
     {
-      label: 'Deals This Month',
-      value: dealsThisMonth,
-      icon: <Handshake className="h-6 w-6" />,
+      label: 'Total Calls',
+      value: callStats.totalCalls,
+      icon: <Phone className="h-6 w-6" />,
       color: 'text-emerald-400',
       glowColor: '0 0 20px rgba(16,185,129,0.5)',
     },
     {
-      label: 'Revenue This Month',
-      value: formatCurrency(revenueThisMonth),
-      icon: <DollarSign className="h-6 w-6" />,
+      label: 'Avg Call Duration',
+      value: `${callStats.avgDuration} min`,
+      icon: <Handshake className="h-6 w-6" />,
       color: 'text-green-400',
       glowColor: '0 0 20px rgba(34,197,94,0.5)',
     },

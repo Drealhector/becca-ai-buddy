@@ -237,11 +237,13 @@ const SectionCard = ({ id, title, icon: Icon, infoText, children, className = ""
         </div>
 
         {/* === CONTENT AREA WITH BLURRED MIRROR === */}
-        <div className="relative flex-1 flex flex-col overflow-hidden">
+        <div className="relative flex flex-col overflow-hidden transition-[max-height] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]"
+          style={{ maxHeight: isOpen ? '2000px' : '180px' }}
+        >
 
           {/* Layer B — Actual Content (always in DOM for sizing) */}
           <div
-            className="relative p-4 flex-1 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
+            className="relative p-4 flex-1 flex flex-col overflow-y-auto transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
             style={{
               opacity: isOpen ? 1 : (isHovered && !isRevealed ? 0.18 : 0),
               transform: isOpen

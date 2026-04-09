@@ -6,7 +6,7 @@ export const list = query({
   args: {
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, { limit = 20 }) => {
+  handler: async (ctx, { limit = 100 }) => {
     return await ctx.db
       .query("transcripts")
       .order("desc")

@@ -45,18 +45,20 @@ type ActivityType =
   | "status_change";
 
 interface Activity {
-  id: string;
-  activity_type: ActivityType;
-  title: string;
-  description: string | null;
-  contact_id: string | null;
-  lead_id: string | null;
-  scheduled_at: string | null;
-  completed_at: string | null;
-  is_completed: boolean;
-  is_ai_generated: boolean;
-  created_by: string | null;
-  created_at: string;
+  _id: string;
+  activity_type?: ActivityType;
+  type?: string;
+  title?: string;
+  description?: string | null;
+  contact_id?: string | null;
+  lead_id?: string | null;
+  scheduled_at?: string | null;
+  completed_at?: string | null;
+  is_completed?: boolean;
+  completed?: boolean;
+  is_ai_generated?: boolean;
+  created_by?: string | null;
+  created_at?: string;
 }
 
 interface Contact {
@@ -104,6 +106,7 @@ const ActivitiesSection = () => {
   const upcoming = useQuery(api.activities.listUpcoming) ?? [];
   const overdue = useQuery(api.activities.listOverdue) ?? [];
   const completed = useQuery(api.activities.listCompleted, { limit: 20 }) ?? [];
+  const recent = useQuery(api.activities.listRecent, { limit: 50 }) ?? [];
   const contactsList = useQuery(api.contacts.list, {}) ?? [];
   const markCompleteMutation = useMutation(api.activities.markComplete);
   const createActivity = useMutation(api.activities.create);
@@ -186,8 +189,9 @@ const ActivitiesSection = () => {
     activity: Activity,
     variant: "upcoming" | "overdue" | "completed"
   ) => {
+    const resolvedType = (activity.activity_type || activity.type || "task") as ActivityType;
     const config =
-      ACTIVITY_TYPE_CONFIG[activity.activity_type] || ACTIVITY_TYPE_CONFIG.task;
+      ACTIVITY_TYPE_CONFIG[resolvedType] || ACTIVITY_TYPE_CONFIG.task;
     const Icon = config.icon;
 
     const isOverdue = variant === "overdue";
@@ -195,7 +199,7 @@ const ActivitiesSection = () => {
 
     return (
       <div
-        key={activity.id}
+        key={activity._id}
         className={`
           flex items-center gap-3 p-3 rounded-lg border-l-4 transition-all
           ${
@@ -221,7 +225,7 @@ const ActivitiesSection = () => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-sm text-gray-100 truncate">
-              {activity.title}
+              {activity.title || resolvedType}
             </span>
             {activity.is_ai_generated && (
               <Badge
@@ -264,7 +268,7 @@ const ActivitiesSection = () => {
             variant="ghost"
             size="icon"
             className="flex-shrink-0 h-8 w-8 text-gray-500 hover:text-green-400 hover:bg-green-950/40 hover:shadow-[0_0_12px_rgba(34,197,94,0.2)] transition-all"
-            onClick={() => handleComplete(activity.id)}
+            onClick={() => handleComplete(activity._id)}
           >
             <CheckCircle2 className="h-4 w-4" />
           </Button>
@@ -424,6 +428,12 @@ const ActivitiesSection = () => {
           >
             Completed
           </TabsTrigger>
+          <TabsTrigger
+            value="all"
+            className="data-[state=active]:bg-indigo-900/30 data-[state=active]:text-indigo-400 text-xs"
+          >
+            All ({recent.length})
+          </TabsTrigger>
         </TabsList>
 
         <div className="flex-1 overflow-y-auto max-h-[420px]">
@@ -443,6 +453,16 @@ const ActivitiesSection = () => {
             {completed.length === 0
               ? renderEmptyState("No completed activities")
               : completed.map((a) => renderActivityItem(a, "completed"))}
+          </TabsContent>
+
+          <TabsContent value="all" className="mt-0 space-y-2">
+            {recent.length === 0
+              ? renderEmptyState("No activities recorded yet")
+              : recent.map((a) => {
+                  const done = a.is_completed || a.completed;
+                  const isOld = a.scheduled_at && a.scheduled_at < new Date().toISOString();
+                  return renderActivityItem(a, done ? "completed" : isOld ? "overdue" : "upcoming");
+                })}
           </TabsContent>
         </div>
       </Tabs>

@@ -83,8 +83,10 @@ export const AIPersonalitySection = () => {
           headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         });
         const syncData = await syncRes.json();
-        if (syncData.success) {
+        if (syncRes.ok && syncData.success) {
           synced = true;
+        } else {
+          console.error("Telnyx sync failed:", syncData.error || syncRes.status);
         }
       } catch (syncErr) {
         console.error("Error syncing to Telnyx:", syncErr);

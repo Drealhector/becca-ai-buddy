@@ -23,7 +23,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ContactDetailSheet } from "./ContactDetailSheet";
 
 type TemperatureFilter = "all" | "hot" | "warm" | "cold";
-type TagFilter = "buyer" | "seller" | "investor" | "VIP";
+type TagFilter = "buyer" | "seller" | "investor" | "renter";
 
 const TEMPERATURE_CONFIG: Record<string, { label: string; color: string; glow: string; icon: React.ReactNode }> = {
   hot: {
@@ -50,10 +50,10 @@ const TAG_COLORS: Record<string, string> = {
   buyer: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40",
   seller: "bg-violet-500/20 text-violet-400 border-violet-500/40",
   investor: "bg-amber-500/20 text-amber-400 border-amber-500/40",
-  VIP: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
+  renter: "bg-teal-500/20 text-teal-300 border-teal-500/40",
 };
 
-const ALL_TAGS: TagFilter[] = ["buyer", "seller", "investor", "VIP"];
+const ALL_TAGS: TagFilter[] = ["buyer", "seller", "investor", "renter"];
 
 const ContactsSection = () => {
   const contacts = useQuery(api.contacts.list, {}) ?? [];

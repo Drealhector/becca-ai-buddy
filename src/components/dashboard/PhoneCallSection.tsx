@@ -49,6 +49,7 @@ const PhoneCallSection = () => {
 
   // Convex reactive queries (auto-update, no manual fetch needed)
   const callHistory = useQuery(api.callHistory.list, { limit: 100 }) ?? [];
+  const transcriptsList = useQuery(api.transcripts.list) ?? [];
   const scheduledCalls = useQuery(api.scheduledCalls.listPending) ?? [];
   const deleteCall = useMutation(api.callHistory.remove);
   const createScheduledCall = useMutation(api.scheduledCalls.create);
@@ -238,11 +239,24 @@ const PhoneCallSection = () => {
   };
 
   const handleViewTranscript = async (call: any) => {
-    // Transcript data comes from Convex reactively via call_history
-    // For now show the topic as transcript summary
+    // Look up transcript by conversation_id from already-loaded transcripts
+    let transcriptText = call.topic || "No transcript available for this call";
+    let callerInfo = call.number;
+
+    if (call.conversation_id) {
+      const match = transcriptsList.find(
+        (t: any) => t.conversation_id === call.conversation_id
+      );
+      if (match?.transcript_text) {
+        transcriptText = match.transcript_text;
+        callerInfo = match.caller_info || call.number;
+      }
+    }
+
     setSelectedCallTranscript({
       ...call,
-      transcript: call.topic || "No transcript available for this call"
+      transcript: transcriptText,
+      caller_info: callerInfo,
     });
     setShowTranscriptDialog(true);
   };
@@ -276,8 +290,9 @@ const PhoneCallSection = () => {
     setAudioRef(audio);
   };
 
-  const incomingCalls = callHistory.filter((call) => call.type === "incoming");
-  const outgoingCalls = callHistory.filter((call) => call.type === "outgoing");
+  const sortByTime = (a: any, b: any) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime();
+  const incomingCalls = callHistory.filter((call) => call.type === "incoming").sort(sortByTime);
+  const outgoingCalls = callHistory.filter((call) => call.type === "outgoing").sort(sortByTime);
 
   const renderCallTile = (call: any) => (
     <div
@@ -567,21 +582,38 @@ const PhoneCallSection = () => {
       <Dialog open={showTranscriptDialog} onOpenChange={setShowTranscriptDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Call Transcript - {selectedCallTranscript?.number}</DialogTitle>
+            <DialogTitle>
+              Call Transcript{selectedCallTranscript?.caller_info ? ` - ${selectedCallTranscript.caller_info}` : ` - ${selectedCallTranscript?.number}`}
+            </DialogTitle>
           </DialogHeader>
           <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-4">
               <div className="border border-border rounded-lg p-4">
-                <p className="text-sm text-muted-foreground mb-2">
-                  {selectedCallTranscript?.timestamp && format(new Date(selectedCallTranscript.timestamp), "MMM dd, yyyy HH:mm")}
-                </p>
-                <p className="text-sm font-medium mb-2">Duration: {selectedCallTranscript?.duration_minutes || 0} minutes</p>
-                {selectedCallTranscript?.topic && (
-                  <p className="text-sm mb-3"><span className="font-medium">Topic:</span> {selectedCallTranscript.topic}</p>
+                <div className="flex items-center gap-4 mb-3">
+                  <p className="text-sm text-muted-foreground">
+                    {selectedCallTranscript?.timestamp && format(new Date(selectedCallTranscript.timestamp), "MMM dd, yyyy HH:mm")}
+                  </p>
+                  <p className="text-sm font-medium">Duration: {selectedCallTranscript?.duration_minutes || 0} min</p>
+                  <Badge variant={selectedCallTranscript?.type === "incoming" ? "default" : "secondary"}>
+                    {selectedCallTranscript?.type || "call"}
+                  </Badge>
+                </div>
+                {selectedCallTranscript?.recording_url && (
+                  <div className="mb-3">
+                    <audio controls className="w-full h-8" src={selectedCallTranscript.recording_url}>
+                      Your browser does not support audio playback.
+                    </audio>
+                  </div>
                 )}
                 <div className="mt-3 p-3 bg-muted/50 rounded">
-                  <p className="text-xs text-muted-foreground mb-1">Transcript:</p>
-                  <p className="text-sm whitespace-pre-wrap">{selectedCallTranscript?.transcript || "No transcript available for this call"}</p>
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">Transcript:</p>
+                  <div className="text-sm space-y-1">
+                    {(selectedCallTranscript?.transcript || "No transcript available").split("\n").map((line: string, i: number) => (
+                      <p key={i} className={line.startsWith("Becca:") ? "text-cyan-400" : line.startsWith("Caller:") ? "text-white" : "text-muted-foreground"}>
+                        {line}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

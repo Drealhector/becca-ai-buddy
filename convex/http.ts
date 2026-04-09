@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 const http = httpRouter();
 
@@ -354,6 +355,23 @@ const webChatEndpoint = httpAction(async (ctx, request) => {
   }
 });
 
+// ─── HELPER: FORMAT PRICES FOR SPEECH ──────────────────────────
+function formatPrice(price: number, currency?: string, period?: string): string {
+  const c = currency || "Naira";
+  let formatted = "";
+  if (price >= 1000000000) {
+    formatted = `${(price / 1000000000).toFixed(1).replace('.0', '')} billion ${c}`;
+  } else if (price >= 1000000) {
+    formatted = `${(price / 1000000).toFixed(1).replace('.0', '')} million ${c}`;
+  } else if (price >= 1000) {
+    formatted = `${(price / 1000).toFixed(0)} thousand ${c}`;
+  } else {
+    formatted = `${price} ${c}`;
+  }
+  if (period) formatted += ` per ${period}`;
+  return formatted;
+}
+
 // ─── TELNYX: CUSTOMER LOOKUP TOOL ────────────────────────────
 // Called by Telnyx AI Assistant during a call to get customer context
 // Also returns available properties so the assistant can answer property questions
@@ -363,7 +381,13 @@ const telnyxCustomerLookup = httpAction(async (ctx, request) => {
   }
   try {
     const body = await request.json();
-    const phoneNumber = body.phone_number || body.caller_number || body.from;
+    // CRITICAL: Use the REAL caller phone from Telnyx metadata, NOT whatever the LLM sends.
+    // The LLM sometimes hallucinates/confuses phone numbers from conversation context.
+    const payload = body.data?.payload || body.payload || body;
+    const phoneNumber = payload.telnyx_end_user_target
+      || payload.from || body.phone_number || body.caller_number || body.from;
+
+    console.log("customer_lookup: real phone from Telnyx =", payload.telnyx_end_user_target, "| LLM sent =", body.phone_number);
 
     if (!phoneNumber) {
       return new Response(
@@ -391,9 +415,8 @@ const telnyxCustomerLookup = httpAction(async (ctx, request) => {
           if (p.listing_type) parts.push(`for ${p.listing_type}`);
           if (p.bedrooms) parts.push(`${p.bedrooms}bed`);
           if (p.bathrooms) parts.push(`${p.bathrooms}bath`);
-          if (p.price) parts.push(`${p.currency || "₦"}${p.price.toLocaleString()}${p.price_period ? "/" + p.price_period : ""}`);
+          if (p.price) parts.push(formatPrice(p.price, "Naira", p.price_period));
           if (p.city) parts.push(p.city);
-          if (p.status === "pending") parts.push("(pending)");
           return parts.join(" | ");
         }).join("\n")
       : "No properties currently listed.";
@@ -409,9 +432,14 @@ const telnyxCustomerLookup = httpAction(async (ctx, request) => {
         tags: context.crmTags,
         available_properties: propertySummary,
         property_count: availableProperties.length,
-        context_prompt: (context.isReturning
-          ? `This is a returning caller${context.name ? ` named ${context.name}` : ""}. They have contacted ${context.callCount} times. ${context.memorySummary ? `Memory: ${context.memorySummary.slice(0, 500)}` : ""}`
-          : "This is a first-time caller. Be extra warm and welcoming.")
+        context_prompt: (() => {
+          const callerInvalidNames = ["unknown", "there", "caller", "customer", "user", "anonymous", ""];
+          const callerRealName = context.name && !callerInvalidNames.includes(context.name.toLowerCase().trim()) ? context.name : null;
+          if (context.isReturning) {
+            return `This is a returning caller${callerRealName ? ` named ${callerRealName}` : " (you don't know their name yet — ask for it!)"}. They have contacted ${context.callCount} times. ${context.memorySummary ? `Memory: ${context.memorySummary.slice(0, 500)}` : ""}`;
+          }
+          return "This is a first-time caller. Be extra warm and welcoming. Ask for their name early in the conversation.";
+        })()
           + `\n\nAVAILABLE PROPERTIES (${availableProperties.length} listings):\n${propertySummary}`,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
@@ -434,8 +462,17 @@ const telnyxSaveCustomer = httpAction(async (ctx, request) => {
   }
   try {
     const body = await request.json();
-    const phoneNumber = body.phone_number || body.caller_number || body.from;
-    const name = body.name || body.customer_name;
+    // CRITICAL: Use the REAL caller phone from Telnyx metadata, NOT the LLM-provided one.
+    // The LLM sometimes sends wrong phone numbers from conversation context.
+    const payload = body.data?.payload || body.payload || body;
+    const phoneNumber = payload.telnyx_end_user_target
+      || payload.from || body.phone_number || body.caller_number || body.from;
+
+    console.log("save_customer: real phone from Telnyx =", payload.telnyx_end_user_target, "| LLM sent =", body.phone_number);
+    const rawName = body.name || body.customer_name || "";
+    // Filter out placeholder/invalid names — the AI sometimes saves "Unknown" or "Caller"
+    const nameInvalid = ["unknown", "there", "caller", "customer", "user", "anonymous", ""];
+    const name = rawName && !nameInvalid.includes(rawName.toLowerCase().trim()) ? rawName : undefined;
     const notes = body.notes || body.summary;
     const email = body.email;
     const budget = body.budget;
@@ -456,12 +493,13 @@ const telnyxSaveCustomer = httpAction(async (ctx, request) => {
       channel: "phone",
     });
 
-    // Also update CRM contact with richer data
+    // Also update OR CREATE CRM contact with richer data
     const existingContact = await ctx.runQuery(api.contacts.getByPhone, {
       phone: phoneNumber,
     });
 
     if (existingContact) {
+      // Update existing contact with any new info
       await ctx.runMutation(api.contacts.update, {
         id: existingContact._id,
         ...(name ? { full_name: name } : {}),
@@ -469,6 +507,18 @@ const telnyxSaveCustomer = httpAction(async (ctx, request) => {
         ...(notes ? { notes } : {}),
         ...(budget ? { budget_min: budget } : {}),
         ...(propertyInterest ? { property_type_interests: [propertyInterest] } : {}),
+      });
+    } else {
+      // CREATE new CRM contact — this is critical for name to appear in CRM
+      await ctx.runMutation(api.contacts.create, {
+        name: name || undefined,
+        full_name: name || undefined,
+        phone: phoneNumber,
+        source: "phone",
+        temperature: "warm",
+        notes: notes || `Auto-created from phone call via save_customer`,
+        tags: ["phone"],
+        ...(email ? { email } : {}),
       });
     }
 
@@ -538,6 +588,7 @@ const telnyxGetProperties = httpAction(async (ctx, request) => {
       listing_type: p.listing_type,
       status: p.status,
       price: p.price,
+      price_display: p.price ? formatPrice(p.price, "Naira", p.price_period) : undefined,
       currency: p.currency || "₦",
       price_period: p.price_period,
       bedrooms: p.bedrooms,
@@ -560,7 +611,7 @@ const telnyxGetProperties = httpAction(async (ctx, request) => {
           if (p.bedrooms) parts.push(`${p.bedrooms} bedrooms`);
           if (p.bathrooms) parts.push(`${p.bathrooms} bathrooms`);
           if (p.sqft) parts.push(`${p.sqft} sqft`);
-          if (p.price) parts.push(`${p.currency || "₦"}${p.price.toLocaleString()}${p.price_period ? " per " + p.price_period : ""}`);
+          if (p.price) parts.push(formatPrice(p.price, "Naira", p.price_period));
           if (p.address) parts.push(`at ${p.address}`);
           if (p.city) parts.push(p.city);
           if (p.description) parts.push(`— ${p.description.slice(0, 100)}`);
@@ -584,6 +635,84 @@ const telnyxGetProperties = httpAction(async (ctx, request) => {
       JSON.stringify({ total_matches: 0, properties: [], summary: "Error fetching properties." }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
+  }
+});
+
+// ─── TELNYX: LOCATION LOOKUP TOOL ─────────────────────────────
+// Called by Telnyx AI assistant to look up real locations in Nigeria via OpenStreetMap
+const telnyxLocationLookup = httpAction(async (ctx, request) => {
+  if (!validateTelnyxToolSecret(request)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403 });
+  }
+
+  try {
+    const body = await request.json();
+    const location = body.location || body.query || "";
+
+    if (!location) {
+      return new Response(JSON.stringify({ found: false, message: "No location provided" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Search with Nigeria bias using OpenStreetMap Nominatim (free, no API key)
+    const query = encodeURIComponent(`${location}, Nigeria`);
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${query}&format=json&countrycodes=ng&limit=5&addressdetails=1`,
+      { headers: { "User-Agent": "BeccaRealEstate/1.0" } }
+    );
+
+    if (!response.ok) {
+      return new Response(JSON.stringify({ found: false, message: "Location service unavailable" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const results = await response.json();
+
+    if (results.length === 0) {
+      return new Response(JSON.stringify({
+        found: false,
+        message: `Could not find "${location}" in Nigeria. Ask the caller to spell it or provide more details.`,
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Format the top results
+    const locations = results.slice(0, 3).map((r: any) => ({
+      name: r.display_name,
+      type: r.type,
+      city: r.address?.city || r.address?.town || r.address?.village || r.address?.state,
+      state: r.address?.state,
+      lat: r.lat,
+      lon: r.lon,
+    }));
+
+    const topResult = locations[0];
+    const summary = `Found "${location}" in ${topResult.state || "Nigeria"}. Full location: ${topResult.name}`;
+
+    return new Response(JSON.stringify({
+      found: true,
+      summary,
+      location_name: location,
+      confirmed_location: topResult.name,
+      state: topResult.state,
+      city: topResult.city,
+      matches: locations,
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Location lookup error:", error);
+    return new Response(JSON.stringify({ found: false, message: "Location lookup failed" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 });
 
@@ -700,26 +829,40 @@ const telnyxSyncPersonality = httpAction(async (ctx, request) => {
         Authorization: `Bearer ${telnyxKey}`,
       },
       body: JSON.stringify({
-        instructions: personalityText + `\n\nIMPORTANT RULES:
-- Keep responses concise (1 to 3 sentences for quick answers, slightly longer for detailed explanations).
-- Do NOT use hyphens, en dashes, or em dashes. Use commas and periods instead.
-- Be warm and conversational. You are on a phone call.
-- ALWAYS ask for the caller's name early in the conversation in a natural way (e.g. "And who am I speaking with today?").
-- When you learn the caller's name, use save_customer to save it immediately with their phone_number and name. Then use their name naturally throughout the call.
-- When someone asks about properties, availability, pricing, or listings, use get_properties to search with filters (bedrooms, city, listing_type, property_type, max_price). Present results naturally as if you know them from memory.
-- The customer_lookup tool is called automatically at the start of each call. It loads the caller's history, memory, and all available property listings. Use that context to personalize the conversation.
-- If no properties match what the caller wants, offer to take their requirements so you can follow up when something becomes available. Use save_customer to record their preferences in the notes and property_interest fields.
-- NEVER mention "database", "system", "records", "CRM", "tools", or "webhook". Just talk naturally as if you know everything from memory.
-- When the call ends, all information is automatically saved. You do not need to tell the caller you are saving anything.`,
+        instructions: personalityText + `\n\nCORE RULES:
+- You operate in Nigeria. Use lookup_location to verify unfamiliar place names.
+- ALWAYS say "Naira" for currency, never "NGN". Say "35 million Naira" not "35,000,000 NGN". Say "million" and "thousand" naturally.
+- ALWAYS respond to the caller. Never go silent.
+- Keep responses to 1-3 sentences. Sound human, not robotic.
+- Start responses with natural reactions like "Oh yeah!", "Sure thing!", "Ah nice!". Use filler words like "umm", "so", "actually".
+- No hyphens or dashes. No bullet points or long lists. Mention 2-3 properties max, then ask which interests them.
+- Never mention "database", "system", "records", "CRM", or "tools". Talk as if you remember everything naturally.
+
+CALLER HANDLING (CRITICAL — follow this EVERY call):
+- FIRST THING on every call: call customer_lookup immediately with phone_number set to "+234". The system automatically knows the caller's real phone number — you do NOT need to figure it out or guess it. Just pass "+234" and the system handles the rest.
+- NEVER ask for their phone number — the system already has it from the call.
+- If customer_lookup returns a name, you already know them. Reference their past conversations naturally. Say things like "Hey [name]! Good to hear from you again!" or "Oh [name], welcome back!". NEVER re-ask their name.
+- If customer_lookup shows this is a first-time caller (no name), ask for their name within the first 2 exchanges. Say something like "By the way, what's your name?" or "And who am I speaking with today?". Then IMMEDIATELY save it with save_customer.
+- When calling save_customer, set phone_number to "+234". The system automatically uses the real caller phone. NEVER type in a phone number you heard in conversation or saw in memory — it may belong to a different person.
+- ALWAYS save the caller's name and notes with save_customer before ending the call. Even if nothing important happened, save a brief note about what they asked about.
+
+PROPERTY SEARCH:
+- Use get_properties with filters: bedrooms (number), city (string), listing_type ("sale"/"rent"/"lease"), property_type ("house"/"apartment"/"commercial"/"land"), max_price (number), min_price (number). Use "city" not "location".
+- Bungalow/duplex = "house". Flat/studio = "apartment". Warehouse/office = "commercial".
+- Present prices in words: "35 million Naira" or "3 and a half million Naira per year".
+
+APPOINTMENTS AND SAVING:
+- Book viewings directly. Ask what day and time works, confirm, and save with save_customer. Never say you will transfer them.
+- Save caller preferences with save_customer if no properties match, so you can follow up later.`,
         dynamic_variables_webhook_url: `https://diligent-nightingale-429.convex.site/telnyx/dynamic-variables${process.env.TELNYX_TOOL_SECRET ? "?secret=" + process.env.TELNYX_TOOL_SECRET : ""}`,
       }),
     });
 
     if (!response.ok) {
       const err = await response.text();
-      console.error("Telnyx update error:", err);
+      console.error("Telnyx update error:", response.status, err);
       return new Response(
-        JSON.stringify({ error: "Failed to sync" }),
+        JSON.stringify({ error: "Failed to sync to Telnyx", status: response.status, detail: err }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -767,12 +910,18 @@ const telnyxDynamicVariables = httpAction(async (ctx, request) => {
       platform: "phone",
     });
 
-    // Return dynamic_variables for greeting personalization
+    // Return dynamic_variables for greeting personalization + caller phone for auto-lookup
     // If we know the name, greeting becomes "Hi John!" otherwise "Hi there!"
+    // Filter out placeholder names that aren't real names
+    const invalidNames = ["unknown", "there", "caller", "customer", "user", "anonymous", ""];
+    const rawName = context.name || "";
+    const isRealName = rawName.length > 0 && !invalidNames.includes(rawName.toLowerCase().trim());
+
     return new Response(
       JSON.stringify({
         dynamic_variables: {
-          caller_name: context.name || "there",
+          caller_name: isRealName ? rawName : "there",
+          caller_phone: phoneNumber,
         },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
@@ -1073,6 +1222,7 @@ http.route({ path: "/telnyx/dynamic-variables", method: "POST", handler: telnyxD
 http.route({ path: "/telnyx/customer-lookup", method: "POST", handler: telnyxCustomerLookup });
 http.route({ path: "/telnyx/save-customer", method: "POST", handler: telnyxSaveCustomer });
 http.route({ path: "/telnyx/get-properties", method: "POST", handler: telnyxGetProperties });
+http.route({ path: "/telnyx/lookup-location", method: "POST", handler: telnyxLocationLookup });
 http.route({ path: "/telnyx/call-webhook", method: "POST", handler: telnyxCallWebhook });
 http.route({ path: "/telnyx/sync-personality", method: "POST", handler: telnyxSyncPersonality });
 http.route({ path: "/telnyx/sync-personality", method: "OPTIONS", handler: telnyxSyncPersonality });
@@ -1082,6 +1232,36 @@ http.route({ path: "/telnyx/outbound-call", method: "POST", handler: telnyxOutbo
 http.route({ path: "/telnyx/outbound-call", method: "OPTIONS", handler: telnyxOutboundCall });
 http.route({ path: "/telnyx/end-call", method: "POST", handler: telnyxEndCall });
 http.route({ path: "/telnyx/end-call", method: "OPTIONS", handler: telnyxEndCall });
+
+// Sync calls from Telnyx
+const syncCallsEndpoint = httpAction(async (ctx, request) => {
+  const corsHeaders = getCorsHeaders();
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  // Require authentication
+  if (!(await validateDashboardAuth(ctx, request))) {
+    return unauthorizedResponse(corsHeaders);
+  }
+
+  try {
+    const result = await ctx.runAction(api.syncCalls.syncRecentCalls, { pageSize: 20 });
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Sync calls error:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to sync calls" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
+http.route({ path: "/sync-calls", method: "POST", handler: syncCallsEndpoint });
+http.route({ path: "/sync-calls", method: "OPTIONS", handler: syncCallsEndpoint });
 
 // AI tools (logo, analyze, character creator)
 http.route({ path: "/generate-logo", method: "POST", handler: generateLogoEndpoint });
