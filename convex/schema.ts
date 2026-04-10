@@ -356,4 +356,13 @@ export default defineSchema({
     changed_at: v.optional(v.string()),
     changed_by: v.optional(v.string()),
   }).index("by_lead_id", ["lead_id"]),
+
+  // Temporary mapping: Telnyx call → real caller phone
+  // Written by dynamic_variables webhook (which gets the real phone from Telnyx)
+  // Read by customer_lookup and save_customer webhooks (which DON'T get the real phone)
+  active_calls: defineTable({
+    telnyx_call_id: v.string(),
+    caller_phone: v.string(),
+    created_at: v.string(),
+  }).index("by_call_id", ["telnyx_call_id"]),
 });

@@ -63,6 +63,11 @@ export const upsert = mutation({
     channel: v.optional(v.string()),             // which channel: whatsapp, instagram, facebook, telegram, phone, web
   },
   handler: async (ctx, { phone, name, memory_summary, call_summary, channel }) => {
+    // Reject placeholder phone numbers that aren't real
+    if (!phone || phone.length < 6 || phone === "+234") {
+      console.error("callers.upsert: rejected invalid phone:", phone);
+      return null;
+    }
     const now = new Date().toISOString();
     const existing = await ctx.db
       .query("callers")
@@ -124,6 +129,14 @@ export const upsert = mutation({
       last_channel: channel ?? undefined,
       updated_at: now,
     });
+  },
+});
+
+// Delete a caller record (for cleanup)
+export const remove = mutation({
+  args: { id: v.id("callers") },
+  handler: async (ctx, { id }) => {
+    await ctx.db.delete(id);
   },
 });
 

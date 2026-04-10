@@ -15,6 +15,9 @@ const PublicHub = () => {
   const customization = useQuery(api.customizations.get, {});
   const convexProducts = useQuery(api.products.list, {});
   const products = (convexProducts as any[]) || [];
+  const convexProperties = useQuery(api.properties.list, {});
+  const availableProperties = ((convexProperties as any[]) || []).filter((p: any) => p.status === "available" || p.status === "pending");
+  const [propertyFilter, setPropertyFilter] = useState<string>("all");
   const loading = customization === undefined;
 
   useEffect(() => {
@@ -237,6 +240,92 @@ const PublicHub = () => {
             );
           })}
         </div>
+
+        {/* Featured Properties */}
+        {availableProperties.length > 0 && (
+          <div className="mt-12 w-full max-w-3xl mx-auto px-4">
+            <h2 className="text-2xl font-bold text-white mb-2 text-center">Featured Properties</h2>
+            <p className="text-white/60 text-sm text-center mb-6">Browse our available listings</p>
+
+            {/* Filter buttons */}
+            <div className="flex flex-wrap gap-2 justify-center mb-6">
+              {["all", "sale", "rent", "lease"].map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setPropertyFilter(filter)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    propertyFilter === filter
+                      ? "bg-white/20 text-white border border-white/40 shadow-lg"
+                      : "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10"
+                  }`}
+                >
+                  {filter === "all" ? "All" : `For ${filter.charAt(0).toUpperCase() + filter.slice(1)}`}
+                </button>
+              ))}
+            </div>
+
+            {/* Property cards grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {availableProperties
+                .filter((p: any) => propertyFilter === "all" || p.listing_type === propertyFilter)
+                .slice(0, 6)
+                .map((property: any) => (
+                  <div
+                    key={property._id}
+                    className="bg-gray-900/80 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden hover:border-white/20 transition-all hover:shadow-lg hover:shadow-cyan-500/10"
+                  >
+                    {/* Property image */}
+                    {property.images?.[0] ? (
+                      <img
+                        src={property.images[0]}
+                        alt={property.title}
+                        className="w-full h-40 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-40 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                        <span className="text-4xl">🏠</span>
+                      </div>
+                    )}
+
+                    {/* Property info */}
+                    <div className="p-4">
+                      <h3 className="text-white font-semibold text-base truncate">{property.title}</h3>
+                      <p className="text-white/50 text-xs mt-1">
+                        {property.city}{property.state ? `, ${property.state}` : ""}
+                      </p>
+
+                      {/* Specs */}
+                      <div className="flex items-center gap-3 mt-2 text-white/60 text-xs">
+                        {property.bedrooms != null && <span>{property.bedrooms} bed</span>}
+                        {property.bathrooms != null && <span>{property.bathrooms} bath</span>}
+                        {property.sqft && <span>{property.sqft.toLocaleString()} sqft</span>}
+                      </div>
+
+                      {/* Price and type */}
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="text-cyan-400 font-bold">
+                          ₦{(property.price || 0).toLocaleString()}
+                          {property.price_period && property.price_period !== "one-time"
+                            ? `/${property.price_period === "monthly" ? "mo" : "yr"}`
+                            : ""}
+                        </span>
+                        <span className="text-[10px] uppercase bg-white/10 text-white/70 px-2 py-0.5 rounded-full">
+                          {property.listing_type || "sale"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {/* Show more indicator */}
+            {availableProperties.filter((p: any) => propertyFilter === "all" || p.listing_type === propertyFilter).length > 6 && (
+              <p className="text-center text-white/40 text-sm mt-4">
+                Call or chat to see more listings
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Call dialog replaced — calls go through Telnyx phone directly */}

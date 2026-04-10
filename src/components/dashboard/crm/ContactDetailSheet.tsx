@@ -88,11 +88,19 @@ export const ContactDetailSheet = ({ contact, open, onOpenChange }: ContactDetai
   const leads = useQuery(api.leads.listByContact, contact?._id ? { contact_id: contact._id } : "skip") ?? [];
   const activities = useQuery(api.activities.listByContact, contact?._id ? { contact_id: contact._id } : "skip") ?? [];
   const updateContact = useMutation(api.contacts.update);
+  const createLead = useMutation(api.leads.create);
+  const createActivity = useMutation(api.activities.create);
+  const createScheduledCall = useMutation(api.scheduledCalls.create);
 
   const [notes, setNotes] = useState(contact.notes || "");
   const [tags, setTags] = useState<string[]>(contact.tags || []);
   const [newTag, setNewTag] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [showNoteForm, setShowNoteForm] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [schedulePurpose, setSchedulePurpose] = useState("");
+  const [scheduleDate, setScheduleDate] = useState("");
 
   useEffect(() => {
     if (open && contact?._id) {
@@ -204,6 +212,19 @@ export const ContactDetailSheet = ({ contact, open, onOpenChange }: ContactDetai
                 size="sm"
                 variant="outline"
                 className="flex-1 gap-1 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
+                onClick={async () => {
+                  if (!contact) return;
+                  try {
+                    await createLead({
+                      contact_id: contact._id as any,
+                      title: `${contact.full_name || contact.name || contact.phone} — New Lead`,
+                      source: contact.source || "manual",
+                    });
+                    toast.success("Lead created successfully");
+                  } catch (err) {
+                    toast.error("Failed to create lead");
+                  }
+                }}
               >
                 <Target className="h-3.5 w-3.5" /> Create Lead
               </Button>
@@ -211,6 +232,7 @@ export const ContactDetailSheet = ({ contact, open, onOpenChange }: ContactDetai
                 size="sm"
                 variant="outline"
                 className="flex-1 gap-1 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
+                onClick={() => setShowScheduleForm(true)}
               >
                 <PhoneCall className="h-3.5 w-3.5" /> Schedule Call
               </Button>
@@ -218,10 +240,80 @@ export const ContactDetailSheet = ({ contact, open, onOpenChange }: ContactDetai
                 size="sm"
                 variant="outline"
                 className="flex-1 gap-1 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
+                onClick={() => setShowNoteForm(true)}
               >
                 <StickyNote className="h-3.5 w-3.5" /> Add Note
               </Button>
             </div>
+
+            {/* Add Note Form */}
+            {showNoteForm && (
+              <div className="space-y-2 p-3 rounded-lg border border-white/10 bg-white/5">
+                <textarea
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder="Type your note..."
+                  rows={3}
+                  className="w-full rounded-md bg-gray-900 border border-gray-700 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 resize-none focus:outline-none focus:ring-1 focus:ring-cyan-700"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" className="bg-cyan-700 hover:bg-cyan-600 text-white" onClick={async () => {
+                    if (!noteText.trim()) return;
+                    try {
+                      await createActivity({
+                        contact_id: contact._id as any,
+                        activity_type: "note",
+                        type: "note",
+                        title: `Note for ${contact.full_name || contact.name || contact.phone}`,
+                        description: noteText.trim(),
+                        is_completed: true,
+                        completed: true,
+                      });
+                      setNoteText("");
+                      setShowNoteForm(false);
+                      toast.success("Note added");
+                    } catch { toast.error("Failed to add note"); }
+                  }}>Save Note</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setShowNoteForm(false); setNoteText(""); }}>Cancel</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Schedule Call Form */}
+            {showScheduleForm && (
+              <div className="space-y-2 p-3 rounded-lg border border-white/10 bg-white/5">
+                <input
+                  type="text"
+                  value={schedulePurpose}
+                  onChange={(e) => setSchedulePurpose(e.target.value)}
+                  placeholder="Call purpose..."
+                  className="w-full rounded-md bg-gray-900 border border-gray-700 px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-700"
+                />
+                <input
+                  type="datetime-local"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  className="w-full rounded-md bg-gray-900 border border-gray-700 px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-1 focus:ring-cyan-700"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" className="bg-cyan-700 hover:bg-cyan-600 text-white" onClick={async () => {
+                    if (!scheduleDate) { toast.error("Please select a date"); return; }
+                    try {
+                      await createScheduledCall({
+                        phone_number: contact.phone || "",
+                        purpose: schedulePurpose || `Follow-up with ${contact.full_name || contact.name || contact.phone}`,
+                        scheduled_at: new Date(scheduleDate).toISOString(),
+                      });
+                      setSchedulePurpose("");
+                      setScheduleDate("");
+                      setShowScheduleForm(false);
+                      toast.success("Call scheduled");
+                    } catch { toast.error("Failed to schedule call"); }
+                  }}>Schedule</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setShowScheduleForm(false); setSchedulePurpose(""); setScheduleDate(""); }}>Cancel</Button>
+                </div>
+              </div>
+            )}
 
             {/* Tags */}
             <div className="space-y-2">
@@ -267,9 +359,9 @@ export const ContactDetailSheet = ({ contact, open, onOpenChange }: ContactDetai
                   <DollarSign className="h-3.5 w-3.5 text-green-400" /> Budget Range
                 </h4>
                 <p className="text-white font-medium">
-                  {contact.budget_min != null ? `$${Number(contact.budget_min).toLocaleString()}` : "N/A"}
+                  {contact.budget_min != null ? `₦${Number(contact.budget_min).toLocaleString()}` : "N/A"}
                   {" - "}
-                  {contact.budget_max != null ? `$${Number(contact.budget_max).toLocaleString()}` : "N/A"}
+                  {contact.budget_max != null ? `₦${Number(contact.budget_max).toLocaleString()}` : "N/A"}
                 </p>
               </div>
             )}

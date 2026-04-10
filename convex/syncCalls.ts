@@ -2,6 +2,43 @@ import { action, internalMutation, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
+// ─── HELPER: Extract structured data from save_customer notes ──────
+function extractStructuredData(notes: string) {
+  if (!notes) return {};
+  const lower = notes.toLowerCase();
+
+  // Property type detection
+  const propertyTypeMatch = lower.match(/\b(duplex|bungalow|flat|studio|warehouse|office|shop|apartment|house|condo|land|commercial|mansion|penthouse|terrace|maisonette)\b/);
+  const propertyType = propertyTypeMatch?.[0] || undefined;
+
+  // Bedroom count
+  const bedroomMatch = lower.match(/(\d+)\s*(?:bed(?:room)?s?)/);
+  const bedrooms = bedroomMatch ? parseInt(bedroomMatch[1]) : undefined;
+
+  // Budget/price extraction (Nigerian style: "25 million Naira")
+  let budget: number | undefined;
+  const priceMatch = lower.match(/(\d+(?:\.\d+)?)\s*(million|thousand|billion)\s*(?:naira)?/);
+  if (priceMatch) {
+    const num = parseFloat(priceMatch[1]);
+    const unit = priceMatch[2];
+    if (unit === "billion") budget = num * 1_000_000_000;
+    else if (unit === "million") budget = num * 1_000_000;
+    else if (unit === "thousand") budget = num * 1_000;
+  }
+
+  // Location extraction (after "in", "at", "around", "near")
+  const locationMatch = notes.match(/\b(?:in|at|around|near)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)/);
+  const location = locationMatch?.[1] || undefined;
+
+  // Listing type
+  let listingType: string | undefined;
+  if (/\b(leas(?:e|ing))\b/.test(lower)) listingType = "lease";
+  else if (/\b(rent(?:ing)?)\b/.test(lower)) listingType = "rent";
+  else if (/\b(buy(?:ing)?|purchas(?:e|ing)|for sale)\b/.test(lower)) listingType = "sale";
+
+  return { propertyType, bedrooms, budget, location, listingType };
+}
+
 // ─── CLEAR ALL SYNCED DATA (for re-sync) ────────────────────────────
 export const clearSyncedData = mutation({
   handler: async (ctx) => {
@@ -103,6 +140,31 @@ export const writeCall = internalMutation({
             await ctx.db.patch(existingContact._id, { name: args.caller_name, updated_at: now });
           }
 
+          // Extract structured data from save_customer notes to enrich contact (update path)
+          const extractedUpdate = extractStructuredData(args.save_customer_notes || "");
+          if (extractedUpdate.budget || extractedUpdate.location || extractedUpdate.propertyType) {
+            const contactUpdates: Record<string, any> = { updated_at: now };
+            if (extractedUpdate.budget) {
+              contactUpdates.budget_min = Math.round(extractedUpdate.budget * 0.8);
+              contactUpdates.budget_max = Math.round(extractedUpdate.budget * 1.2);
+            }
+            if (extractedUpdate.location) {
+              const existingLocations = existingContact?.preferred_locations ?? [];
+              if (!existingLocations.includes(extractedUpdate.location)) {
+                contactUpdates.preferred_locations = [...existingLocations, extractedUpdate.location];
+              }
+            }
+            if (extractedUpdate.propertyType) {
+              const existingTypes = existingContact?.property_type_interests ?? [];
+              if (!existingTypes.includes(extractedUpdate.propertyType)) {
+                contactUpdates.property_type_interests = [...existingTypes, extractedUpdate.propertyType];
+              }
+            }
+            if (Object.keys(contactUpdates).length > 1) {
+              await ctx.db.patch(existingContact._id, contactUpdates);
+            }
+          }
+
           // Check if viewing activity already exists for this contact
           const existingViewing = await ctx.db
             .query("activities")
@@ -177,16 +239,16 @@ export const writeCall = internalMutation({
 
     // ── Categorize caller from transcript keywords ──
     let callerCategory: "buyer" | "seller" | "renter" | "unknown" = "unknown";
-    if (/\b(sell|list my|listing my|put .* on (the )?market)\b/.test(transcript)) {
+    if (/\b(sell|list my|listing my|put .* on (the )?market|i wan sell|i dey sell)\b/.test(transcript)) {
       callerCategory = "seller";
-    } else if (/\b(rent|lease|renting|leasing)\b/.test(transcript)) {
+    } else if (/\b(rent|lease|renting|leasing|i wan rent|i dey find.*rent)\b/.test(transcript)) {
       callerCategory = "renter";
-    } else if (/\b(buy|purchase|buying|purchasing)\b/.test(transcript)) {
+    } else if (/\b(buy|purchase|buying|purchasing|i wan buy|i dey find|i dey look for)\b/.test(transcript)) {
       callerCategory = "buyer";
     }
 
     // ── Detect high-interest signals ──
-    const hasInterest = /\b(interested|viewing|appointment|schedule|visit|tour|show me|see the (house|property|place|unit))\b/.test(transcript);
+    const hasInterest = /\b(interested|viewing|appointment|schedule|visit|tour|show me|see the (house|property|place|unit)|duplex|bungalow|flat|warehouse|i wan see am|make i come|i go come|wetin be the price|how much)\b/.test(transcript);
     const contactTemperature = hasInterest ? "hot" : "warm";
     const leadStatus = hasInterest ? "qualified" : "new";
 
@@ -227,7 +289,9 @@ export const writeCall = internalMutation({
       .withIndex("by_phone", (q) => q.eq("phone", args.caller_phone))
       .first();
 
-    const summary = args.topic || `Phone call (${args.call_type}), ${args.duration_minutes.toFixed(1)} min`;
+    // Use save_customer notes as summary (AI-generated, rich context like "Interested in warehouse in Apapa")
+    // Fall back to topic only if no notes available
+    const summary = args.save_customer_notes || args.topic || `Phone call (${args.call_type}), ${args.duration_minutes.toFixed(1)} min`;
 
     if (existingCaller) {
       const existingMemory = existingCaller.memory_summary || "";
@@ -297,6 +361,31 @@ export const writeCall = internalMutation({
         created_at: now,
         updated_at: now,
       });
+    }
+
+    // Extract structured data from save_customer notes to enrich contact
+    const extracted = extractStructuredData(args.save_customer_notes || "");
+    if (extracted.budget || extracted.location || extracted.propertyType) {
+      const contactUpdates: Record<string, any> = { updated_at: now };
+      if (extracted.budget) {
+        contactUpdates.budget_min = Math.round(extracted.budget * 0.8);
+        contactUpdates.budget_max = Math.round(extracted.budget * 1.2);
+      }
+      if (extracted.location) {
+        const existingLocations = existingContact?.preferred_locations ?? [];
+        if (!existingLocations.includes(extracted.location)) {
+          contactUpdates.preferred_locations = [...existingLocations, extracted.location];
+        }
+      }
+      if (extracted.propertyType) {
+        const existingTypes = existingContact?.property_type_interests ?? [];
+        if (!existingTypes.includes(extracted.propertyType)) {
+          contactUpdates.property_type_interests = [...existingTypes, extracted.propertyType];
+        }
+      }
+      if (Object.keys(contactUpdates).length > 1) {
+        await ctx.db.patch(contactId, contactUpdates);
+      }
     }
 
     // 5. Log CRM activity
@@ -376,6 +465,10 @@ export const writeCall = internalMutation({
         lead_type: leadType,
         priority: hasInterest ? "high" : "medium",
         source: "phone",
+        property_interest: extracted.propertyType
+          ? `${extracted.bedrooms ? extracted.bedrooms + ' bedroom ' : ''}${extracted.propertyType}${extracted.location ? ' in ' + extracted.location : ''}`
+          : undefined,
+        deal_value: extracted.budget || undefined,
         notes: (callerCategory !== "unknown"
           ? `Auto-created from phone call — categorized as ${callerCategory}`
           : `Auto-created from phone call`) + appointmentNote,

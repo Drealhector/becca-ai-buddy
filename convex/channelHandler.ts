@@ -211,7 +211,7 @@ export const processInteraction = mutation({
     // If the customer mentions buying, selling, renting, or property keywords,
     // auto-create a lead in the pipeline
     const combinedText = (args.user_message + " " + (args.conversation_summary || "")).toLowerCase();
-    const leadKeywords = /\b(buy|buying|purchase|sell|selling|rent|renting|lease|leasing|property|apartment|house|condo|land|bedroom|listing|mortgage|viewing|tour|schedule a visit)\b/i;
+    const leadKeywords = /\b(buy|buying|purchase|sell|selling|rent|renting|lease|leasing|property|apartment|house|condo|land|bedroom|listing|mortgage|viewing|tour|schedule a visit|duplex|bungalow|flat|studio|warehouse|office|shop|penthouse|terrace|maisonette|mansion|i wan buy|i dey find|i dey look for|wetin be the price|how much|naira|million)\b/i;
 
     if (leadKeywords.test(combinedText) && contactId) {
       // Check if this contact already has an active lead
@@ -226,9 +226,13 @@ export const processInteraction = mutation({
       if (!hasActiveLead) {
         // Detect lead type from keywords
         let leadType = "buyer";
-        if (/sell|selling|list/i.test(combinedText)) leadType = "seller";
-        if (/rent|renting|lease|leasing/i.test(combinedText)) leadType = "renter";
-        if (/invest|investment|portfolio/i.test(combinedText)) leadType = "investor";
+        if (/\b(sell|selling|list|listing|i wan sell|i dey sell)\b/i.test(combinedText)) {
+          leadType = "seller";
+        } else if (/\b(rent|renting|lease|leasing|i wan rent)\b/i.test(combinedText)) {
+          leadType = "renter";
+        } else if (/\b(invest|investment|portfolio|ROI|return|rental income)\b/i.test(combinedText)) {
+          leadType = "investor";
+        }
 
         await ctx.db.insert("leads", {
           business_id: args.business_id,
@@ -237,7 +241,9 @@ export const processInteraction = mutation({
           status: "new",
           lead_type: leadType,
           source: args.platform,
-          property_interest: combinedText.match(/(\d+)\s*bed/i)?.[0] || undefined,
+          property_interest: combinedText.match(/(\d+)\s*(?:bed(?:room)?s?)/i)?.[0]
+            || combinedText.match(/\b(duplex|bungalow|flat|studio|warehouse|office|apartment|house|land|commercial|penthouse|terrace)\b/i)?.[0]
+            || undefined,
           notes: `Auto-created from ${args.platform}: "${args.user_message.slice(0, 150)}"`,
           created_at: now,
           updated_at: now,
@@ -351,15 +357,28 @@ export const getCustomerContext = query({
       }));
     }
 
+    // Filter out placeholder names — return real names only
+    const invalidNames = ["unknown", "there", "caller", "customer", "user", "anonymous"];
+    const callerName = caller?.name && !invalidNames.includes(caller.name.toLowerCase().trim()) ? caller.name : null;
+    const contactName = contact?.name && !invalidNames.includes(contact.name.toLowerCase().trim()) ? contact.name : null;
+    const contactFullName = contact?.full_name && !invalidNames.includes(contact.full_name.toLowerCase().trim()) ? contact.full_name : null;
+
     return {
       isReturning: !!caller,
-      name: caller?.name ?? contact?.name ?? null,
+      name: callerName ?? contactName ?? contactFullName ?? null,
       callCount: caller?.call_count ?? 0,
       memorySummary: caller?.memory_summary ?? null,
       lastCallAt: caller?.last_call_at ?? null,
       lastChannel: caller?.last_channel ?? null,
       crmTags: contact?.tags ?? [],
       recentMessages,
+      // CRM enrichment
+      budgetMin: contact?.budget_min ?? null,
+      budgetMax: contact?.budget_max ?? null,
+      preferredLocations: contact?.preferred_locations ?? [],
+      propertyTypeInterests: contact?.property_type_interests ?? [],
+      temperature: contact?.temperature ?? null,
+      contactNotes: contact?.notes ?? null,
     };
   },
 });

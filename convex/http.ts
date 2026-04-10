@@ -381,13 +381,28 @@ const telnyxCustomerLookup = httpAction(async (ctx, request) => {
   }
   try {
     const body = await request.json();
-    // CRITICAL: Use the REAL caller phone from Telnyx metadata, NOT whatever the LLM sends.
-    // The LLM sometimes hallucinates/confuses phone numbers from conversation context.
+    // CRITICAL: The LLM sends "+234" as placeholder. Telnyx sends the real call_control_id
+    // as a HEADER (x-telnyx-call-control-id), not in the body. We use it to look up
+    // the real caller phone from active_calls table (stored at call start by dynamic_variables).
     const payload = body.data?.payload || body.payload || body;
-    const phoneNumber = payload.telnyx_end_user_target
-      || payload.from || body.phone_number || body.caller_number || body.from;
+    const metadata = body.data?.metadata || body.metadata || {};
 
-    console.log("customer_lookup: real phone from Telnyx =", payload.telnyx_end_user_target, "| LLM sent =", body.phone_number);
+    // Get call_control_id from HEADER first (Telnyx sends it there), then body as fallback
+    const callId = request.headers.get("x-telnyx-call-control-id")
+      || payload.call_control_id || metadata.call_control_id
+      || payload.call_session_id || metadata.call_session_id
+      || payload.call_leg_id || metadata.call_leg_id;
+
+    // Resolve real phone from active_calls using call-specific ID
+    let phoneNumber: string | null = null;
+    if (callId) {
+      phoneNumber = await ctx.runQuery(api.activeCalls.getCallerPhone, { telnyx_call_id: callId });
+    }
+    // Fallback: Telnyx metadata (some payload formats include it)
+    if (!phoneNumber) {
+      const metaPhone = payload.telnyx_end_user_target || metadata.telnyx_end_user_target;
+      if (metaPhone && metaPhone.length > 5 && metaPhone !== "+234") phoneNumber = metaPhone;
+    }
 
     if (!phoneNumber) {
       return new Response(
@@ -435,10 +450,36 @@ const telnyxCustomerLookup = httpAction(async (ctx, request) => {
         context_prompt: (() => {
           const callerInvalidNames = ["unknown", "there", "caller", "customer", "user", "anonymous", ""];
           const callerRealName = context.name && !callerInvalidNames.includes(context.name.toLowerCase().trim()) ? context.name : null;
+
+          let prompt = "";
           if (context.isReturning) {
-            return `This is a returning caller${callerRealName ? ` named ${callerRealName}` : " (you don't know their name yet — ask for it!)"}. They have contacted ${context.callCount} times. ${context.memorySummary ? `Memory: ${context.memorySummary.slice(0, 500)}` : ""}`;
+            prompt = `This is a returning caller${callerRealName ? ` named ${callerRealName}` : " (you don't know their name yet — ask for it!)"}. They have contacted ${context.callCount} times.`;
+            if (context.memorySummary) prompt += ` Memory: ${context.memorySummary.slice(0, 500)}`;
+          } else {
+            prompt = "This is a first-time caller. Be extra warm and welcoming. Ask for their name early in the conversation.";
           }
-          return "This is a first-time caller. Be extra warm and welcoming. Ask for their name early in the conversation.";
+
+          // Add caller preferences if known (so AI doesn't re-ask)
+          const prefs: string[] = [];
+          if (context.budgetMin || context.budgetMax) {
+            const min = context.budgetMin ? `${(context.budgetMin / 1_000_000).toFixed(1)}M` : "?";
+            const max = context.budgetMax ? `${(context.budgetMax / 1_000_000).toFixed(1)}M` : "?";
+            prefs.push(`Budget: ${min}-${max} Naira`);
+          }
+          if (context.preferredLocations && context.preferredLocations.length > 0) {
+            prefs.push(`Preferred areas: ${context.preferredLocations.join(", ")}`);
+          }
+          if (context.propertyTypeInterests && context.propertyTypeInterests.length > 0) {
+            prefs.push(`Looking for: ${context.propertyTypeInterests.join(", ")}`);
+          }
+          if (context.temperature) {
+            prefs.push(`Lead temperature: ${context.temperature}`);
+          }
+          if (prefs.length > 0) {
+            prompt += `\n\nKNOWN PREFERENCES (don't re-ask these, use them to personalize):\n${prefs.join("\n")}`;
+          }
+
+          return prompt;
         })()
           + `\n\nAVAILABLE PROPERTIES (${availableProperties.length} listings):\n${propertySummary}`,
       }),
@@ -462,13 +503,26 @@ const telnyxSaveCustomer = httpAction(async (ctx, request) => {
   }
   try {
     const body = await request.json();
-    // CRITICAL: Use the REAL caller phone from Telnyx metadata, NOT the LLM-provided one.
-    // The LLM sometimes sends wrong phone numbers from conversation context.
+    // CRITICAL: Look up REAL phone from active_calls table (stored by dynamic_variables at call start).
+    // The LLM sends "+234" as placeholder. Telnyx sends call_control_id as a HEADER.
     const payload = body.data?.payload || body.payload || body;
-    const phoneNumber = payload.telnyx_end_user_target
-      || payload.from || body.phone_number || body.caller_number || body.from;
+    const metadata = body.data?.metadata || body.metadata || {};
 
-    console.log("save_customer: real phone from Telnyx =", payload.telnyx_end_user_target, "| LLM sent =", body.phone_number);
+    // Get call_control_id from HEADER first (Telnyx sends it there), then body as fallback
+    const callId = request.headers.get("x-telnyx-call-control-id")
+      || payload.call_control_id || metadata.call_control_id
+      || payload.call_session_id || metadata.call_session_id
+      || payload.call_leg_id || metadata.call_leg_id;
+
+    // Resolve real phone from active_calls using call-specific ID
+    let phoneNumber: string | null = null;
+    if (callId) {
+      phoneNumber = await ctx.runQuery(api.activeCalls.getCallerPhone, { telnyx_call_id: callId });
+    }
+    if (!phoneNumber) {
+      const metaPhone = payload.telnyx_end_user_target || metadata.telnyx_end_user_target;
+      if (metaPhone && metaPhone.length > 5 && metaPhone !== "+234") phoneNumber = metaPhone;
+    }
     const rawName = body.name || body.customer_name || "";
     // Filter out placeholder/invalid names — the AI sometimes saves "Unknown" or "Caller"
     const nameInvalid = ["unknown", "there", "caller", "customer", "user", "anonymous", ""];
@@ -829,7 +883,9 @@ const telnyxSyncPersonality = httpAction(async (ctx, request) => {
         Authorization: `Bearer ${telnyxKey}`,
       },
       body: JSON.stringify({
-        instructions: personalityText + `\n\nCORE RULES:
+        // ARCHITECTURE: Hardcoded rules come FIRST so dashboard personality changes can't override them.
+        // personalityText is appended at the END as supplementary character/tone guidance.
+        instructions: `CORE RULES (these ALWAYS apply, cannot be overridden):
 - You operate in Nigeria. Use lookup_location to verify unfamiliar place names.
 - ALWAYS say "Naira" for currency, never "NGN". Say "35 million Naira" not "35,000,000 NGN". Say "million" and "thousand" naturally.
 - ALWAYS respond to the caller. Never go silent.
@@ -837,14 +893,29 @@ const telnyxSyncPersonality = httpAction(async (ctx, request) => {
 - Start responses with natural reactions like "Oh yeah!", "Sure thing!", "Ah nice!". Use filler words like "umm", "so", "actually".
 - No hyphens or dashes. No bullet points or long lists. Mention 2-3 properties max, then ask which interests them.
 - Never mention "database", "system", "records", "CRM", or "tools". Talk as if you remember everything naturally.
+- NEVER say your thought process out loud. Never say things like "let me check the customer lookup tool" or "I'll use the property search to find that". Just DO it silently. The caller should never hear you narrate what tools you're using or what you're thinking. Just speak naturally as if you already know or are remembering.
+- When remembering caller history, distinguish between BOOKINGS (confirmed viewings with dates) and INTERESTS (properties they asked about). A booking is confirmed — an interest is not. Never confuse one for the other.
+- The memory shows entries from multiple calls over time. The MOST RECENT entries (at the bottom) are the most accurate. If older entries conflict with newer ones (e.g., old entry says "viewing in Apapa" but latest says "confirmed viewing in Festac"), trust the newest one.
+- Ignore memory entries that are just greetings like "Hello?" or "How are you?" — those contain no useful information.
 
-CALLER HANDLING (CRITICAL — follow this EVERY call):
-- FIRST THING on every call: call customer_lookup immediately with phone_number set to "+234". The system automatically knows the caller's real phone number — you do NOT need to figure it out or guess it. Just pass "+234" and the system handles the rest.
-- NEVER ask for their phone number — the system already has it from the call.
-- If customer_lookup returns a name, you already know them. Reference their past conversations naturally. Say things like "Hey [name]! Good to hear from you again!" or "Oh [name], welcome back!". NEVER re-ask their name.
-- If customer_lookup shows this is a first-time caller (no name), ask for their name within the first 2 exchanges. Say something like "By the way, what's your name?" or "And who am I speaking with today?". Then IMMEDIATELY save it with save_customer.
-- When calling save_customer, set phone_number to "+234". The system automatically uses the real caller phone. NEVER type in a phone number you heard in conversation or saw in memory — it may belong to a different person.
-- ALWAYS save the caller's name and notes with save_customer before ending the call. Even if nothing important happened, save a brief note about what they asked about.
+CALLER CONTEXT (injected automatically — you already know this):
+{{caller_context}}
+
+CALLER HANDLING (MOST IMPORTANT):
+- You already have the caller's context above from {{caller_context}}. Use it IMMEDIATELY in your first response after the greeting. If they're returning, reference their most recent topic naturally: "So how's the bungalow viewing going?" or "Still interested in that place in Festac?". Don't wait to be asked.
+- You can ALSO call customer_lookup with phone_number "+234" for more detail (full property list, deeper memory). But you don't NEED to wait for it — you already have enough context to start a natural conversation.
+- After customer_lookup returns (if you call it), use the additional detail to enrich the conversation.
+- NEVER ask for their phone number — you already have it.
+- NEVER re-ask a returning caller's name.
+- When calling save_customer or customer_lookup, always set phone_number to "+234". The system handles the real number. NEVER type a phone number from memory or conversation.
+- ALWAYS call save_customer before ending every call with a meaningful summary of what was discussed.
+
+DATE AND TIME AWARENESS:
+- Today is {{current_date}}.
+- CALENDAR REFERENCE (use this to look up days — NEVER guess): {{calendar}}
+- When you mention ANY date, look it up in the calendar reference above to get the correct day of the week. For example if the calendar says "April 20 = Monday (in 10 days)", then say "April 20th, that's Monday, 10 days from now."
+- NEVER guess what day a date falls on. ALWAYS check the calendar reference. If a date is not in the reference, just say the date and how far away it is without naming the day.
+- Use natural time references: "this weekend", "next week Monday", "in 3 days", "tomorrow afternoon".
 
 PROPERTY SEARCH:
 - Use get_properties with filters: bedrooms (number), city (string), listing_type ("sale"/"rent"/"lease"), property_type ("house"/"apartment"/"commercial"/"land"), max_price (number), min_price (number). Use "city" not "location".
@@ -852,8 +923,65 @@ PROPERTY SEARCH:
 - Present prices in words: "35 million Naira" or "3 and a half million Naira per year".
 
 APPOINTMENTS AND SAVING:
-- Book viewings directly. Ask what day and time works, confirm, and save with save_customer. Never say you will transfer them.
-- Save caller preferences with save_customer if no properties match, so you can follow up later.`,
+- Book viewings directly. Ask what day and time works, confirm with day-of-week context ("So that's Thursday the 17th at 2 PM"), and save with save_customer.
+- Save caller preferences with save_customer if no properties match, so you can follow up later.
+
+CONVERSATION FLOW EXAMPLES:
+
+Example 1 — Returning caller (YOU MUST follow this pattern):
+[greeting plays: "Hi Kingsley!"]
+[IMMEDIATELY call customer_lookup — don't wait]
+[customer_lookup returns: memory about warehouse in Apapa, viewing on April 15]
+Caller: Hello?
+You: Hey Kingsley! So you've got that warehouse viewing in Apapa coming up this Tuesday — are you all set for that, or do you need anything before then?
+[Why: Referenced specific past topic IMMEDIATELY in first response. Added day-of-week context. Didn't wait to be asked.]
+
+Example 2 — Returning caller with past viewing date:
+[customer_lookup returns: viewing was scheduled for April 5th (already passed)]
+Caller: Hi!
+You: Hey Amara! Last time we set up a viewing for that 3-bedroom in Festac — that was last Saturday. How did it go? Did you like it?
+[Why: Acknowledged the viewing happened, asked for feedback naturally]
+
+Example 3 — First-time caller:
+[customer_lookup returns: first-time caller, no name]
+Caller: Hi, I'm looking for a property.
+You: Oh hey, welcome! I'd love to help you out. And who am I speaking with today?
+Caller: I'm Chidi.
+You: Nice to meet you, Chidi! So are you looking to buy, rent, or lease? And any particular area you're interested in?
+[Why: Asked name naturally within first exchange, then qualifying questions]
+
+Example 4 — Scheduling with date awareness:
+Caller: Can I come see it on the 20th?
+You: April 20th — that's next Sunday. What time works for you?
+Caller: Around 3 PM.
+You: Perfect! Sunday the 20th at 3 PM for the warehouse viewing in Apapa. I'll have everything ready for you!
+[Why: Confirmed the day of week, full date, time, and property in one natural sentence]
+
+Example 5 — Price objection:
+Caller: That's too much for me.
+You: I hear you. What range are you comfortable with? I might have something that fits better — we've got options from 800 thousand to 350 million depending on what you're after.
+
+ENDING CALLS (follow this EXACT sequence — never skip steps):
+Step 1: When the conversation naturally wraps up, FIRST call save_customer with a summary of everything discussed.
+Step 2: THEN say a warm, personal goodbye OUT LOUD to the caller. Use their name. Examples:
+  - "It was really nice chatting with you, Peter! Your viewing is on Saturday April 25th — I'll make sure everything is ready. Talk to you soon!"
+  - "Thanks for calling, Amara! I'll keep my eyes open for 3-bedrooms in Lekki in your budget. Don't hesitate to call back anytime. Have a great day!"
+  - "Lovely speaking with you, Chidi! See you at the viewing on Tuesday. Take care!"
+Step 3: Wait for the caller to respond (they'll usually say "bye" or "thanks").
+Step 4: ONLY THEN call hangup.
+
+CRITICAL: If you call hangup without saying goodbye first, that is WRONG. Always speak your farewell first.
+- Say goodbye ONCE — one warm, complete farewell sentence. Do NOT say goodbye multiple times or keep adding more farewell phrases. One goodbye is perfect, two feels awkward, three feels like you can't let go.
+- After your single goodbye, if the caller says "bye" back, call hangup immediately. Don't add another "bye bye" or "take care" — just end it cleanly.
+
+Example 6 — Proper call ending:
+Caller: Alright, that's all I needed. Thank you!
+You: [calls save_customer first]
+You: You're welcome, Peter! Your viewing for the bungalow in Festac is on April 25th — I'll have everything ready. Enjoy the rest of your day!
+Caller: Bye.
+[calls hangup immediately — do NOT say another goodbye]
+
+` + `\n\nASSISTANT PERSONALITY AND CHARACTER:\n` + personalityText,
         dynamic_variables_webhook_url: `https://diligent-nightingale-429.convex.site/telnyx/dynamic-variables${process.env.TELNYX_TOOL_SECRET ? "?secret=" + process.env.TELNYX_TOOL_SECRET : ""}`,
       }),
     });
@@ -895,6 +1023,19 @@ const telnyxDynamicVariables = httpAction(async (ctx, request) => {
     const phoneNumber = payload.telnyx_end_user_target
       || payload.from || payload.phone_number || payload.caller_number;
 
+    // DEBUG: Log entire body structure to find call IDs
+    console.log("dynamic_variables FULL BODY:", JSON.stringify({
+      topKeys: Object.keys(body),
+      payloadKeys: Object.keys(payload),
+      phone: phoneNumber,
+      call_control_id: payload.call_control_id,
+      call_session_id: payload.call_session_id,
+      call_leg_id: payload.call_leg_id,
+      header_call_id: request.headers.get("x-telnyx-call-control-id"),
+      data_keys: body.data ? Object.keys(body.data) : "no data",
+      data_payload_keys: body.data?.payload ? Object.keys(body.data.payload) : "no data.payload",
+    }));
+
     if (!phoneNumber) {
       return new Response(
         JSON.stringify({
@@ -902,6 +1043,25 @@ const telnyxDynamicVariables = httpAction(async (ctx, request) => {
         }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
+    }
+
+    // Store the real caller phone under ALL call-specific IDs.
+    // NO "latest" key — that causes race conditions when 2+ calls arrive simultaneously.
+    // Each call has unique IDs so lookups are always call-specific.
+    const callIds = [
+      payload.call_control_id,
+      payload.call_session_id,
+      payload.call_leg_id,
+      request.headers.get("x-telnyx-call-control-id"),
+    ].filter(Boolean) as string[];
+
+    for (const id of callIds) {
+      if (phoneNumber && id) {
+        await ctx.runMutation(api.activeCalls.store, {
+          telnyx_call_id: id,
+          caller_phone: phoneNumber,
+        });
+      }
     }
 
     // Look up caller in unified callers table
@@ -917,11 +1077,59 @@ const telnyxDynamicVariables = httpAction(async (ctx, request) => {
     const rawName = context.name || "";
     const isRealName = rawName.length > 0 && !invalidNames.includes(rawName.toLowerCase().trim());
 
+    // Build current date + next 21 days calendar so the LLM never guesses wrong
+    const now = new Date();
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const currentDate = `${dayNames[now.getUTCDay()]}, ${monthNames[now.getUTCMonth()]} ${now.getUTCDate()}, ${now.getUTCFullYear()}`;
+
+    // Generate calendar reference for the next 21 days
+    const calendarLines: string[] = [];
+    for (let i = 0; i <= 21; i++) {
+      const d = new Date(now.getTime() + i * 24 * 60 * 60 * 1000);
+      const label = i === 0 ? "TODAY" : i === 1 ? "TOMORROW" : `in ${i} days`;
+      calendarLines.push(`${monthNames[d.getUTCMonth()]} ${d.getUTCDate()} = ${dayNames[d.getUTCDay()]} (${label})`);
+    }
+    const calendarRef = calendarLines.join(", ");
+
+    // Build caller context string so the assistant ALWAYS has customer history
+    // even if customer_lookup tool is never called (which happens sometimes)
+    let callerContext = "";
+    if (context.isReturning && isRealName) {
+      callerContext = `CALLER INFO: This is ${rawName}, a returning caller (${context.callCount} calls).`;
+      // Add last meaningful memory entries (skip "Hello?" junk, take last 3 useful ones)
+      if (context.memorySummary) {
+        const lines = context.memorySummary.split("\n").filter((l: string) => {
+          const content = l.split("] ")[1] || l;
+          return content.trim().length > 20 && !/^(Hello|Hi|How are|Okay|Yes|Yeah|Alright|Mhmm)/i.test(content.trim());
+        });
+        const recent = lines.slice(-3);
+        if (recent.length > 0) callerContext += " Recent: " + recent.join(" | ");
+      }
+      // Add preferences
+      const prefs: string[] = [];
+      if (context.budgetMin || context.budgetMax) {
+        const min = context.budgetMin ? `${(context.budgetMin / 1_000_000).toFixed(0)}M` : "?";
+        const max = context.budgetMax ? `${(context.budgetMax / 1_000_000).toFixed(0)}M` : "?";
+        prefs.push(`Budget: ${min}-${max} Naira`);
+      }
+      if (context.preferredLocations && context.preferredLocations.length > 0) prefs.push(`Areas: ${context.preferredLocations.join(", ")}`);
+      if (context.propertyTypeInterests && context.propertyTypeInterests.length > 0) prefs.push(`Looking for: ${context.propertyTypeInterests.join(", ")}`);
+      if (prefs.length > 0) callerContext += " Preferences: " + prefs.join(". ") + ".";
+    } else if (context.isReturning) {
+      callerContext = "CALLER INFO: Returning caller but name unknown — ask for their name.";
+    } else {
+      callerContext = "CALLER INFO: First-time caller — be warm, ask for their name.";
+    }
+
     return new Response(
       JSON.stringify({
         dynamic_variables: {
           caller_name: isRealName ? rawName : "there",
           caller_phone: phoneNumber,
+          current_date: currentDate,
+          calendar: calendarRef,
+          caller_context: callerContext,
         },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
@@ -930,7 +1138,7 @@ const telnyxDynamicVariables = httpAction(async (ctx, request) => {
     console.error("Telnyx dynamic variables error:", error);
     return new Response(
       JSON.stringify({
-        dynamic_variables: { caller_name: "there" },
+        dynamic_variables: { caller_name: "there", current_date: new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
