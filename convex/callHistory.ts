@@ -1,5 +1,6 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, action } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 // List call history
 export const list = query({
@@ -78,6 +79,70 @@ export const stats = query({
       avgDuration: totalCalls > 0 ? Math.round(totalDuration / totalCalls * 10) / 10 : 0,
       totalDuration: Math.round(totalDuration * 10) / 10,
     };
+  },
+});
+
+// Fetch a FRESH recording URL from Telnyx (the stored ones expire after 10 min)
+export const getFreshRecordingUrl = action({
+  args: {
+    call_session_id: v.optional(v.string()),
+    call_leg_id: v.optional(v.string()),
+    conversation_id: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const telnyxKey = process.env.TELNYX_API_KEY;
+    if (!telnyxKey) return { url: null, error: "TELNYX_API_KEY not set" };
+
+    try {
+      // Fetch recent recordings from Telnyx
+      const response = await fetch(
+        "https://api.telnyx.com/v2/recordings?page%5Bsize%5D=100",
+        { headers: { Authorization: `Bearer ${telnyxKey}` } }
+      );
+      if (!response.ok) return { url: null, error: `Telnyx API: ${response.status}` };
+
+      const { data: recordings } = await response.json();
+
+      // Find matching recording by session_id or leg_id
+      for (const rec of recordings) {
+        const url = rec.download_urls?.wav || rec.download_urls?.mp3;
+        if (!url) continue;
+
+        if (args.call_session_id && rec.call_session_id === args.call_session_id) {
+          return { url };
+        }
+        if (args.call_leg_id && rec.call_leg_id === args.call_leg_id) {
+          return { url };
+        }
+      }
+
+      // If no session/leg match, try matching by conversation metadata
+      if (args.conversation_id) {
+        // Fetch the conversation to get its call_session_id
+        const convRes = await fetch(
+          `https://api.telnyx.com/v2/ai/conversations/${args.conversation_id}`,
+          { headers: { Authorization: `Bearer ${telnyxKey}`, "Content-Type": "application/json" } }
+        );
+        if (convRes.ok) {
+          const convData = await convRes.json();
+          const conv = convData.data || convData;
+          const sessionId = conv.metadata?.call_session_id;
+          const legId = conv.metadata?.call_leg_id;
+
+          for (const rec of recordings) {
+            const url = rec.download_urls?.wav || rec.download_urls?.mp3;
+            if (!url) continue;
+            if (sessionId && rec.call_session_id === sessionId) return { url };
+            if (legId && rec.call_leg_id === legId) return { url };
+          }
+        }
+      }
+
+      return { url: null, error: "Recording not found" };
+    } catch (error) {
+      console.error("Error fetching fresh recording URL:", error);
+      return { url: null, error: "Failed to fetch recording" };
+    }
   },
 });
 

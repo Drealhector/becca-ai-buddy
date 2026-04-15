@@ -27,19 +27,19 @@ export const PhoneConnectionDialog = ({ open, onOpenChange, provider, onConnect 
   const handleConnect = () => {
     if (provider === "twilio") {
       if (!twilioSid || !twilioToken || !twilioPhone) {
-        toast.error("Please fill in all Twilio fields");
+        toast.error("Please fill in all fields");
         return;
       }
       onConnect({ provider: "twilio", sid: twilioSid, token: twilioToken, phone: twilioPhone });
     } else if (provider === "telnyx") {
       if (!telnyxKey || !telnyxPhone) {
-        toast.error("Please fill in all Telnyx fields");
+        toast.error("Please fill in all fields");
         return;
       }
       onConnect({ provider: "telnyx", key: telnyxKey, phone: telnyxPhone });
     } else if (provider === "becca") {
       if (!beccaBusinessName || !beccaBusinessKey) {
-        toast.error("Please fill in all BECCA fields");
+        toast.error("Please fill in all fields");
         return;
       }
       onConnect({ provider: "becca", businessName: beccaBusinessName, businessKey: beccaBusinessKey });
@@ -52,7 +52,7 @@ export const PhoneConnectionDialog = ({ open, onOpenChange, provider, onConnect 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Connect Phone Number via {provider?.toUpperCase()}</DialogTitle>
+          <DialogTitle>Connect Phone Number</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           {provider === "twilio" && (
@@ -62,7 +62,7 @@ export const PhoneConnectionDialog = ({ open, onOpenChange, provider, onConnect 
                 <Input
                   value={twilioSid}
                   onChange={(e) => setTwilioSid(e.target.value)}
-                  placeholder="Enter your Twilio Account SID"
+                  placeholder="Enter Account SID"
                 />
               </div>
               <div>
@@ -71,7 +71,7 @@ export const PhoneConnectionDialog = ({ open, onOpenChange, provider, onConnect 
                   type="password"
                   value={twilioToken}
                   onChange={(e) => setTwilioToken(e.target.value)}
-                  placeholder="Enter your Twilio Auth Token"
+                  placeholder="Enter Auth Token"
                 />
               </div>
               <div>
@@ -93,7 +93,7 @@ export const PhoneConnectionDialog = ({ open, onOpenChange, provider, onConnect 
                   type="password"
                   value={telnyxKey}
                   onChange={(e) => setTelnyxKey(e.target.value)}
-                  placeholder="Enter your Telnyx API Key"
+                  placeholder="Enter API Key"
                 />
               </div>
               <div>

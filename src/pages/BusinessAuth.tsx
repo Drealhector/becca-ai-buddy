@@ -52,19 +52,7 @@ const BusinessAuth = () => {
       sessionStorage.setItem("becca_business_key", businessKey);
       sessionStorage.setItem("becca_business_id", keyData._id);
 
-      // Trigger portal then navigate
-      const btn = document.getElementById("signin-btn");
-      if (btn) {
-        const rect = btn.getBoundingClientRect();
-        setPortal({
-          active: true,
-          x: rect.left + rect.width / 2,
-          y: rect.top + rect.height / 2,
-          dest: "/welcome",
-        });
-      } else {
-        navigate("/welcome");
-      }
+      navigate("/welcome");
     } catch (error) {
       console.error("Auth error:", error);
       toast({
@@ -81,16 +69,9 @@ const BusinessAuth = () => {
     setPortal((p) => ({ ...p, active: false }));
   }, [navigate, portal.dest]);
 
-  const handleBackClick = useCallback((e: React.MouseEvent) => {
-    if (portal.active) return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setPortal({
-      active: true,
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
-      dest: "/",
-    });
-  }, [portal.active]);
+  const handleBackClick = useCallback(() => {
+    navigate("/");
+  }, [navigate]);
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#02040f]">

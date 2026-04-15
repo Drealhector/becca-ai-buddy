@@ -18,14 +18,10 @@ const Landing = () => {
   }>({ active: false, x: 0, y: 0, dest: "" });
 
   const handleNavigate = useCallback(
-    (dest: string, e: React.MouseEvent) => {
-      if (portal.active) return;
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const x = rect.left + rect.width / 2;
-      const y = rect.top + rect.height / 2;
-      setPortal({ active: true, x, y, dest });
+    (dest: string) => {
+      navigate(dest);
     },
-    [portal.active]
+    [navigate]
   );
 
   const handlePortalComplete = useCallback(() => {

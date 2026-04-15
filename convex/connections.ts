@@ -44,6 +44,7 @@ export const getStatus = query({
       telnyx_connection_id: conn.telnyx_connection_id,
       telnyx_sip_uri: conn.telnyx_sip_uri,
       telnyx_app_id: conn.telnyx_app_id,
+      telnyx_whatsapp_number: conn.telnyx_whatsapp_number,
     };
   },
 });
@@ -73,6 +74,7 @@ export const update = mutation({
     telnyx_phone_number: v.optional(v.string()),
     telnyx_sip_uri: v.optional(v.string()),
     telnyx_app_id: v.optional(v.string()),
+    telnyx_whatsapp_number: v.optional(v.string()),
   },
   handler: async (ctx, { id, ...fields }) => {
     const updates: Record<string, any> = { updated_at: new Date().toISOString() };
@@ -91,6 +93,7 @@ export const create = mutation({
     telnyx_api_key: v.optional(v.string()),
     telnyx_connection_id: v.optional(v.string()),
     telnyx_phone_number: v.optional(v.string()),
+    telnyx_whatsapp_number: v.optional(v.string()),
   },
   handler: async (ctx, fields) => {
     return await ctx.db.insert("connections", {
@@ -126,6 +129,7 @@ export const upsert = mutation({
     telnyx_phone_number: v.optional(v.string()),
     telnyx_sip_uri: v.optional(v.string()),
     telnyx_app_id: v.optional(v.string()),
+    telnyx_whatsapp_number: v.optional(v.string()),
   },
   handler: async (ctx, fields) => {
     const existing = await ctx.db.query("connections").first();

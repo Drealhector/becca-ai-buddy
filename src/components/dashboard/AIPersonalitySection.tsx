@@ -94,8 +94,8 @@ export const AIPersonalitySection = () => {
 
       toast.success(
         synced
-          ? "AI personality updated & synced to Telnyx!"
-          : "AI personality saved (Telnyx sync failed — try again)"
+          ? "AI personality updated & synced!"
+          : "AI personality saved (sync failed — try again)"
       );
     } catch (error) {
       console.error("Error saving personality:", error);

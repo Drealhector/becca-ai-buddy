@@ -25,17 +25,10 @@ const Welcome = () => {
   }, [navigate]);
 
   const handleNavigate = useCallback(
-    (dest: string, e: React.MouseEvent) => {
-      if (portal.active) return;
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      setPortal({
-        active: true,
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-        dest,
-      });
+    (dest: string) => {
+      navigate(dest);
     },
-    [portal.active]
+    [navigate]
   );
 
   const handlePortalComplete = useCallback(() => {

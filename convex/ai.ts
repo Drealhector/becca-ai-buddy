@@ -18,6 +18,8 @@ export const generateResponse = action({
     platform_user_id: v.optional(v.string()),
     sender_name: v.optional(v.string()),
     business_id: v.optional(v.string()),
+    image_base64: v.optional(v.string()),
+    image_mime_type: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Validate message length
@@ -96,7 +98,7 @@ export const generateResponse = action({
 - NEVER mention "database", "system", "records", "CRM", or "listings data". Just talk naturally as if you know your inventory.`;
 
     // 5. Build conversation history from recent messages
-    const messages: Array<{ role: string; content: string }> = [
+    const messages: Array<{ role: string; content: string | Array<any> }> = [
       { role: "system", content: systemPrompt },
     ];
 
@@ -108,8 +110,24 @@ export const generateResponse = action({
       });
     }
 
-    // Add the current message
-    messages.push({ role: "user", content: args.user_message });
+    // Add the current message (with optional image for vision)
+    if (args.image_base64) {
+      const mimeType = args.image_mime_type || "image/png";
+      messages.push({
+        role: "user",
+        content: [
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:${mimeType};base64,${args.image_base64}`,
+            },
+          },
+          { type: "text", text: args.user_message },
+        ],
+      });
+    } else {
+      messages.push({ role: "user", content: args.user_message });
+    }
 
     // 6. Call OpenAI
     const openaiKey = process.env.OPENAI_API_KEY;

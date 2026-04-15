@@ -291,15 +291,6 @@ const SectionCard = ({ id, title, icon: Icon, infoText, children, className = ""
                   }} />
               </div>
 
-              {/* Horizontal shimmer line */}
-              <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute left-0 right-0 h-[1px]"
-                  style={{
-                    background: 'linear-gradient(90deg, transparent, rgba(0,230,255,0.15), transparent)',
-                    animation: 'shimmer-line 4s ease-in-out infinite',
-                  }} />
-              </div>
-
               {/* Reflection spots */}
               <div className="absolute top-[15%] left-[20%] w-32 h-32 rounded-full pointer-events-none"
                 style={{

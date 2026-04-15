@@ -13,7 +13,6 @@ import VoiceManagementSection from "@/components/dashboard/VoiceManagementSectio
 import { AIPersonalitySection } from "@/components/dashboard/AIPersonalitySection";
 import { PhoneConnectionDialog } from "@/components/dashboard/PhoneConnectionDialog";
 import FloatingAssistant from "@/components/dashboard/FloatingAssistant";
-import MatrixBackground from "@/components/dashboard/MatrixBackground";
 import SectionCard from "@/components/dashboard/SectionCard";
 import {
   Menu, X, LogOut, Phone, Link as LinkIcon, Settings, MessageSquare,
@@ -142,7 +141,7 @@ const Dashboard = () => {
 
   const handleProviderConnect = (data: any) => {
     setPhoneNumber(data.phone); setIsConnected(true);
-    toast.success(`Connected via ${data.provider}`);
+    toast.success("Phone connected successfully");
   };
 
   if (loading) {
@@ -162,9 +161,7 @@ const Dashboard = () => {
   const mainPl = sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-56';
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden">
-      <MatrixBackground />
-
+    <div className="min-h-screen relative overflow-x-hidden" style={{ background: 'radial-gradient(ellipse at top, #0a1628 0%, #040811 70%, #02040a 100%)' }}>
       {/* Mobile overlay with blur */}
       <div
         className={`fixed inset-0 z-40 lg:hidden transition-all duration-500
@@ -386,13 +383,6 @@ const Dashboard = () => {
             </SectionCard>
           </div>
 
-          {/* CRM Divider */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-cyan-500/15 to-transparent" />
-            <span className="text-[9px] text-cyan-500/30 uppercase tracking-[0.3em] font-bold">CRM</span>
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-cyan-500/15 to-transparent" />
-          </div>
-
           {/* === ROW 3: CRM (full width with tabs) === */}
           <SectionCard id="crm" title="CRM" icon={Users}
             infoText="Manage contacts, pipeline, follow-ups, and analytics — your full real estate command center.">
@@ -409,13 +399,6 @@ const Dashboard = () => {
               infoText="Manage inbound/outbound calls, view call history, and access full transcripts.">
               <PhoneCallSection />
             </SectionCard>
-          </div>
-
-          {/* Divider */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-cyan-500/15 to-transparent" />
-            <span className="text-[9px] text-cyan-500/30 uppercase tracking-[0.3em] font-bold">Customize</span>
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-cyan-500/15 to-transparent" />
           </div>
 
           {/* === ROW 4: Voice + AI Personality side by side === */}

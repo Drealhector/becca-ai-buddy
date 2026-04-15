@@ -12,7 +12,7 @@ import { AnalyzeCallTranscriptsDialog } from "./AnalyzeCallTranscriptsDialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { getAuthHeaders } from "@/lib/auth-fetch";
 
@@ -41,6 +41,7 @@ const PhoneCallSection = () => {
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
   const [showTranscriptDialog, setShowTranscriptDialog] = useState(false);
   const [selectedCallTranscript, setSelectedCallTranscript] = useState<any>(null);
+  const [freshRecordingUrl, setFreshRecordingUrl] = useState<string | null>(null);
   const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
   const [playingCallId, setPlayingCallId] = useState<string | null>(null);
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
@@ -54,6 +55,7 @@ const PhoneCallSection = () => {
   const deleteCall = useMutation(api.callHistory.remove);
   const createScheduledCall = useMutation(api.scheduledCalls.create);
   const removeScheduledCall = useMutation(api.scheduledCalls.remove);
+  const getFreshRecordingUrl = useAction(api.callHistory.getFreshRecordingUrl);
 
   // Countdown timer for scheduled calls
   useEffect(() => {
@@ -259,10 +261,18 @@ const PhoneCallSection = () => {
       caller_info: callerInfo,
     });
     setShowTranscriptDialog(true);
+
+    // Fetch fresh recording URL for the audio player in the dialog
+    setFreshRecordingUrl(null);
+    if (call.conversation_id) {
+      getFreshRecordingUrl({ conversation_id: call.conversation_id })
+        .then(result => { if (result?.url) setFreshRecordingUrl(result.url); })
+        .catch(() => {});
+    }
   };
 
-  const handlePlayRecording = (call: any) => {
-    if (!call.recording_url) {
+  const handlePlayRecording = async (call: any) => {
+    if (!call.recording_url && !call.conversation_id) {
       toast.error("No recording available for this call");
       return;
     }
@@ -282,12 +292,28 @@ const PhoneCallSection = () => {
       audioRef.currentTime = 0;
     }
 
-    const audio = new Audio(call.recording_url);
-    audio.onended = () => { setPlayingCallId(null); setAudioRef(null); };
-    audio.onerror = () => { toast.error("Failed to play recording"); setPlayingCallId(null); setAudioRef(null); };
-    audio.play();
-    setPlayingCallId(call._id);
-    setAudioRef(audio);
+    // Fetch a FRESH recording URL from Telnyx (stored URLs expire after 10 min)
+    setPlayingCallId(call._id); // Show loading state
+    try {
+      const result = await getFreshRecordingUrl({ conversation_id: call.conversation_id || undefined });
+      const freshUrl = result?.url || call.recording_url;
+
+      if (!freshUrl) {
+        toast.error("Recording not found");
+        setPlayingCallId(null);
+        return;
+      }
+
+      const audio = new Audio(freshUrl);
+      audio.onended = () => { setPlayingCallId(null); setAudioRef(null); };
+      audio.onerror = () => { toast.error("Failed to play recording"); setPlayingCallId(null); setAudioRef(null); };
+      audio.play();
+      setAudioRef(audio);
+    } catch (error) {
+      console.error("Error fetching recording:", error);
+      toast.error("Failed to load recording");
+      setPlayingCallId(null);
+    }
   };
 
   const sortByTime = (a: any, b: any) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime();
@@ -598,11 +624,15 @@ const PhoneCallSection = () => {
                     {selectedCallTranscript?.type || "call"}
                   </Badge>
                 </div>
-                {selectedCallTranscript?.recording_url && (
+                {(freshRecordingUrl || selectedCallTranscript?.recording_url) && (
                   <div className="mb-3">
-                    <audio controls className="w-full h-8" src={selectedCallTranscript.recording_url}>
-                      Your browser does not support audio playback.
-                    </audio>
+                    {freshRecordingUrl ? (
+                      <audio controls className="w-full h-8" src={freshRecordingUrl}>
+                        Your browser does not support audio playback.
+                      </audio>
+                    ) : (
+                      <p className="text-xs text-muted-foreground animate-pulse">Loading recording...</p>
+                    )}
                   </div>
                 )}
                 <div className="mt-3 p-3 bg-muted/50 rounded">

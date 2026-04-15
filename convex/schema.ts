@@ -85,6 +85,7 @@ export default defineSchema({
     telnyx_phone_number: v.optional(v.string()),
     telnyx_sip_uri: v.optional(v.string()),
     telnyx_app_id: v.optional(v.string()),
+    telnyx_whatsapp_number: v.optional(v.string()),
     created_at: v.optional(v.string()),
     updated_at: v.optional(v.string()),
   }).index("by_business_id", ["business_id"]),

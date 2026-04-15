@@ -28,9 +28,10 @@ async function getConnections(ctx: any) {
 
 // ─── SECURITY HELPERS ────────────────────────────────────────
 
-// CORS: restrict to configured origin instead of wildcard
-function getCorsHeaders(): Record<string, string> {
-  const origin = process.env.ALLOWED_ORIGIN || "http://localhost:5173";
+// CORS: restrict to configured origins (comma-separated in env)
+function getCorsHeaders(requestOrigin?: string | null): Record<string, string> {
+  const allowed = (process.env.ALLOWED_ORIGIN || "http://localhost:5173").split(",").map(o => o.trim());
+  const origin = (requestOrigin && allowed.includes(requestOrigin)) ? requestOrigin : allowed[0];
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -161,6 +162,199 @@ const whatsappWebhook = httpAction(async (ctx, request) => {
     return new Response("OK", { status: 200 });
   } catch (error) {
     console.error("WhatsApp webhook error:", error);
+    return new Response("OK", { status: 200 });
+  }
+});
+
+// ─── TELNYX WHATSAPP WEBHOOK ────────────────────────────────
+// Receives WhatsApp messages via Telnyx's webhook system (separate from Meta's direct API above).
+// Telnyx uses ED25519 signatures — skipping verification for now (can add later).
+const telnyxWhatsAppWebhook = httpAction(async (ctx, request) => {
+  try {
+    const body = await request.json();
+
+    // Debug: log the raw payload to understand the format
+    console.log("WhatsApp webhook payload:", JSON.stringify(body).substring(0, 500));
+
+    // Telnyx WhatsApp may wrap in different formats — try all known structures
+    // Format 1: Direct Meta format { messages: [...], messaging_product: "whatsapp" }
+    // Format 2: Telnyx envelope { data: { event_type: "...", payload: { ... } } }
+    // Format 3: Meta nested { entry: [{ changes: [{ value: { messages: [...] } }] }] }
+    let message = body.messages?.[0];
+    let contacts = body.contacts;
+
+    if (!message && body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]) {
+      // Meta nested format
+      const value = body.entry[0].changes[0].value;
+      message = value.messages[0];
+      contacts = value.contacts;
+    }
+
+    if (!message && body.data?.payload?.messages?.[0]) {
+      // Telnyx envelope format
+      message = body.data.payload.messages[0];
+      contacts = body.data.payload.contacts;
+    }
+
+    if (!message) {
+      console.log("WhatsApp webhook: no message found in payload, skipping");
+      return new Response("OK", { status: 200 });
+    }
+
+    const phoneNumber = message.from; // e.g. "2347042208155"
+    const senderName = contacts?.[0]?.profile?.name || body.contacts?.[0]?.profile?.name || null;
+    const messageType = message.type; // "text", "image", "audio", "document", etc.
+
+    // Normalize phone number to E.164 format
+    const normalizedPhone = phoneNumber.startsWith("+") ? phoneNumber : `+${phoneNumber}`;
+
+    // Extract text content
+    let userMessage = "";
+    if (messageType === "text") {
+      userMessage = message.text?.body || "";
+    } else if (messageType === "image") {
+      userMessage = message.image?.caption || "Sent an image";
+    } else if (messageType === "audio") {
+      userMessage = "Sent a voice note";
+    } else if (messageType === "document") {
+      userMessage = message.document?.caption || "Sent a document";
+    } else if (messageType === "location") {
+      userMessage = `Shared location: ${message.location?.name || ""} (${message.location?.latitude}, ${message.location?.longitude})`;
+    } else {
+      userMessage = `Sent a ${messageType} message`;
+    }
+
+    if (!phoneNumber || !userMessage) {
+      return new Response("OK", { status: 200 });
+    }
+
+    // Check toggle
+    const toggleStatus = await ctx.runQuery(api.toggles.checkToggle, { channel: "whatsapp" });
+    if (!toggleStatus.channel) {
+      return new Response("OK", { status: 200 });
+    }
+
+    // Handle images — download via Meta Cloud API through Telnyx
+    let imageBase64: string | undefined;
+    let imageMimeType: string | undefined;
+    const telnyxApiKey = process.env.TELNYX_API_KEY;
+
+    if (messageType === "image" && message.image?.id && telnyxApiKey) {
+      try {
+        // Get media URL from Telnyx/Meta
+        const mediaRes = await fetch(`https://api.telnyx.com/v2/whatsapp/media/${message.image.id}`, {
+          headers: { Authorization: `Bearer ${telnyxApiKey}` },
+        });
+        if (mediaRes.ok) {
+          const mediaData = await mediaRes.json();
+          const mediaUrl = mediaData.data?.url || mediaData.url;
+          if (mediaUrl) {
+            const imgRes = await fetch(mediaUrl, {
+              headers: { Authorization: `Bearer ${telnyxApiKey}` },
+            });
+            if (imgRes.ok) {
+              const arrayBuf = await imgRes.arrayBuffer();
+              const bytes = new Uint8Array(arrayBuf);
+              let binary = "";
+              for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+              imageBase64 = btoa(binary);
+              imageMimeType = message.image.mime_type || "image/jpeg";
+            }
+          }
+        }
+      } catch (imgErr) {
+        console.error("WhatsApp image download error:", imgErr);
+      }
+    }
+
+    const messageForAI = imageBase64
+      ? (userMessage === "Sent an image" ? "The customer sent an image. Describe what you see and respond helpfully." : userMessage)
+      : userMessage;
+
+    // Generate AI response
+    const aiResponse = await ctx.runAction(api.ai.generateResponse, {
+      user_message: messageForAI,
+      platform: "whatsapp",
+      phone_number: normalizedPhone,
+      sender_name: senderName || undefined,
+      ...(imageBase64 ? { image_base64: imageBase64, image_mime_type: imageMimeType } : {}),
+    });
+
+    // Reply via Telnyx WhatsApp API
+    // Try multiple send approaches — embedded signup numbers may need different endpoints
+    const phoneNumberId = body.data?.payload?.metadata?.phone_number_id
+      || body.metadata?.phone_number_id;
+    const envPhone = process.env.TELNYX_WHATSAPP_NUMBER || "+15559051085";
+    const recipientPhone = phoneNumber.replace(/^\+/, ""); // Meta format: no +
+    console.log("WhatsApp replying to:", recipientPhone, "via phone_number_id:", phoneNumberId);
+
+    if (telnyxApiKey && aiResponse) {
+      let sent = false;
+
+      // Approach 1: Meta Cloud API format via Telnyx proxy
+      if (phoneNumberId && !sent) {
+        try {
+          const cloudRes = await fetch(`https://api.telnyx.com/v2/whatsapp/${phoneNumberId}/messages`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${telnyxApiKey}`,
+            },
+            body: JSON.stringify({
+              messaging_product: "whatsapp",
+              to: recipientPhone,
+              type: "text",
+              text: { body: aiResponse },
+            }),
+          });
+          if (cloudRes.ok) {
+            console.log("WhatsApp reply sent via Cloud API proxy");
+            sent = true;
+          } else {
+            console.error("Cloud API proxy failed:", cloudRes.status, await cloudRes.text());
+          }
+        } catch (e) {
+          console.error("Cloud API proxy error:", e);
+        }
+      }
+
+      // Approach 2: Standard Telnyx messaging API (fallback)
+      if (!sent) {
+        try {
+          const msgRes = await fetch("https://api.telnyx.com/v2/messages/whatsapp", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${telnyxApiKey}`,
+            },
+            body: JSON.stringify({
+              from: envPhone,
+              to: normalizedPhone,
+              whatsapp_message: {
+                type: "text",
+                text: { body: aiResponse, preview_url: false },
+              },
+            }),
+          });
+          if (msgRes.ok) {
+            console.log("WhatsApp reply sent via messaging API");
+            sent = true;
+          } else {
+            console.error("Messaging API failed:", msgRes.status, await msgRes.text());
+          }
+        } catch (e) {
+          console.error("Messaging API error:", e);
+        }
+      }
+
+      if (!sent) {
+        console.error("All WhatsApp reply methods failed");
+      }
+    }
+
+    return new Response("OK", { status: 200 });
+  } catch (error) {
+    console.error("Telnyx WhatsApp webhook error:", error);
     return new Response("OK", { status: 200 });
   }
 });
@@ -319,7 +513,7 @@ const telegramWebhook = httpAction(async (ctx, request) => {
 // Called from dashboard (BeccaChatDialog — with auth) and public pages (WebChat/Widget — no auth).
 // Auth is optional: if present, validate. If absent, allow as public chat.
 const webChatEndpoint = httpAction(async (ctx, request) => {
-  const corsHeaders = getCorsHeaders();
+  const corsHeaders = getCorsHeaders(request.headers.get("Origin"));
 
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -842,7 +1036,7 @@ const telnyxCallWebhook = httpAction(async (ctx, request) => {
 // ─── TELNYX: PERSONALITY SYNC ────────────────────────────────
 // Called from dashboard when personality is updated — syncs to Telnyx assistant
 const telnyxSyncPersonality = httpAction(async (ctx, request) => {
-  const corsHeaders = getCorsHeaders();
+  const corsHeaders = getCorsHeaders(request.headers.get("Origin"));
 
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -1147,7 +1341,7 @@ const telnyxDynamicVariables = httpAction(async (ctx, request) => {
 
 // ─── TELNYX: OUTBOUND CALL ────────────────────────────────────
 const telnyxOutboundCall = httpAction(async (ctx, request) => {
-  const corsHeaders = getCorsHeaders();
+  const corsHeaders = getCorsHeaders(request.headers.get("Origin"));
 
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -1217,7 +1411,7 @@ const telnyxOutboundCall = httpAction(async (ctx, request) => {
 
 // ─── TELNYX: END CALL ────────────────────────────────────────
 const telnyxEndCall = httpAction(async (ctx, request) => {
-  const corsHeaders = getCorsHeaders();
+  const corsHeaders = getCorsHeaders(request.headers.get("Origin"));
 
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -1262,7 +1456,7 @@ const telnyxEndCall = httpAction(async (ctx, request) => {
 
 // ─── LOGO/BACKGROUND GENERATION ─────────────────────────────
 const generateLogoEndpoint = httpAction(async (ctx, request) => {
-  const corsHeaders = getCorsHeaders();
+  const corsHeaders = getCorsHeaders(request.headers.get("Origin"));
   if (request.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
   if (!(await validateDashboardAuth(ctx, request))) return unauthorizedResponse(corsHeaders);
   try {
@@ -1282,7 +1476,7 @@ const generateLogoEndpoint = httpAction(async (ctx, request) => {
 
 // ─── UPDATE LOGO URL ─────────────────────────────────────────
 const updateLogoEndpoint = httpAction(async (ctx, request) => {
-  const corsHeaders = getCorsHeaders();
+  const corsHeaders = getCorsHeaders(request.headers.get("Origin"));
   if (request.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
   if (!(await validateDashboardAuth(ctx, request))) return unauthorizedResponse(corsHeaders);
   try {
@@ -1300,7 +1494,7 @@ const updateLogoEndpoint = httpAction(async (ctx, request) => {
 
 // ─── ANALYZE DATA ────────────────────────────────────────────
 const analyzeEndpoint = httpAction(async (ctx, request) => {
-  const corsHeaders = getCorsHeaders();
+  const corsHeaders = getCorsHeaders(request.headers.get("Origin"));
   if (request.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
   if (!(await validateDashboardAuth(ctx, request))) return unauthorizedResponse(corsHeaders);
   try {
@@ -1319,7 +1513,7 @@ const analyzeEndpoint = httpAction(async (ctx, request) => {
 
 // ─── CHARACTER CREATOR ───────────────────────────────────────
 const createCharacterEndpoint = httpAction(async (ctx, request) => {
-  const corsHeaders = getCorsHeaders();
+  const corsHeaders = getCorsHeaders(request.headers.get("Origin"));
   if (request.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
   if (!(await validateDashboardAuth(ctx, request))) return unauthorizedResponse(corsHeaders);
   try {
@@ -1339,10 +1533,11 @@ const createCharacterEndpoint = httpAction(async (ctx, request) => {
 });
 
 // ─── TELNYX: SYNC VOICE ─────────────────────────────────────
-// Called from dashboard when user selects or clones a voice.
-// Updates the Telnyx AI Assistant's voice to the selected ElevenLabs voice.
+// Called from dashboard when user selects a voice.
+// Updates the Telnyx AI Assistant's voice to the selected voice.
+// Voice ID format: full Telnyx voice string
 const telnyxSyncVoice = httpAction(async (ctx, request) => {
-  const corsHeaders = getCorsHeaders();
+  const corsHeaders = getCorsHeaders(request.headers.get("Origin"));
 
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -1356,7 +1551,7 @@ const telnyxSyncVoice = httpAction(async (ctx, request) => {
   try {
     const { voice_id } = await request.json();
 
-    if (!voice_id || typeof voice_id !== "string" || !/^[a-zA-Z0-9_-]+$/.test(voice_id)) {
+    if (!voice_id || typeof voice_id !== "string") {
       return new Response(
         JSON.stringify({ error: "Invalid voice_id" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1373,8 +1568,9 @@ const telnyxSyncVoice = httpAction(async (ctx, request) => {
       );
     }
 
-    // Telnyx voice format: "ElevenLabs.<voice_id>"
-    const telnyxVoice = `ElevenLabs.${voice_id}`;
+    // Voice ID is the full Telnyx voice string
+    // No prefix needed — it's already in the correct format
+    const telnyxVoice = voice_id;
 
     const response = await fetch(`https://api.telnyx.com/v2/ai/assistants/${assistantId}`, {
       method: "PATCH",
@@ -1385,8 +1581,6 @@ const telnyxSyncVoice = httpAction(async (ctx, request) => {
       body: JSON.stringify({
         voice_settings: {
           voice: telnyxVoice,
-          api_key_ref: "elevenlab",
-          use_speaker_boost: true,
         },
       }),
     });
@@ -1419,6 +1613,7 @@ const telnyxSyncVoice = httpAction(async (ctx, request) => {
 // Social channels
 http.route({ path: "/whatsapp", method: "GET", handler: verifyWebhook });
 http.route({ path: "/whatsapp", method: "POST", handler: whatsappWebhook });
+http.route({ path: "/telnyx/whatsapp", method: "POST", handler: telnyxWhatsAppWebhook });
 http.route({ path: "/instagram", method: "GET", handler: verifyWebhook });
 http.route({ path: "/instagram", method: "POST", handler: instagramWebhook });
 http.route({ path: "/telegram", method: "POST", handler: telegramWebhook });
@@ -1443,7 +1638,7 @@ http.route({ path: "/telnyx/end-call", method: "OPTIONS", handler: telnyxEndCall
 
 // Sync calls from Telnyx
 const syncCallsEndpoint = httpAction(async (ctx, request) => {
-  const corsHeaders = getCorsHeaders();
+  const corsHeaders = getCorsHeaders(request.headers.get("Origin"));
 
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });

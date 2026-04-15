@@ -26,10 +26,10 @@ const ConnectionStatus = () => {
         telnyx_phone_number: telnyxPhoneNumber,
       });
       setTelnyxApiKey("");
-      toast.success("Telnyx configuration saved successfully");
+      toast.success("Phone configuration saved");
     } catch (error) {
       console.error("Error saving Telnyx config:", error);
-      toast.error("Failed to save Telnyx configuration");
+      toast.error("Failed to save configuration");
     } finally {
       setIsSaving(false);
     }
@@ -43,14 +43,14 @@ const ConnectionStatus = () => {
     <Card className="p-6">
       <h3 className="text-lg font-semibold mb-4">Connection Status</h3>
 
-      {/* Telnyx Configuration */}
+      {/* Voice/Phone Configuration */}
       <div className="mb-6 p-4 border rounded-lg bg-muted/50">
-        <h4 className="font-medium mb-3">Telnyx Voice Configuration</h4>
+        <h4 className="font-medium mb-3">Phone Configuration</h4>
         <div className="space-y-3">
           <div>
             <Label className="text-sm mb-2">API Key</Label>
             <Input
-              placeholder={connections?.telnyx_configured ? "••••••••  (configured — enter new to change)" : "Enter Telnyx API Key"}
+              placeholder={connections?.telnyx_configured ? "••••••••  (configured — enter new to change)" : "Enter API Key"}
               value={telnyxApiKey}
               onChange={(e) => setTelnyxApiKey(e.target.value)}
               type="password"
@@ -59,7 +59,7 @@ const ConnectionStatus = () => {
           <div>
             <Label className="text-sm mb-2">Phone Number</Label>
             <Input
-              placeholder="Enter Telnyx Phone Number"
+              placeholder="Enter Phone Number"
               value={telnyxPhoneNumber}
               onChange={(e) => setTelnyxPhoneNumber(e.target.value)}
             />
