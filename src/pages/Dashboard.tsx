@@ -162,35 +162,89 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen relative overflow-x-hidden" style={{ background: 'radial-gradient(ellipse at top, #0a1628 0%, #040811 70%, #02040a 100%)' }}>
-      {/* Mobile overlay with blur */}
+      {/* Mobile "More" sheet overlay */}
       <div
-        className={`fixed inset-0 z-40 lg:hidden transition-all duration-500
-          ${sidebarOpen ? 'bg-black/60 backdrop-blur-sm pointer-events-auto' : 'bg-transparent pointer-events-none'}`}
+        className={`fixed inset-0 z-[60] lg:hidden transition-all duration-300
+          ${sidebarOpen ? 'bg-black/70 backdrop-blur-sm pointer-events-auto' : 'bg-transparent pointer-events-none'}`}
         onClick={() => setSidebarOpen(false)}
       />
 
-      {/* ===== SIDEBAR with sci-fi retraction ===== */}
-      <aside
-        className={`fixed top-0 left-0 h-full z-50 flex flex-col
-          transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
-          ${sidebarW} lg:translate-x-0 ${sidebarOpen ? 'translate-x-0 w-56' : '-translate-x-full'}`}
+      {/* Mobile "More" bottom sheet */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-[65] lg:hidden transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
+          ${sidebarOpen ? 'translate-y-0' : 'translate-y-full'}`}
         style={{
-          background: 'linear-gradient(180deg, rgba(16,26,46,0.97) 0%, rgba(12,22,40,0.98) 100%)',
-          borderRight: '1px solid rgba(0,230,255,0.12)',
-          boxShadow: '4px 0 40px rgba(0,0,0,0.3), 1px 0 0 rgba(0,230,255,0.08)',
+          background: 'linear-gradient(180deg, rgba(22,40,72,0.99) 0%, rgba(14,26,52,0.99) 100%)',
+          borderTop: '1px solid rgba(0,230,255,0.25)',
+          borderRadius: '24px 24px 0 0',
+          boxShadow: '0 -12px 48px rgba(0,0,0,0.5), 0 -1px 0 rgba(0,230,255,0.2)',
+          maxHeight: '75vh',
         }}
       >
-        {/* Animated edge glow on sidebar */}
-        <div className="absolute top-0 right-0 bottom-0 w-[1px] overflow-hidden">
-          <div className="absolute w-full h-20 bg-gradient-to-b from-transparent via-cyan-400/30 to-transparent animate-[sidebar-glow_4s_ease-in-out_infinite]" />
+        <div className="flex flex-col overflow-y-auto max-h-[75vh]">
+          {/* Drag handle */}
+          <div className="flex justify-center pt-2 pb-3">
+            <div className="w-10 h-1 rounded-full bg-white/20" />
+          </div>
+          <div className="px-4 pb-3">
+            <h3 className="text-white/90 font-semibold text-base">All Sections</h3>
+          </div>
+          <div className="px-2 pb-6 space-y-1">
+            {sectionGroups.map((group) => (
+              <div key={group.label} className="mb-2">
+                <div className="px-3 py-1.5 text-[10px] text-cyan-400/60 uppercase tracking-[0.2em] font-bold">{group.label}</div>
+                {group.sections.map((section) => {
+                  const IconComp = section.icon;
+                  const active = activeSection === section.id;
+                  return (
+                    <button
+                      key={section.id}
+                      onClick={() => { scrollToSection(section.id); setSidebarOpen(false); }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all active:scale-[0.98]
+                        ${active ? 'bg-cyan-500/15 text-cyan-200' : 'text-white/70 hover:bg-white/5'}`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${active ? 'bg-cyan-500/20' : 'bg-white/5'}`}>
+                        <IconComp className="h-4 w-4" />
+                      </div>
+                      <span className="text-sm font-medium">{section.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+            <button onClick={handleSignOut}
+              className="w-full flex items-center gap-3 px-4 py-3 mt-4 rounded-xl text-red-400 hover:bg-red-500/10 transition-all active:scale-[0.98]">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-500/10">
+                <LogOut className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-medium">Sign Out</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== SIDEBAR with sci-fi retraction — brighter than content area ===== */}
+      <aside
+        className={`fixed top-0 left-0 h-full z-50 hidden lg:flex flex-col
+          transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
+          ${sidebarW} lg:translate-x-0 ${sidebarOpen ? 'translate-x-0 w-56' : '-translate-x-full lg:translate-x-0'}`}
+        style={{
+          background: 'linear-gradient(180deg, rgba(28,48,82,0.98) 0%, rgba(22,40,72,0.98) 50%, rgba(18,34,64,0.98) 100%)',
+          borderRight: '1px solid rgba(0,230,255,0.25)',
+          boxShadow: '6px 0 50px rgba(0,230,255,0.08), 2px 0 0 rgba(0,230,255,0.15), inset -1px 0 0 rgba(255,255,255,0.04)',
+        }}
+      >
+        {/* Animated edge glow on sidebar — stronger */}
+        <div className="absolute top-0 right-0 bottom-0 w-[2px] overflow-hidden">
+          <div className="absolute w-full h-28 bg-gradient-to-b from-transparent via-cyan-400/60 to-transparent animate-[sidebar-glow_4s_ease-in-out_infinite]" />
         </div>
 
         {/* Sidebar Header */}
         <div className="flex items-center justify-between px-3 py-4 border-b border-white/[0.04] min-h-[56px]">
           {!sidebarCollapsed || sidebarOpen ? (
-            <div className="flex items-center gap-2 overflow-hidden">
-              <img src={beccaBLogo} alt="B" className="w-7 h-7 flex-shrink-0 transition-all duration-500" style={{ filter: 'drop-shadow(0 0 8px rgba(0,230,255,0.4))' }} />
-              <span className="text-white/80 text-sm font-normal whitespace-nowrap transition-all duration-300" style={{ fontFamily: 'system-ui' }}>Dashboard</span>
+            <div className="flex items-center gap-2.5 overflow-hidden">
+              <img src={beccaBLogo} alt="B" className="w-8 h-8 flex-shrink-0 transition-all duration-500" style={{ filter: 'drop-shadow(0 0 8px rgba(0,230,255,0.5))' }} />
+              <span className="text-white text-base font-semibold whitespace-nowrap transition-all duration-300" style={{ fontFamily: 'system-ui', letterSpacing: '0.02em' }}>Dashboard</span>
             </div>
           ) : (
             <img src={beccaBLogo} alt="B" className="w-7 h-7 mx-auto transition-all duration-500 hover:scale-110" style={{ filter: 'drop-shadow(0 0 8px rgba(0,230,255,0.4))' }} />
@@ -208,7 +262,7 @@ const Dashboard = () => {
           {sectionGroups.map((group) => (
             <div key={group.label}>
               {(!sidebarCollapsed || sidebarOpen) && (
-                <p className="text-[9px] font-bold text-cyan-500/40 uppercase tracking-[0.2em] px-2 mb-1.5">{group.label}</p>
+                <p className="text-[11px] font-bold text-cyan-300/80 uppercase tracking-[0.2em] px-2 mb-2">{group.label}</p>
               )}
               {sidebarCollapsed && !sidebarOpen && (
                 <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/15 to-transparent mb-2" />
@@ -221,13 +275,13 @@ const Dashboard = () => {
                     <button
                       key={section.id}
                       onClick={() => scrollToSection(section.id)}
-                      className={`group/nav w-full flex items-center rounded-lg text-xs relative overflow-hidden
+                      className={`group/nav w-full flex items-center rounded-lg text-sm font-medium relative overflow-hidden
                         transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]
                         active:scale-[0.96]
-                        ${isExpanded ? 'gap-2.5 px-2.5 py-2' : 'justify-center px-0 py-2.5'}
+                        ${isExpanded ? 'gap-3 px-3 py-2.5' : 'justify-center px-0 py-2.5'}
                         ${isActive
-                          ? 'text-cyan-300 bg-gradient-to-r from-cyan-500/10 to-transparent'
-                          : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
+                          ? 'text-cyan-200 bg-gradient-to-r from-cyan-500/15 to-transparent'
+                          : 'text-white/85 hover:text-white hover:bg-white/[0.06]'
                         }`}
                       title={!isExpanded ? section.label : undefined}
                     >
@@ -239,8 +293,8 @@ const Dashboard = () => {
                       {/* Hover sweep */}
                       <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/[0.04] to-cyan-500/0
                         translate-x-[-100%] group-hover/nav:translate-x-[100%] transition-transform duration-700" />
-                      <section.icon className={`h-4 w-4 flex-shrink-0 transition-all duration-300
-                        ${isActive ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,230,255,0.5)]' : 'text-white/25 group-hover/nav:text-white/50'}`} />
+                      <section.icon className={`h-[18px] w-[18px] flex-shrink-0 transition-all duration-300
+                        ${isActive ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,230,255,0.5)]' : 'text-white/70 group-hover/nav:text-white'}`} />
                       {isExpanded && <span className="truncate relative">{section.label}</span>}
                     </button>
                   );
@@ -252,16 +306,16 @@ const Dashboard = () => {
           {/* Connect Number (only when expanded) */}
           {(!sidebarCollapsed || sidebarOpen) && (
             <div>
-              <p className="text-[9px] font-bold text-cyan-500/40 uppercase tracking-[0.2em] px-2 mb-1.5">PHONE</p>
+              <p className="text-[11px] font-bold text-cyan-300/80 uppercase tracking-[0.2em] px-2 mb-2">PHONE</p>
               <button
                 onClick={() => setShowConnectNumber(!showConnectNumber)}
-                className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-white/40 hover:text-white/70 hover:bg-white/[0.03] transition-all"
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-white/85 hover:text-white hover:bg-white/[0.06] transition-all"
               >
-                <div className="flex items-center gap-2.5">
-                  <Phone className="h-4 w-4 text-white/25" />
+                <div className="flex items-center gap-3">
+                  <Phone className="h-[18px] w-[18px] text-white/70" />
                   <span>Connect</span>
                 </div>
-                {showConnectNumber ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                {showConnectNumber ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </button>
               {showConnectNumber && (
                 <div className="mt-1.5 ml-2 pl-3 border-l border-cyan-500/10 space-y-2">
@@ -286,29 +340,29 @@ const Dashboard = () => {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="border-t border-white/5 p-2 space-y-0.5">
+        <div className="border-t border-white/10 p-2 space-y-0.5">
           {/* Collapse toggle with retraction animation (desktop only) */}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="hidden lg:flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-white/30
-              hover:text-cyan-400/70 hover:bg-cyan-500/5 transition-all duration-300 active:scale-95
+            className="hidden lg:flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70
+              hover:text-cyan-300 hover:bg-cyan-500/10 transition-all duration-300 active:scale-95
               hover:shadow-[0_0_10px_rgba(0,230,255,0.05)]"
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <div className={`transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${sidebarCollapsed ? 'rotate-180' : ''}`}>
-              <PanelLeftClose className={`h-4 w-4 ${sidebarCollapsed ? 'mx-auto' : ''}`} />
+              <PanelLeftClose className={`h-[18px] w-[18px] ${sidebarCollapsed ? 'mx-auto' : ''}`} />
             </div>
             {!sidebarCollapsed && <span>Collapse</span>}
           </button>
           {(!sidebarCollapsed || sidebarOpen) ? (
             <>
               <button onClick={() => navigate("/dashboard/billing")}
-                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-all">
-                <CreditCard className="h-4 w-4" /><span>Billing</span>
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/75 hover:text-white hover:bg-white/[0.06] transition-all">
+                <CreditCard className="h-[18px] w-[18px]" /><span>Billing</span>
               </button>
               <button onClick={handleSignOut}
-                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-red-400/40 hover:text-red-400 hover:bg-red-500/5 transition-all">
-                <LogOut className="h-4 w-4" /><span>Sign Out</span>
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-400/80 hover:text-red-300 hover:bg-red-500/10 transition-all">
+                <LogOut className="h-[18px] w-[18px]" /><span>Sign Out</span>
               </button>
             </>
           ) : (
@@ -328,16 +382,15 @@ const Dashboard = () => {
 
       {/* ===== HEADER ===== */}
       <header className={`sticky top-0 z-30 transition-all duration-300 ${mainPl}`}
-        style={{ background: 'rgba(4,10,20,0.8)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(0,230,255,0.06)' }}>
+        style={{ background: 'rgba(4,10,20,0.85)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(0,230,255,0.08)' }}>
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/5 transition-all active:scale-90">
-              <Menu className="h-5 w-5" />
-            </button>
-            {/* Mobile logo */}
+            {/* Mobile logo — no hamburger, bottom tabs handle nav */}
             <div className="flex items-center gap-2 lg:hidden">
-              <img src={beccaBLogo} alt="B" className="w-6 h-6" style={{ filter: 'drop-shadow(0 0 4px rgba(0,230,255,0.3))' }} />
-              <span className="text-white/60 text-sm">Dashboard</span>
+              <img src={beccaBLogo} alt="B" className="w-7 h-7" style={{ filter: 'drop-shadow(0 0 6px rgba(0,230,255,0.5))' }} />
+              <span className="text-white/80 text-sm font-medium">
+                {allSections.find(s => s.id === activeSection)?.label || "Dashboard"}
+              </span>
             </div>
             {/* Desktop breadcrumb */}
             <div className="hidden lg:flex items-center gap-2 text-xs text-white/40">
@@ -355,12 +408,17 @@ const Dashboard = () => {
               })()}
             </div>
           </div>
+          {/* Mobile sign-out icon */}
+          <button onClick={handleSignOut}
+            className="lg:hidden p-1.5 rounded-lg text-red-400/50 hover:text-red-400 hover:bg-red-500/5 transition-all active:scale-90">
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </header>
 
       {/* ===== MAIN CONTENT ===== */}
       <main className={`relative z-10 transition-all duration-300 ${mainPl}`}>
-        <div className="w-full px-3 sm:px-5 lg:px-6 py-5 space-y-5">
+        <div className="w-full px-3 sm:px-5 lg:px-6 py-3 sm:py-5 space-y-3 sm:space-y-5">
 
           {/* === ROW 1: Master Switch — full width umbrella === */}
           <SectionCard id="master-switch" title="Master Switch" icon={ToggleLeft} alwaysOpen
@@ -425,10 +483,56 @@ const Dashboard = () => {
             </SectionCard>
           </div>
 
-          {/* Bottom spacer for floating ball */}
-          <div className="h-20" />
+          {/* Bottom spacer for floating ball + mobile tab bar */}
+          <div className="h-24 lg:h-20" />
         </div>
       </main>
+
+      {/* ===== MOBILE BOTTOM TAB BAR ===== */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)]"
+        style={{
+          background: 'linear-gradient(180deg, rgba(16,28,52,0.92) 0%, rgba(10,20,40,0.98) 100%)',
+          backdropFilter: 'blur(20px)',
+          borderTop: '1px solid rgba(0,230,255,0.18)',
+          boxShadow: '0 -4px 24px rgba(0,0,0,0.4), 0 -1px 0 rgba(0,230,255,0.15)',
+        }}
+      >
+        <div className="flex items-center justify-around px-1 pt-2 pb-2">
+          {[
+            { id: "master-switch", label: "Home", icon: ToggleLeft, isMore: false },
+            { id: "crm", label: "CRM", icon: Users, isMore: false },
+            { id: "conversations", label: "Chats", icon: MessageSquare, isMore: false },
+            { id: "phone-calls", label: "Calls", icon: PhoneCall, isMore: false },
+            { id: "__more", label: "More", icon: Menu, isMore: true },
+          ].map((tab) => {
+            const isActive = tab.isMore ? sidebarOpen : (activeSection === tab.id && !sidebarOpen);
+            const TabIcon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  if (tab.isMore) {
+                    setSidebarOpen(true);
+                  } else {
+                    setSidebarOpen(false);
+                    scrollToSection(tab.id);
+                  }
+                }}
+                className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-xl min-w-[56px] transition-all duration-300 active:scale-90
+                  ${isActive ? 'text-cyan-300' : 'text-white/45'}`}
+              >
+                <div className={`relative p-1.5 rounded-lg transition-all duration-300 ${isActive ? 'bg-cyan-500/15 shadow-[0_0_12px_rgba(0,230,255,0.25)]' : ''}`}>
+                  <TabIcon className="h-5 w-5" />
+                  {isActive && (
+                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,230,255,0.6)]" />
+                  )}
+                </div>
+                <span className={`text-[10px] font-medium tracking-tight ${isActive ? 'text-cyan-300' : 'text-white/45'}`}>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       {/* Dialogs */}
       <PhoneConnectionDialog open={showProviderDialog} onOpenChange={setShowProviderDialog}

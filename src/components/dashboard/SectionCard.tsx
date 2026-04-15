@@ -129,20 +129,20 @@ const SectionCard = ({ id, title, icon: Icon, infoText, children, className = ""
         <svg className="absolute bottom-1.5 right-1.5 w-3 h-3 text-cyan-500/0 group-hover/card:text-cyan-500/30 transition-all duration-500 z-20" viewBox="0 0 12 12"><path d="M12 8v4H8" fill="none" stroke="currentColor" strokeWidth="1"/></svg>
 
         {/* === SECTION HEADER === */}
-        <div className="relative flex items-center justify-between px-4 py-3 z-20"
+        <div className="relative flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 z-20"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             {/* 3D icon container */}
-            <div className="relative flex items-center justify-center w-8 h-8 rounded-lg
+            <div className="relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg
               transition-all duration-500 group-hover/card:shadow-[0_0_16px_rgba(0,230,255,0.15)]"
               style={{
                 background: 'linear-gradient(135deg, rgba(0,230,255,0.12) 0%, rgba(0,180,220,0.06) 100%)',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.1)',
               }}>
-              <Icon className="h-4 w-4 text-cyan-400/80 group-hover/card:text-cyan-300 transition-all duration-300
+              <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-cyan-400/80 group-hover/card:text-cyan-300 transition-all duration-300
                 group-hover/card:drop-shadow-[0_0_4px_rgba(0,230,255,0.5)]" />
             </div>
-            <h2 className="text-xs font-semibold text-white/60 uppercase tracking-[0.15em]
+            <h2 className="text-[11px] sm:text-xs font-semibold text-white/60 uppercase tracking-[0.12em] sm:tracking-[0.15em]
               group-hover/card:text-white/90 transition-colors duration-300
               group-hover/card:drop-shadow-[0_0_8px_rgba(0,230,255,0.15)]">{title}</h2>
           </div>
@@ -243,7 +243,7 @@ const SectionCard = ({ id, title, icon: Icon, infoText, children, className = ""
 
           {/* Layer B — Actual Content (always in DOM for sizing) */}
           <div
-            className="relative p-4 flex-1 flex flex-col overflow-y-auto transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
+            className="relative p-3 sm:p-4 flex-1 flex flex-col overflow-y-auto transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
             style={{
               opacity: isOpen ? 1 : (isHovered && !isRevealed ? 0.18 : 0),
               transform: isOpen
