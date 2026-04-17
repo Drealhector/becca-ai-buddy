@@ -792,14 +792,16 @@ const telnyxGetProperties = httpAction(async (ctx, request) => {
   }
   try {
     const body = await request.json();
+    // CRITICAL: Telnyx wraps tool parameters in data.payload — must unwrap
+    const payload = body.data?.payload || body.payload || body;
     const filters = {
-      bedrooms: body.bedrooms ? Number(body.bedrooms) : null,
-      city: body.city?.toLowerCase() || null,
-      state: body.state?.toLowerCase() || null,
-      listing_type: body.listing_type?.toLowerCase() || null, // sale, rent, lease
-      property_type: body.property_type?.toLowerCase() || null, // house, apartment, condo, land
-      max_price: body.max_price ? Number(body.max_price) : null,
-      min_price: body.min_price ? Number(body.min_price) : null,
+      bedrooms: payload.bedrooms ? Number(payload.bedrooms) : null,
+      city: payload.city?.toLowerCase() || null,
+      state: payload.state?.toLowerCase() || null,
+      listing_type: payload.listing_type?.toLowerCase() || null, // sale, rent, lease
+      property_type: payload.property_type?.toLowerCase() || null, // house, apartment, condo, land
+      max_price: payload.max_price ? Number(payload.max_price) : null,
+      min_price: payload.min_price ? Number(payload.min_price) : null,
     };
 
     const allProperties = await ctx.runQuery(api.properties.list, {});
@@ -1242,6 +1244,9 @@ const telnyxDynamicVariables = httpAction(async (ctx, request) => {
     // Store the real caller phone under ALL call-specific IDs.
     // NO "latest" key — that causes race conditions when 2+ calls arrive simultaneously.
     // Each call has unique IDs so lookups are always call-specific.
+    // CRITICAL: Telnyx requires <1s response. Run storage mutations in PARALLEL with the context lookup,
+    // not sequentially — this was the bottleneck causing timeouts that made Telnyx fall back to defaults
+    // and render {{caller_name}} literally as "caller name" in the greeting.
     const callIds = [
       payload.call_control_id,
       payload.call_session_id,
@@ -1249,20 +1254,22 @@ const telnyxDynamicVariables = httpAction(async (ctx, request) => {
       request.headers.get("x-telnyx-call-control-id"),
     ].filter(Boolean) as string[];
 
-    for (const id of callIds) {
-      if (phoneNumber && id) {
-        await ctx.runMutation(api.activeCalls.store, {
-          telnyx_call_id: id,
-          caller_phone: phoneNumber,
-        });
-      }
-    }
+    const storePromises = callIds.map((id) =>
+      phoneNumber && id
+        ? ctx.runMutation(api.activeCalls.store, {
+            telnyx_call_id: id,
+            caller_phone: phoneNumber,
+          })
+        : Promise.resolve()
+    );
 
-    // Look up caller in unified callers table
-    const context = await ctx.runQuery(api.channelHandler.getCustomerContext, {
+    // Run caller context lookup in parallel with storage mutations
+    const contextPromise = ctx.runQuery(api.channelHandler.getCustomerContext, {
       phone_number: phoneNumber,
       platform: "phone",
     });
+
+    const [context] = await Promise.all([contextPromise, ...storePromises]);
 
     // Return dynamic_variables for greeting personalization + caller phone for auto-lookup
     // If we know the name, greeting becomes "Hi John!" otherwise "Hi there!"
@@ -1533,9 +1540,10 @@ const createCharacterEndpoint = httpAction(async (ctx, request) => {
 });
 
 // ─── TELNYX: SYNC VOICE ─────────────────────────────────────
-// Called from dashboard when user selects a voice.
-// Updates the Telnyx AI Assistant's voice to the selected voice.
-// Voice ID format: full Telnyx voice string
+// Called from dashboard when user selects a voice or changes voice speed.
+// Updates the Telnyx AI Assistant's voice settings.
+// Accepts: voice_id (string), voice_speed (number, optional 0.25-2.0)
+// Preserves existing voice_speed if not provided — never wipes it.
 const telnyxSyncVoice = httpAction(async (ctx, request) => {
   const corsHeaders = getCorsHeaders(request.headers.get("Origin"));
 
@@ -1549,11 +1557,13 @@ const telnyxSyncVoice = httpAction(async (ctx, request) => {
   }
 
   try {
-    const { voice_id } = await request.json();
+    const body = await request.json();
+    const { voice_id, voice_speed } = body;
 
-    if (!voice_id || typeof voice_id !== "string") {
+    // At least one of voice_id or voice_speed must be provided
+    if (!voice_id && voice_speed === undefined) {
       return new Response(
-        JSON.stringify({ error: "Invalid voice_id" }),
+        JSON.stringify({ error: "Provide voice_id and/or voice_speed" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -1563,14 +1573,30 @@ const telnyxSyncVoice = httpAction(async (ctx, request) => {
 
     if (!telnyxKey || !assistantId) {
       return new Response(
-        JSON.stringify({ error: "Telnyx not configured" }),
+        JSON.stringify({ error: "Not configured" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Voice ID is the full Telnyx voice string
-    // No prefix needed — it's already in the correct format
-    const telnyxVoice = voice_id;
+    // Fetch current voice_settings to preserve fields we're not changing
+    const currentRes = await fetch(
+      `https://api.telnyx.com/v2/ai/assistants/${assistantId}`,
+      { headers: { Authorization: `Bearer ${telnyxKey}`, "Content-Type": "application/json" } }
+    );
+    const currentData = await currentRes.json();
+    const currentSettings = currentData.data?.voice_settings || {};
+
+    // Build the PATCH payload — only override what's being changed
+    const patchSettings: Record<string, any> = {
+      voice: voice_id || currentSettings.voice,
+    };
+
+    // Preserve or update voice_speed
+    if (typeof voice_speed === "number") {
+      patchSettings.voice_speed = Math.max(0.25, Math.min(2.0, voice_speed));
+    } else if (currentSettings.voice_speed !== undefined) {
+      patchSettings.voice_speed = currentSettings.voice_speed;
+    }
 
     const response = await fetch(`https://api.telnyx.com/v2/ai/assistants/${assistantId}`, {
       method: "PATCH",
@@ -1578,29 +1604,32 @@ const telnyxSyncVoice = httpAction(async (ctx, request) => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${telnyxKey}`,
       },
-      body: JSON.stringify({
-        voice_settings: {
-          voice: telnyxVoice,
-        },
-      }),
+      body: JSON.stringify({ voice_settings: patchSettings }),
     });
 
     if (!response.ok) {
       const err = await response.text();
-      console.error("Telnyx voice sync error:", err);
+      console.error("Voice sync error:", err);
       return new Response(
-        JSON.stringify({ error: "Failed to sync voice to Telnyx" }),
+        JSON.stringify({ error: "Failed to sync voice settings" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Voice synced to Telnyx: ${telnyxVoice}`);
+    const result = await response.json();
+    const updatedSettings = result.data?.voice_settings || {};
+
+    console.log(`Voice synced: voice=${updatedSettings.voice}, speed=${updatedSettings.voice_speed}`);
     return new Response(
-      JSON.stringify({ success: true, voice: telnyxVoice }),
+      JSON.stringify({
+        success: true,
+        voice: updatedSettings.voice,
+        voice_speed: updatedSettings.voice_speed,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Telnyx voice sync error:", error);
+    console.error("Voice sync error:", error);
     return new Response(
       JSON.stringify({ error: "Voice sync failed" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

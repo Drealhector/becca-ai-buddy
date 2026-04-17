@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Mic, RefreshCw, Volume2, Square, Circle, Play, Check, Trash2, Upload } from "lucide-react";
+import { Mic, RefreshCw, Volume2, Square, Circle, Play, Check, Trash2, Upload, Gauge } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -33,6 +33,9 @@ const VoiceManagementSection = () => {
   const [recordingTime, setRecordingTime] = useState(0);
   const [newVoiceName, setNewVoiceName] = useState("");
   const [isCloning, setIsCloning] = useState(false);
+  const [voiceSpeed, setVoiceSpeed] = useState(1.0);
+  const [savingSpeed, setSavingSpeed] = useState(false);
+  const speedDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -49,14 +52,17 @@ const VoiceManagementSection = () => {
   const storeVoiceSampleAction = useAction(api.voice.storeVoiceSample);
   const getVoiceSampleUrlAction = useAction(api.voice.getVoiceSampleUrl);
 
-  const syncVoiceToTelnyx = useCallback(async (voiceId: string): Promise<boolean> => {
+  const syncVoiceToTelnyx = useCallback(async (voiceId?: string, speed?: number): Promise<boolean> => {
     const siteUrl = import.meta.env.VITE_CONVEX_SITE_URL;
     if (!siteUrl) return false;
     try {
+      const body: Record<string, any> = {};
+      if (voiceId) body.voice_id = voiceId;
+      if (speed !== undefined) body.voice_speed = speed;
       const res = await fetch(`${siteUrl}/telnyx/sync-voice`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ voice_id: voiceId }),
+        body: JSON.stringify(body),
       });
       return res.ok;
     } catch {
@@ -98,6 +104,7 @@ const VoiceManagementSection = () => {
     try {
       const current = await fetchCurrentVoiceAction();
       if (current?.voice) setSelectedVoice(current.voice);
+      if (current?.voice_speed != null) setVoiceSpeed(current.voice_speed);
     } catch { /* silent */ }
     finally { setLoading(false); }
   };
@@ -116,6 +123,27 @@ const VoiceManagementSection = () => {
       setSyncingVoice(false);
     }
   };
+
+  const handleSpeedChange = useCallback((newSpeed: number) => {
+    setVoiceSpeed(newSpeed);
+    // Debounce the API call — sync after user stops sliding
+    if (speedDebounceRef.current) clearTimeout(speedDebounceRef.current);
+    speedDebounceRef.current = setTimeout(async () => {
+      setSavingSpeed(true);
+      try {
+        const synced = await syncVoiceToTelnyx(undefined, newSpeed);
+        if (synced) {
+          toast.success(`Voice speed set to ${newSpeed.toFixed(1)}x`);
+        } else {
+          toast.error("Failed to update voice speed");
+        }
+      } catch {
+        toast.error("Failed to update voice speed");
+      } finally {
+        setSavingSpeed(false);
+      }
+    }, 500);
+  }, [syncVoiceToTelnyx]);
 
   const handleDeleteVoice = async (voice: VoiceItem) => {
     setDeletingVoice(voice.id);
@@ -239,7 +267,7 @@ const VoiceManagementSection = () => {
       setRecordedBlob(null);
       setRecordingTime(0);
 
-      const synced = await syncVoiceToTelnyx(data.voice_id);
+      const synced = await syncVoiceToTelnyx(data.voice_id, voiceSpeed);
       toast.success(synced
         ? `"${nameForToast}" cloned and set as your calling voice!`
         : `"${nameForToast}" cloned successfully!`
@@ -371,6 +399,34 @@ const VoiceManagementSection = () => {
             )}
           </div>
           {syncingVoice && <p className="text-xs text-primary mt-2 animate-pulse">Setting as calling voice...</p>}
+        </div>
+
+        {/* Voice Speed Control */}
+        <div className="border-t pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-sm font-semibold flex items-center gap-2">
+              <Gauge className="w-4 h-4 text-primary" />
+              Voice Speed
+            </Label>
+            <span className="text-sm font-mono text-primary">
+              {voiceSpeed.toFixed(1)}x
+              {savingSpeed && <span className="ml-2 text-xs text-muted-foreground animate-pulse">saving...</span>}
+            </span>
+          </div>
+          <input
+            type="range"
+            min="0.5"
+            max="2.0"
+            step="0.1"
+            value={voiceSpeed}
+            onChange={(e) => handleSpeedChange(parseFloat(e.target.value))}
+            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+          />
+          <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+            <span>Slow (0.5x)</span>
+            <span>Normal (1.0x)</span>
+            <span>Fast (2.0x)</span>
+          </div>
         </div>
 
         {/* Clone Voice Section */}

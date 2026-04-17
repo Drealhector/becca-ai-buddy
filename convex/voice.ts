@@ -5,27 +5,29 @@ import { v } from "convex/values";
  * VOICE MANAGEMENT — Voice cloning and management
  */
 
-// Fetch current voice from the assistant
+// Fetch current voice and speed from the assistant
 export const fetchCurrentVoice = action({
   handler: async (ctx) => {
     const telnyxKey = process.env.TELNYX_API_KEY;
     const assistantId = process.env.TELNYX_ASSISTANT_ID;
-    if (!telnyxKey || !assistantId) return { voice: null };
+    if (!telnyxKey || !assistantId) return { voice: null, voice_speed: null, voice_settings: null };
 
     try {
       const response = await fetch(
         `https://api.telnyx.com/v2/ai/assistants/${assistantId}`,
         { headers: { Authorization: `Bearer ${telnyxKey}`, "Content-Type": "application/json" } }
       );
-      if (!response.ok) return { voice: null };
+      if (!response.ok) return { voice: null, voice_speed: null, voice_settings: null };
 
       const result = await response.json();
       const data = result.data || result;
       return {
         voice: data.voice_settings?.voice || null,
+        voice_speed: data.voice_settings?.voice_speed ?? null,
+        voice_settings: data.voice_settings || null,
       };
     } catch {
-      return { voice: null };
+      return { voice: null, voice_speed: null, voice_settings: null };
     }
   },
 });
