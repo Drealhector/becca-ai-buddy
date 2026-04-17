@@ -57,9 +57,18 @@ const MobileOverview = ({ businessName, openView }: MobileOverviewProps) => {
   const recentCalls = useQuery(api.callHistory.list, { limit: 100 }) ?? [];
 
   const greeting = greetingForHour(now.getHours());
-  const displayName = businessName
-    ? businessName.replace(/[_-]+/g, " ").trim() || "there"
-    : "there";
+  // Display name = user-set localStorage value only. Business name is a company label, not a person.
+  const storedDisplay = typeof window !== "undefined" ? localStorage.getItem("becca_display_name") : null;
+  const displayName = storedDisplay && storedDisplay.trim() ? storedDisplay.trim() : "there";
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState(displayName);
+  const saveDisplayName = () => {
+    const trimmed = draftName.trim();
+    if (trimmed) localStorage.setItem("becca_display_name", trimmed);
+    else localStorage.removeItem("becca_display_name");
+    setEditingName(false);
+    setNow(new Date());
+  };
 
   // 7-day trend
   const callsTrend = useMemo(() => {
@@ -197,8 +206,30 @@ const MobileOverview = ({ businessName, openView }: MobileOverviewProps) => {
                 <span className="px-1 py-0.5 rounded text-[8px] font-semibold tracking-wider uppercase text-emerald-300"
                   style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)" }}>Live</span>
               </div>
-              <h1 className="text-base font-bold text-white tracking-tight leading-tight truncate">
-                <span className="capitalize">{greeting}, {displayName}.</span>
+              <h1 className="text-base font-bold text-white tracking-tight leading-tight truncate flex items-center gap-1.5">
+                <span className="capitalize">{greeting},</span>
+                {editingName ? (
+                  <input
+                    autoFocus
+                    value={draftName}
+                    onChange={(e) => setDraftName(e.target.value)}
+                    onBlur={saveDisplayName}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveDisplayName();
+                      if (e.key === "Escape") { setDraftName(displayName); setEditingName(false); }
+                    }}
+                    className="bg-cyan-500/10 border border-cyan-400/40 rounded px-1.5 py-0 text-base font-bold text-white outline-none min-w-[80px] max-w-[140px]"
+                    placeholder="Name"
+                  />
+                ) : (
+                  <button
+                    onClick={() => { setDraftName(displayName); setEditingName(true); }}
+                    className="capitalize hover:text-cyan-200 transition-colors decoration-dotted decoration-cyan-400/30 underline-offset-2 active:underline truncate"
+                    title="Tap to change"
+                  >
+                    {displayName}.
+                  </button>
+                )}
               </h1>
               <p className="text-[11px] text-cyan-100/65 mt-0.5 tracking-wide truncate">
                 {formatShortDate(now)} · AI is on duty

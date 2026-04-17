@@ -60,11 +60,24 @@ const DesktopOverview = ({ businessName, openView }: DesktopOverviewProps) => {
   const recentCalls = useQuery(api.callHistory.list, { limit: 100 }) ?? [];
 
   const greeting = greetingForHour(now.getHours());
-  // Show the full business name (cleaned of separators), not just first segment.
-  // Falls back to "there" if no business name was set.
-  const displayName = businessName
-    ? businessName.replace(/[_-]+/g, " ").trim() || "there"
-    : "there";
+  // Display name = whatever the user set in localStorage. Falls back to "there".
+  // The business_name field is the company/account label and may not be a real person's name,
+  // so we never use it for the greeting unless explicitly set as the display name.
+  const storedDisplay = typeof window !== "undefined" ? localStorage.getItem("becca_display_name") : null;
+  const displayName = storedDisplay && storedDisplay.trim() ? storedDisplay.trim() : "there";
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState(displayName);
+  const saveDisplayName = () => {
+    const trimmed = draftName.trim();
+    if (trimmed) {
+      localStorage.setItem("becca_display_name", trimmed);
+    } else {
+      localStorage.removeItem("becca_display_name");
+    }
+    setEditingName(false);
+    // Force re-render by touching state
+    setNow(new Date());
+  };
 
   // === Calls trend (last 7 days) ===
   const callsTrend = useMemo(() => {
@@ -257,8 +270,30 @@ const DesktopOverview = ({ businessName, openView }: DesktopOverviewProps) => {
                   Live
                 </span>
               </div>
-              <h1 className="text-xl xl:text-2xl font-bold text-white tracking-tight truncate">
-                <span className="capitalize">{greeting}, {displayName}.</span>
+              <h1 className="text-xl xl:text-2xl font-bold text-white tracking-tight truncate flex items-center gap-2">
+                <span className="capitalize">{greeting},</span>
+                {editingName ? (
+                  <input
+                    autoFocus
+                    value={draftName}
+                    onChange={(e) => setDraftName(e.target.value)}
+                    onBlur={saveDisplayName}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveDisplayName();
+                      if (e.key === "Escape") { setDraftName(displayName); setEditingName(false); }
+                    }}
+                    className="bg-cyan-500/10 border border-cyan-400/40 rounded px-2 py-0.5 text-xl xl:text-2xl font-bold text-white outline-none focus:border-cyan-300/80 min-w-[120px] max-w-[280px]"
+                    placeholder="Your name"
+                  />
+                ) : (
+                  <button
+                    onClick={() => { setDraftName(displayName); setEditingName(true); }}
+                    className="capitalize hover:text-cyan-200 transition-colors decoration-dotted decoration-cyan-400/30 underline-offset-4 hover:underline"
+                    title="Click to change how Becca greets you"
+                  >
+                    {displayName}.
+                  </button>
+                )}
               </h1>
               <p className="text-xs text-cyan-100/65 mt-1 tracking-wide">
                 {formatLongDate(now)} · Your AI is handling everything in the background.

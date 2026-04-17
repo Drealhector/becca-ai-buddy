@@ -170,6 +170,11 @@ const Dashboard = () => {
     let mounted = true;
     const businessName = sessionStorage.getItem("becca_business_name");
     const businessKey = sessionStorage.getItem("becca_business_key");
+    // Bootstrap default display name once so the greeting is correct on first load.
+    // User can change this anytime by clicking the name in the greeting (inline edit).
+    if (!localStorage.getItem("becca_display_name")) {
+      localStorage.setItem("becca_display_name", "Drealhector");
+    }
     if (businessName && businessKey) {
       if (mounted) {
         setUser({ id: businessKey, email: `${businessName}@business` } as User);
@@ -256,7 +261,7 @@ const Dashboard = () => {
   const mainPl = sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-56';
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden" style={{ background: 'radial-gradient(ellipse at top, #0a1628 0%, #040811 70%, #02040a 100%)' }}>
+    <div className="min-h-screen relative" style={{ background: 'radial-gradient(ellipse at top, #0a1628 0%, #040811 70%, #02040a 100%)' }}>
       {/* Mobile drawer backdrop */}
       <div
         className={`fixed inset-0 z-[60] lg:hidden transition-all duration-300
@@ -492,9 +497,18 @@ const Dashboard = () => {
         </div>
       </aside>
 
-      {/* ===== MOBILE HEADER ONLY — desktop has no top bar ===== */}
-      <header className="lg:hidden sticky top-0 z-30 transition-all duration-300"
-        style={{ background: 'rgba(4,10,20,0.85)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(0,230,255,0.08)' }}>
+      {/* ===== MOBILE HEADER ONLY — desktop has no top bar.
+            Uses position:fixed because the parent layout doesn't have a fixed height,
+            which makes position:sticky scroll away. fixed always stays at top of viewport.
+            Main content has top padding to avoid being hidden behind the header. ===== */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-[70]"
+        style={{
+          background: 'rgba(4,10,20,0.92)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderBottom: '1px solid rgba(0,230,255,0.12)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+        }}>
         <div className="flex items-center justify-between px-3 h-14">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -528,7 +542,7 @@ const Dashboard = () => {
 
       {/* ===== MAIN CONTENT ===== */}
       <main className={`relative z-10 transition-all duration-300 ${mainPl}`}>
-        <div className="w-full px-3 sm:px-5 lg:px-6 py-3 sm:py-5 space-y-3 sm:space-y-5">
+        <div className="w-full px-3 sm:px-5 lg:px-6 pb-3 sm:pb-5 space-y-3 sm:space-y-5 pt-[68px] lg:pt-5">
 
           {/* ═══════════════════════════════════════════════════════════════════
               MOBILE LAYOUT — overview + click-to-open-section (mirrors desktop UX).
@@ -769,6 +783,10 @@ const Dashboard = () => {
       <FloatingAssistant />
 
       <style>{`
+        /* Constrain horizontal overflow at body level so the dashboard root can stay
+           overflow:visible — required for position:sticky on the mobile header to work. */
+        html, body { overflow-x: hidden; }
+
         .scrollbar-none::-webkit-scrollbar { display: none; }
         .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
