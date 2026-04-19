@@ -1554,16 +1554,24 @@ const telnyxSyncVoice = httpAction(async (ctx, request) => {
     const currentData = await currentRes.json();
     const currentSettings = currentData.data?.voice_settings || {};
 
-    // Build the PATCH payload — only override what's being changed
+    // Spread ALL existing voice_settings so the PATCH never wipes fields
+    // we didn't explicitly touch (api_key_ref, language_boost, etc.)
+    const resolvedVoice = voice_id || currentSettings.voice || "";
     const patchSettings: Record<string, any> = {
-      voice: voice_id || currentSettings.voice,
+      ...currentSettings,
+      voice: resolvedVoice,
     };
 
-    // Preserve or update voice_speed
+    // Apply voice speed — clamp to Telnyx's documented range [0.25, 2.0]
     if (typeof voice_speed === "number") {
-      patchSettings.voice_speed = Math.max(0.25, Math.min(2.0, voice_speed));
-    } else if (currentSettings.voice_speed !== undefined) {
-      patchSettings.voice_speed = currentSettings.voice_speed;
+      const clamped = Math.max(0.25, Math.min(2.0, voice_speed));
+      // voice_speed works for Telnyx Natural voices (Telnyx.*, Kokoro, etc.)
+      patchSettings.voice_speed = clamped;
+      // For MiniMax cloned voices, also send `speed` as a provider passthrough
+      // (MiniMax's native speed field — may be forwarded by Telnyx, not documented)
+      if (resolvedVoice.startsWith("Minimax.")) {
+        patchSettings.speed = clamped;
+      }
     }
 
     const response = await fetch(`https://api.telnyx.com/v2/ai/assistants/${assistantId}`, {

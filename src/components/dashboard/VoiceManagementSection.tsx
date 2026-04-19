@@ -52,9 +52,12 @@ const VoiceManagementSection = () => {
   const storeVoiceSampleAction = useAction(api.voice.storeVoiceSample);
   const getVoiceSampleUrlAction = useAction(api.voice.getVoiceSampleUrl);
 
-  const syncVoiceToTelnyx = useCallback(async (voiceId?: string, speed?: number): Promise<boolean> => {
+  const syncVoiceToTelnyx = useCallback(async (
+    voiceId?: string,
+    speed?: number
+  ): Promise<{ ok: boolean; confirmedSpeed?: number }> => {
     const siteUrl = import.meta.env.VITE_CONVEX_SITE_URL;
-    if (!siteUrl) return false;
+    if (!siteUrl) return { ok: false };
     try {
       const body: Record<string, any> = {};
       if (voiceId) body.voice_id = voiceId;
@@ -64,9 +67,11 @@ const VoiceManagementSection = () => {
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(body),
       });
-      return res.ok;
+      if (!res.ok) return { ok: false };
+      const data = await res.json();
+      return { ok: true, confirmedSpeed: data.voice_speed };
     } catch {
-      return false;
+      return { ok: false };
     }
   }, []);
 
@@ -115,7 +120,7 @@ const VoiceManagementSection = () => {
       setSelectedVoice(voice.id);
       setSyncingVoice(true);
       await updateCustomizations({ id: customizations._id, voices: [voice.id] as any });
-      const synced = await syncVoiceToTelnyx(voice.id);
+      const { ok: synced } = await syncVoiceToTelnyx(voice.id);
       toast.success(synced ? `"${voice.name}" is now your calling voice` : `"${voice.name}" selected`);
     } catch {
       toast.error("Failed to set voice");
@@ -131,9 +136,11 @@ const VoiceManagementSection = () => {
     speedDebounceRef.current = setTimeout(async () => {
       setSavingSpeed(true);
       try {
-        const synced = await syncVoiceToTelnyx(undefined, newSpeed);
-        if (synced) {
-          toast.success(`Voice speed set to ${newSpeed.toFixed(1)}x`);
+        const { ok, confirmedSpeed } = await syncVoiceToTelnyx(undefined, newSpeed);
+        if (ok) {
+          // Snap slider to what Telnyx actually stored (may differ slightly)
+          if (confirmedSpeed != null) setVoiceSpeed(confirmedSpeed);
+          toast.success(`Voice speed set to ${(confirmedSpeed ?? newSpeed).toFixed(2)}x`);
         } else {
           toast.error("Failed to update voice speed");
         }
@@ -267,7 +274,7 @@ const VoiceManagementSection = () => {
       setRecordedBlob(null);
       setRecordingTime(0);
 
-      const synced = await syncVoiceToTelnyx(data.voice_id, voiceSpeed);
+      const { ok: synced } = await syncVoiceToTelnyx(data.voice_id, voiceSpeed);
       toast.success(synced
         ? `"${nameForToast}" cloned and set as your calling voice!`
         : `"${nameForToast}" cloned successfully!`
@@ -415,17 +422,17 @@ const VoiceManagementSection = () => {
           </div>
           <input
             type="range"
-            min="0.5"
+            min="0.25"
             max="2.0"
-            step="0.1"
+            step="0.05"
             value={voiceSpeed}
             onChange={(e) => handleSpeedChange(parseFloat(e.target.value))}
             className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
           />
           <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-            <span>Slow (0.5x)</span>
-            <span>Normal (1.0x)</span>
-            <span>Fast (2.0x)</span>
+            <span>0.25x (slow)</span>
+            <span>1.0x (normal)</span>
+            <span>2.0x (fast)</span>
           </div>
         </div>
 
