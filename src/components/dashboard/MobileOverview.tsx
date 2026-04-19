@@ -10,6 +10,7 @@ import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip,
   PieChart, Pie, Cell, CartesianGrid,
 } from "recharts";
+import beccaBLogo from "@/assets/becca-b-new-logo.png";
 
 interface MobileOverviewProps {
   businessName: string;
@@ -183,12 +184,17 @@ const MobileOverview = ({ businessName, openView }: MobileOverviewProps) => {
           <div className="flex items-center gap-3">
             {/* Pulsing brain orb */}
             <div className="relative flex-shrink-0">
-              <div className="relative w-11 h-11 rounded-full flex items-center justify-center"
+              <div className="relative w-16 h-16 rounded-full flex items-center justify-center"
                 style={{
-                  background: "radial-gradient(circle at 30% 30%, rgba(0,230,255,0.55) 0%, rgba(0,140,200,0.35) 50%, rgba(0,60,120,0.25) 100%)",
-                  boxShadow: "0 0 22px rgba(0,230,255,0.45), inset 0 2px 4px rgba(255,255,255,0.2), inset 0 -2px 6px rgba(0,30,80,0.6)",
+                  background: "radial-gradient(circle at 30% 30%, rgba(0,230,255,0.45) 0%, rgba(0,100,160,0.3) 55%, rgba(0,30,80,0.4) 100%)",
+                  boxShadow: "0 0 28px rgba(0,230,255,0.5), inset 0 2px 4px rgba(255,255,255,0.15), inset 0 -2px 6px rgba(0,30,80,0.6)",
                 }}>
-                <Brain className="h-5 w-5 text-white drop-shadow-[0_0_6px_rgba(0,230,255,0.9)]" strokeWidth={2.2} />
+                <img
+                  src={beccaBLogo}
+                  alt="Becca"
+                  className="w-10 h-10 object-contain"
+                  style={{ animation: "becca-b-neural 2.5s ease-in-out infinite" }}
+                />
               </div>
               <div className="absolute inset-0 rounded-full pointer-events-none"
                 style={{ border: "2px solid rgba(0,230,255,0.5)", animation: "becca-brain-pulse 2.5s ease-out infinite" }} />

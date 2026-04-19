@@ -835,6 +835,22 @@ const Dashboard = () => {
           0%, 100% { height: 30%; }
           50%      { height: 100%; }
         }
+
+        /* Luminescent B — outer glow in sync with becca-brain-pulse (2.5s) */
+        @keyframes becca-b-luminescent {
+          0%, 100% { filter: drop-shadow(0 0 8px rgba(0,230,255,1.0)) brightness(1.25); }
+          35%      { filter: drop-shadow(0 0 4px rgba(0,230,255,0.65)) brightness(1.0); }
+          70%      { filter: drop-shadow(0 0 2px rgba(0,230,255,0.4)) brightness(0.88); }
+        }
+        /* Neural network B logo — pulses in sync with the radiating ring.
+           Uses brightness so the cyan elements flare without affecting the
+           dark background. Keyed to becca-brain-pulse (2.5s): brightest
+           when the ring is emitted, dims as it expands, recovers at 100%. */
+        @keyframes becca-b-neural {
+          0%, 100% { filter: brightness(1.5) drop-shadow(0 0 8px rgba(0,230,255,0.9)); }
+          35%      { filter: brightness(1.15) drop-shadow(0 0 4px rgba(0,230,255,0.5)); }
+          70%      { filter: brightness(0.85) drop-shadow(0 0 1px rgba(0,230,255,0.2)); }
+        }
       `}</style>
     </div>
   );

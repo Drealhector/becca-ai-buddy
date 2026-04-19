@@ -316,7 +316,7 @@ const VoiceManagementSection = () => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 25 * 1024 * 1024) { toast.error("File too large. Max 25MB."); return; }
+    if (file.size > 4.5 * 1024 * 1024) { toast.error(`File is ${(file.size / 1024 / 1024).toFixed(1)}MB. Maximum is 4.5MB. Try a 60-90 second clip, or re-export at 128kbps mono.`); return; }
     setRecordedBlob(file);
     setRecordingTime(0);
     if (!newVoiceName.trim()) setNewVoiceName(file.name.replace(/\.[^/.]+$/, ""));
@@ -448,7 +448,7 @@ const VoiceManagementSection = () => {
               <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isCloning || isRecording} className="gap-2">
                 <Upload className="w-4 h-4" />Upload Audio
               </Button>
-              <input ref={fileInputRef} type="file" accept="audio/*,.wav,.mp3,.webm,.ogg,.m4a" onChange={handleFileUpload} className="hidden" />
+              <input ref={fileInputRef} type="file" accept="audio/*,.wav,.mp3,.webm,.ogg,.m4a,.mpeg,.mpga" onChange={handleFileUpload} className="hidden" />
               {isRecording && <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /><span className="text-sm text-muted-foreground">Recording...</span></div>}
               {recordedBlob && !isRecording && (
                 <div className="flex items-center gap-2">

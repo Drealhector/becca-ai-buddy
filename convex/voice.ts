@@ -59,20 +59,32 @@ export const cloneVoice = action({
     if (!telnyxKey) throw new Error("Voice service not configured");
 
     if (!name || name.length > 100) throw new Error("Voice name must be 1-100 characters");
-    if (audio.length > 10 * 1024 * 1024) throw new Error("Audio file too large (max 10MB)");
+    // Base64 cap stays generous — the real constraint is decoded size below
+    if (audio.length > 7 * 1024 * 1024) throw new Error("Audio file too large. Please use a sample under 4.5MB raw.");
 
     // Convert base64 to buffer — split on ";base64," to handle MIME params like codecs=opus
     const base64Split = audio.split(";base64,");
     const base64Data = base64Split.length > 1 ? base64Split[1] : audio;
     const binaryStr = atob(base64Data);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
+
+    // Telnyx voice clone gateway rejects payloads at ~5MB (HTTP 413). Empirically tested:
+    // 4.8MB → success, 5.0MB → 413. Cap at 4.5MB to leave safety margin for form overhead.
+    const rawBytes = binaryStr.length;
+    if (rawBytes > 4.5 * 1024 * 1024) throw new Error(`Audio is ${(rawBytes / 1024 / 1024).toFixed(1)}MB. Maximum is 4.5MB. Try a shorter clip (60-90 seconds is plenty for cloning), or re-export at 128kbps mono.`);
+
+    const bytes = new Uint8Array(rawBytes);
+    for (let i = 0; i < rawBytes; i++) {
       bytes[i] = binaryStr.charCodeAt(i);
     }
 
-    const mimeMatch = audio.match(/^data:([^;,]+)/);
-    const mimeType = mimeMatch ? mimeMatch[1] : "audio/wav";
-    const extension = mimeType.split("/")[1] || "wav";
+    // Normalize MIME — browsers sometimes mis-tag .mpeg as video/mpeg even though it's audio
+    let mimeMatch = audio.match(/^data:([^;,]+)/);
+    let mimeType = mimeMatch ? mimeMatch[1] : "audio/mpeg";
+    if (mimeType.startsWith("video/")) {
+      // .mpeg / .mp4 audio files often come through as video/* — rewrite to audio for Telnyx
+      mimeType = mimeType === "video/mpeg" ? "audio/mpeg" : "audio/mp4";
+    }
+    const extension = mimeType.split("/")[1] || "mp3";
 
     const formData = new FormData();
     formData.append("audio_file", new Blob([bytes], { type: mimeType }), `voice_sample.${extension}`);
@@ -90,14 +102,23 @@ export const cloneVoice = action({
     if (!response.ok) {
       const err = await response.text();
       console.error("Voice clone error:", response.status, err);
+
+      // Try to parse as JSON for a clean error detail
+      let detail: string | null = null;
       try {
         const errJson = JSON.parse(err);
-        const detail = errJson.errors?.[0]?.detail || "Voice cloning failed";
-        throw new Error(detail);
-      } catch (e) {
-        if (e instanceof Error && e.message !== "Voice cloning failed") throw e;
-        throw new Error("Voice cloning failed. Please try again.");
+        detail = errJson.errors?.[0]?.detail || errJson.errors?.[0]?.title || null;
+      } catch {
+        // Non-JSON response (e.g. "Request Entity Too Large" HTML from gateway)
+        // Map common HTTP status codes to user-friendly messages
+        if (response.status === 413) detail = "Audio file too large for the voice provider. Try a shorter clip (under 5MB).";
+        else if (response.status === 415) detail = "Audio format not supported. Try MP3 or WAV.";
+        else if (response.status === 401 || response.status === 403) detail = "Voice provider authentication failed.";
+        else if (response.status >= 500) detail = "Voice provider is having issues. Please try again in a moment.";
+        else detail = `Voice cloning failed (HTTP ${response.status})`;
       }
+
+      throw new Error(detail || `Voice cloning failed (HTTP ${response.status})`);
     }
 
     const result = await response.json();

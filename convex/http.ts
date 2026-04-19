@@ -280,75 +280,43 @@ const telnyxWhatsAppWebhook = httpAction(async (ctx, request) => {
       ...(imageBase64 ? { image_base64: imageBase64, image_mime_type: imageMimeType } : {}),
     });
 
-    // Reply via Telnyx WhatsApp API
-    // Try multiple send approaches — embedded signup numbers may need different endpoints
-    const phoneNumberId = body.data?.payload?.metadata?.phone_number_id
-      || body.metadata?.phone_number_id;
-    const envPhone = process.env.TELNYX_WHATSAPP_NUMBER || "+15559051085";
-    const recipientPhone = phoneNumber.replace(/^\+/, ""); // Meta format: no +
-    console.log("WhatsApp replying to:", recipientPhone, "via phone_number_id:", phoneNumberId);
+    // Reply via Telnyx WhatsApp API — POST /v2/messages/whatsapp
+    // Use WABA display number from webhook metadata, falling back to env var.
+    const webhookDisplayNumber = body.data?.payload?.metadata?.display_phone_number
+      || body.metadata?.display_phone_number;
+    const fromPhone = webhookDisplayNumber
+      ? (webhookDisplayNumber.startsWith("+") ? webhookDisplayNumber : `+${webhookDisplayNumber}`)
+      : (process.env.TELNYX_WHATSAPP_NUMBER || "+2342093940544");
+    console.log("WhatsApp replying from:", fromPhone, "to:", normalizedPhone);
 
     if (telnyxApiKey && aiResponse) {
-      let sent = false;
-
-      // Approach 1: Meta Cloud API format via Telnyx proxy
-      if (phoneNumberId && !sent) {
-        try {
-          const cloudRes = await fetch(`https://api.telnyx.com/v2/whatsapp/${phoneNumberId}/messages`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${telnyxApiKey}`,
-            },
-            body: JSON.stringify({
-              messaging_product: "whatsapp",
-              to: recipientPhone,
+      try {
+        const msgRes = await fetch("https://api.telnyx.com/v2/messages/whatsapp", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${telnyxApiKey}`,
+          },
+          body: JSON.stringify({
+            from: fromPhone,
+            to: normalizedPhone,
+            whatsapp_message: {
               type: "text",
-              text: { body: aiResponse },
-            }),
-          });
-          if (cloudRes.ok) {
-            console.log("WhatsApp reply sent via Cloud API proxy");
-            sent = true;
-          } else {
-            console.error("Cloud API proxy failed:", cloudRes.status, await cloudRes.text());
-          }
-        } catch (e) {
-          console.error("Cloud API proxy error:", e);
-        }
-      }
-
-      // Approach 2: Standard Telnyx messaging API (fallback)
-      if (!sent) {
-        try {
-          const msgRes = await fetch("https://api.telnyx.com/v2/messages/whatsapp", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${telnyxApiKey}`,
+              text: { body: aiResponse, preview_url: false },
             },
-            body: JSON.stringify({
-              from: envPhone,
-              to: normalizedPhone,
-              whatsapp_message: {
-                type: "text",
-                text: { body: aiResponse, preview_url: false },
-              },
-            }),
-          });
-          if (msgRes.ok) {
-            console.log("WhatsApp reply sent via messaging API");
-            sent = true;
-          } else {
-            console.error("Messaging API failed:", msgRes.status, await msgRes.text());
-          }
-        } catch (e) {
-          console.error("Messaging API error:", e);
+          }),
+        });
+        if (msgRes.ok) {
+          console.log("WhatsApp reply sent");
+        } else {
+          const errBody = await msgRes.text();
+          console.error("WhatsApp send failed:", msgRes.status, errBody);
+          // 40305 = from address not associated with messaging profile.
+          // Requires Telnyx support to link the WA number to a messaging profile
+          // (regular API/portal paths fail with 40323 because the number is Meta-registered).
         }
-      }
-
-      if (!sent) {
-        console.error("All WhatsApp reply methods failed");
+      } catch (e) {
+        console.error("WhatsApp send error:", e);
       }
     }
 

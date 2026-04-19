@@ -94,13 +94,13 @@ const Landing = () => {
             <h1
               className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 md:mb-8 leading-tight px-2 flex flex-col items-center"
             >
-              <span className="text-center">AI that talks like a human.</span>
-              <span className="text-center">Handles millions of calls.</span>
-              <span className="text-center">Integrates into any platform.</span>
+              <span className="text-center">Answers your calls.</span>
+              <span className="text-center">Replies to your chats.</span>
+              <span className="text-center">Remembers every customer.</span>
             </h1>
 
             <p className="text-sm sm:text-lg md:text-xl lg:text-2xl text-white/80 mb-6 md:mb-12 px-4">
-              AI brain for enterprise support
+              One intelligent system across every channel, working 24/7.
             </p>
 
             <Button
